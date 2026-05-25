@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backstage Blueprint</title>
+<meta name="description" content="Systems for live production and touring — the behind-the-curtain blueprint that keeps tours, shows, and festivals moving.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black:#0E0E0E; --blue:#1B3A5C; --blue-d:#122947;
+    --blue-l:#9FC5E7; --bone:#F4F1EA; --orange:#D4641E;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    background:var(--black);
+    background-image:
+      linear-gradient(rgba(27,58,92,0.18) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(27,58,92,0.18) 1px,transparent 1px);
+    background-size:26px 26px;
+    color:var(--bone);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex; align-items:center; justify-content:center;
+    padding:40px 24px;
+  }
+  .hero{
+    position:relative; max-width:680px; width:100%;
+    text-align:center;
+    padding:64px 48px;
+    border:1px solid rgba(244,241,234,0.14);
+    background:rgba(20,20,20,0.55);
+  }
+  .tick{
+    position:absolute; width:18px; height:18px;
+    border:1.5px solid var(--orange); opacity:0.7;
+  }
+  .tick.tl{top:14px;left:14px;border-right:0;border-bottom:0;}
+  .tick.tr{top:14px;right:14px;border-left:0;border-bottom:0;}
+  .tick.bl{bottom:14px;left:14px;border-right:0;border-top:0;}
+  .tick.br{bottom:14px;right:14px;border-left:0;border-top:0;}
+  .mark{
+    display:inline-flex; flex-direction:column; line-height:1;
+    border:1px solid rgba(244,241,234,0.55); margin-bottom:30px;
+  }
+  .mark span{
+    font-family:'Archivo',sans-serif; font-size:11px;
+    letter-spacing:3px; padding:6px 14px;
+  }
+  .mark .a{font-weight:900;}
+  .mark .b{font-weight:300;border-top:.5px solid rgba(244,241,234,0.4);}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace; font-size:10px;
+    font-weight:700; letter-spacing:3.5px; color:var(--orange);
+    margin-bottom:18px;
+  }
+  h1{
+    font-family:'Archivo',sans-serif; font-weight:900;
+    font-size:54px; line-height:0.95; letter-spacing:1px;
+    margin-bottom:6px;
+  }
+  h1 .dot{color:var(--orange);}
+  .rule{width:70px; height:2px; background:var(--orange); margin:22px auto;}
+  .tagline{
+    font-size:15px; line-height:1.6; color:rgba(244,241,234,0.78);
+    max-width:440px; margin:0 auto 28px;
+  }
+  .pillars{
+    display:flex; justify-content:center; gap:10px; flex-wrap:wrap;
+    margin-bottom:6px;
+  }
+  .pillar{
+    font-family:'JetBrains Mono',monospace; font-size:9.5px;
+    font-weight:700; letter-spacing:2px; color:rgba(244,241,234,0.7);
+    border:1px solid rgba(244,241,234,0.2); padding:6px 12px;
+  }
+  .foot{
+    margin-top:34px;
+    font-family:'JetBrains Mono',monospace; font-size:9px;
+    letter-spacing:2px; color:rgba(244,241,234,0.4);
+  }
+  @media (max-width:560px){
+    .hero{padding:52px 28px;}
+    h1{font-size:38px;}
+  }
+</style>
+</head>
+<body>
+  <main class="hero">
+    <span class="tick tl"></span><span class="tick tr"></span>
+    <span class="tick bl"></span><span class="tick br"></span>
+
+    <div class="mark">
+      <span class="a">BACKSTAGE</span>
+      <span class="b">BLUEPRINT</span>
+    </div>
+
+    <div class="eyebrow">— SYSTEMS FOR LIVE PRODUCTION &amp; TOURING —</div>
+    <h1>BACKSTAGE<br>BLUEPRINT<span class="dot">.</span></h1>
+    <div class="rule"></div>
+    <p class="tagline">A view behind the curtain — the systems and workflows that keep tours, shows, and festivals moving.</p>
+
+    <div class="pillars">
+      <span class="pillar">THE COURSE</span>
+      <span class="pillar">THE TOOLKIT</span>
+      <span class="pillar">TEMPLATES</span>
+    </div>
+
+    <div class="foot">backstageblueprint.co · launching soon</div>
+  </main>
+</body>
+</html>

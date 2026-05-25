@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+
+# netlify local
+.netlify/
+
+# environment / secrets — never commit these
+.env
+.env.*
+
+# os files
+.DS_Store
+Thumbs.db
