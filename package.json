@@ -1,0 +1,9 @@
+{
+  "name": "backstage-blueprint-functions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backstage Blueprint — root package.json for Netlify Functions dependencies. The React toolkit app has its own package.json inside toolkit-app/.",
+  "dependencies": {
+    "stripe": "^17.0.0"
+  }
+}

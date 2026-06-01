@@ -102,23 +102,28 @@ export async function verifyTierFromBackend() {
  * Async: start Stripe Checkout for the Toolkit subscription.
  * Returns true if redirect started successfully, false otherwise.
  * Caller should fall back to dev behavior on false.
+ *
+ * Server-side mode (Order 009 update — 2026-06-01):
+ * - POSTs to /.netlify/functions/create-checkout-session
+ * - The function uses STRIPE_SECRET_KEY (server-only) to create a session
+ * - We follow the returned `url` to checkout.stripe.com
+ * - No publishable key needed in the browser
  */
 export async function startBBCheckout() {
-  if (!bbCheckoutReady()) return false;
   try {
-    const { loadStripe } = await import("@stripe/stripe-js");
-    const stripe = await loadStripe(STRIPE_PK);
-    if (!stripe) return false;
-    const { error } = await stripe.redirectToCheckout({
-      lineItems: [{ price: STRIPE_PRICE_ID, quantity: 1 }],
-      mode: "subscription",
-      successUrl: `${window.location.origin}/toolkit/?upgrade=success`,
-      cancelUrl: `${window.location.origin}/toolkit/?upgrade=cancelled`,
+    const res = await fetch("/.netlify/functions/create-checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
     });
-    if (error) {
-      console.warn("[BB] Stripe checkout error:", error.message);
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      console.warn("[BB] Checkout session error:", errBody.error || res.statusText);
       return false;
     }
+    const { url } = await res.json();
+    if (!url) return false;
+    window.location.assign(url);
     return true; // redirect happens; control passes to Stripe
   } catch (err) {
     console.warn("[BB] Checkout skipped:", err && err.message ? err.message : err);
