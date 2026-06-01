@@ -5,10 +5,6 @@ import {
   LayoutGrid, Printer, Save, RotateCw, X, Search, Star,
   Move, Square
 } from "lucide-react";
-
-// Order 009 · BB integration adapter (Clerk + Supabase + Stripe).
-// Graceful fallback: if env vars aren't set, the app keeps its
-// current URL-param/localStorage dev behavior unchanged.
 import { verifyTierFromBackend, startBBCheckout, bbAuthReady, bbCheckoutReady } from "./bb-integration.js";
 
 /* =========================================================================
@@ -83,27 +79,19 @@ function TierProvider({ children }) {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
-
-  // Order 009 · Backend tier verification.
-  // On mount (and on tab focus), if BB auth integration is configured,
-  // verify the user's tier from Clerk + Supabase. Falls back to the
-  // sync-read tier silently if not configured. The setter persists to
-  // localStorage so the next mount picks up the verified tier instantly.
+  // BB backend tier verification (Order 009 — graceful degradation: no-op if env vars missing)
   useEffect(() => {
+    if (!bbAuthReady()) return;
     let cancelled = false;
-    const verify = async () => {
+    const checkTier = async () => {
       const backendTier = await verifyTierFromBackend();
-      if (cancelled) return;
-      if (backendTier === "paid" || backendTier === "free") {
-        setTierState((current) => (current === backendTier ? current : backendTier));
-        try { localStorage.setItem(TIER_STORAGE_KEY, backendTier); } catch (_) {}
-      }
+      if (!cancelled && backendTier) setTier(backendTier);
     };
-    verify();
-    const onFocus = () => verify();
+    checkTier();
+    const onFocus = () => checkTier();
     window.addEventListener("focus", onFocus);
     return () => { cancelled = true; window.removeEventListener("focus", onFocus); };
-  }, []);
+  }, [setTier]);
   const value = useMemo(() => ({
     tier, isPaid: tier === "paid", isFree: tier === "free", setTier,
   }), [tier, setTier]);
@@ -126,16 +114,12 @@ function UpgradeProvider({ children }) {
   const hide = useCallback(() => setOpenReason(null), []);
   const value = useMemo(() => ({ show, hide }), [show, hide]);
   const { setTier } = useTier();
-  // Order 009 · auto-open the modal when /toolkit/?upgrade=prompt is hit
-  // (the Paid CTA on the toolkit.html sales page lands here).
+  // BB ?upgrade=prompt auto-open (Order 009 — landing from toolkit.html Paid CTA)
   useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("upgrade") === "prompt") {
-        setOpenReason("Upgrade to Backstage Blueprint Pro");
-      }
-    } catch (_) { /* SSR / locked storage */ }
-  }, []);
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("upgrade") === "prompt") show("Backstage Blueprint Pro");
+  }, [show]);
   return (
     <UpgradeContext.Provider value={value}>
       {children}
@@ -195,21 +179,15 @@ function UpgradeProvider({ children }) {
               <span><span style={{ fontSize: 16, color: BRAND.orange, fontWeight: 700 }}>$5</span> <span style={{ color: "rgba(244,241,234,0.55)" }}>/ month</span></span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {/* Order 009: real Stripe Checkout if configured, else falls
-                  back to the dev-toggle behavior. The async startBBCheckout()
-                  returns false when env vars are missing — we then flip the
-                  local tier flag so unwired-dev work keeps moving. */}
+              {/* The actual checkout flow lives on the future website — for
+                  now this button just flips the local tier flag so dev work
+                  on the paid surface is unblocked. Will be replaced with a
+                  real Stripe/etc. checkout link when the site launches. */}
               <button
                 onClick={async () => {
-                  const redirected = await startBBCheckout();
-                  if (!redirected) {
-                    // Backend not configured — preserve dev-toggle behavior.
-                    setTier("paid");
-                    hide();
-                  }
-                  // If redirected, Stripe takes over; success path returns
-                  // to /toolkit/?upgrade=success and TierProvider's verify
-                  // useEffect picks up the new paid entitlement on mount.
+                  // BB Order 009 — try Stripe checkout if configured; fall back to dev toggle.
+                  const went = await startBBCheckout();
+                  if (!went) { setTier("paid"); hide(); }
                 }}
                 style={{
                   padding: "11px 16px",
@@ -6859,3 +6837,635 @@ function RiderPreview(p) {
               fontSize: 9.5,
               lineHeight: 1.5,
               color: "rgba(14,14,14,0.92)",
+              whiteSpace: "pre-wrap",
+            }}>
+              {text}
+            </div>
+          </div>
+        );
+      }
+      case "pa":
+        return wrap(
+          <div key="pa" data-section-id={block.sectionId}>
+            <Block num="02" title="PA / Sound System" sectionId={block.sectionId}>
+              <div style={{ fontSize: 10, fontWeight: 700, marginBottom: 1 }}>Main</div>
+              <Row rows={p.paMain} label="PA" />
+              <div style={{ fontSize: 10, fontWeight: 700, marginTop: 5, marginBottom: 1 }}>Subs</div>
+              <Row rows={p.paSubs} label="Subs" />
+              {(p.paSpecs.splTarget || p.paSpecs.uniformity || p.paSpecs.phaseAligned || p.paSpecs.noiseFree) && (
+                <div style={{ marginTop: 6, padding: 5, border: `0.5px solid ${BRAND.black}`, fontSize: 9.5 }}>
+                  <Mono style={{ fontSize: 7.5, color: BRAND.orange, fontWeight: 700 }}>PERFORMANCE SPECS</Mono>
+                  <div style={{ marginTop: 2 }}>
+                    {p.paSpecs.splTarget && <div>SPL @ FOH: <strong>{p.paSpecs.splTarget} {p.paSpecs.splWeighting}</strong></div>}
+                    {p.paSpecs.uniformity && <div>Uniformity: {p.paSpecs.uniformity}</div>}
+                    {(p.paSpecs.freqLow || p.paSpecs.freqHigh) && (
+                      <div>Freq response: {p.paSpecs.freqLow || "—"} → {p.paSpecs.freqHigh || "—"}</div>
+                    )}
+                    {p.paSpecs.phaseAligned && <div>✓ Phase-aligned system required</div>}
+                    {p.paSpecs.noiseFree && <div>✓ Noise-free system required</div>}
+                    {p.paSpecs.notes && <div style={{ color: "rgba(14,14,14,0.55)", fontStyle: "italic", marginTop: 1 }}>{p.paSpecs.notes}</div>}
+                  </div>
+                </div>
+              )}
+              {(p.paCoverage.depth || p.paCoverage.width || p.paCoverage.delayZones || p.paCoverage.frontFills) && (
+                <div style={{ marginTop: 5, fontSize: 9.5 }}>
+                  <Mono style={{ fontSize: 7.5, color: BRAND.orange, fontWeight: 700 }}>COVERAGE</Mono>
+                  <div style={{ marginTop: 1 }}>
+                    {(p.paCoverage.depth || p.paCoverage.width) && <div>{p.paCoverage.depth} × {p.paCoverage.width}</div>}
+                    {p.paCoverage.delayZones && <div>Delays: {p.paCoverage.delayZones}</div>}
+                    {p.paCoverage.frontFills && <div>Front fills: {p.paCoverage.frontFills}</div>}
+                  </div>
+                </div>
+              )}
+              {(p.paConfig.type || p.paConfig.rigging || p.paConfig.notes) && (
+                <div style={{ marginTop: 5, fontSize: 9.5 }}>
+                  <Mono style={{ fontSize: 7.5, color: BRAND.orange, fontWeight: 700 }}>CONFIGURATION</Mono>
+                  <div style={{ marginTop: 1 }}>
+                    {p.paConfig.type && <div><strong>{p.paConfig.type}</strong>{p.paConfig.rigging && ` · ${p.paConfig.rigging}`}</div>}
+                    {p.paConfig.notes && <div style={{ color: "rgba(14,14,14,0.55)", fontStyle: "italic" }}>{p.paConfig.notes}</div>}
+                  </div>
+                </div>
+              )}
+              {p.sectionNotes?.pa && (
+                <div style={{ marginTop: 6, fontSize: 9.5, color: "rgba(14,14,14,0.72)", fontStyle: "italic", whiteSpace: "pre-wrap" }}>
+                  {p.sectionNotes.pa}
+                </div>
+              )}
+            </Block>
+          </div>
+        );
+      case "consoles":
+        return wrap(
+          <div key="consoles" data-section-id={block.sectionId}>
+            <Block num="03" title="Consoles" sectionId={block.sectionId}>
+              <div style={{ fontSize: 10, fontWeight: 700, marginBottom: 1 }}>Front of House</div>
+              <Row rows={p.foh} label="FOH" />
+              <div style={{ fontSize: 10, fontWeight: 700, marginTop: 5, marginBottom: 1 }}>Monitors</div>
+              <Row rows={p.mon} label="Monitor" />
+              {p.sectionNotes?.consoles && (
+                <div style={{ marginTop: 6, fontSize: 9.5, color: "rgba(14,14,14,0.72)", fontStyle: "italic", whiteSpace: "pre-wrap" }}>
+                  {p.sectionNotes.consoles}
+                </div>
+              )}
+            </Block>
+          </div>
+        );
+      case "inputs": {
+        // Stereo-aware channel labels — derived live so the rider preview
+        // matches what the user sees in the Input List section.
+        const inputsChannelMap = computeChannelMap(p.inputs);
+        return wrap(
+          <div key="inputs" data-section-id={block.sectionId}>
+            <Block num="06" title="Input List" sectionId={block.sectionId}>
+              <table style={{ width: "100%", fontSize: 9, borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: `0.5px solid ${BRAND.black}` }}>
+                    <th style={{ textAlign: "left", padding: "1px 0" }}>Ch</th>
+                    <th style={{ textAlign: "left" }}>Source</th>
+                    <th style={{ textAlign: "left" }}>Mic / DI</th>
+                    <th style={{ textAlign: "left" }}>+48V</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {p.inputs.map((i, idx) => (
+                    <tr key={i.id} style={{ borderBottom: "0.25px solid #ccc" }}>
+                      <td style={{ padding: "1px 0", fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>{inputsChannelMap[idx]?.label ?? (idx + 1)}</td>
+                      <td>{i.source || "—"}</td>
+                      <td style={{ color: "rgba(14,14,14,0.72)" }}>{i.mic || "—"}</td>
+                      <td>{i.phantom ? "✓" : ""}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {p.sectionNotes?.inputs && (
+                <div style={{ marginTop: 5, fontSize: 9.5, color: "rgba(14,14,14,0.72)", fontStyle: "italic", whiteSpace: "pre-wrap" }}>
+                  {p.sectionNotes.inputs}
+                </div>
+              )}
+            </Block>
+          </div>
+        );
+      }
+      case "monsys":
+        return wrap(
+          <div key="monsys" data-section-id={block.sectionId}>
+            <Block num="04" title="Monitor Systems" sectionId={block.sectionId}>
+              <div style={{ fontSize: 10, fontWeight: 700, marginBottom: 1 }}>IEMs</div>
+              <Row rows={p.iemRows} label="IEM" />
+              <div style={{ fontSize: 10, fontWeight: 700, marginTop: 5, marginBottom: 1 }}>Wedges</div>
+              <Row rows={p.wedgeRows} label="Wedges" />
+              <div style={{ fontSize: 10, fontWeight: 700, marginTop: 5, marginBottom: 1 }}>Side Fills</div>
+              <Row rows={p.sideFillRows || []} label="Side Fills" />
+              <div style={{ fontSize: 10, fontWeight: 700, marginTop: 5, marginBottom: 1 }}>Sub Fills</div>
+              <Row rows={p.subFillRows || []} label="Sub Fills" />
+              {p.sectionNotes?.monsys && (
+                <div style={{ marginTop: 6, fontSize: 9.5, color: "rgba(14,14,14,0.72)", fontStyle: "italic", whiteSpace: "pre-wrap" }}>
+                  {p.sectionNotes.monsys}
+                </div>
+              )}
+            </Block>
+          </div>
+        );
+      case "monmix":
+        return wrap(
+          <div key="monmix" data-section-id={block.sectionId}>
+            <Block num="05" title="Monitor Mixes" sectionId={block.sectionId}>
+              <table style={{ width: "100%", fontSize: 9, borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: `0.5px solid ${BRAND.black}` }}>
+                    <th style={{ textAlign: "left", padding: "1px 0" }}>Mix</th>
+                    <th style={{ textAlign: "left" }}>Recipient</th>
+                    <th style={{ textAlign: "left" }}>Type</th>
+                    <th style={{ textAlign: "left" }}>Format</th>
+                    <th style={{ textAlign: "left" }}>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expandMixes(p.mixes).map(row => (
+                    <tr key={row.id} style={{ borderBottom: "0.25px solid #ccc" }}>
+                      <td style={{ padding: "1px 0", fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>{row.mixNum}{row.side ? ` ${row.side}` : ""}</td>
+                      <td>{row.recipient || "—"}</td>
+                      <td>{row.type}</td>
+                      <td>{row.format}</td>
+                      <td style={{ color: "rgba(14,14,14,0.72)" }}>{row.notes || (row.side === "R" ? "(R-side)" : "")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {p.sectionNotes?.monmix && (
+                <div style={{ marginTop: 5, fontSize: 9.5, color: "rgba(14,14,14,0.72)", fontStyle: "italic", whiteSpace: "pre-wrap" }}>
+                  {p.sectionNotes.monmix}
+                </div>
+              )}
+            </Block>
+          </div>
+        );
+      case "backline":
+        return wrap(
+          <div key="backline" data-section-id={block.sectionId}>
+            <Block num="07" title="Backline" sectionId={block.sectionId}>
+              {(p.backlineItems || []).filter(it => it.brand || it.model).length === 0 ? (
+                <div style={{ fontSize: 10, fontStyle: "italic", color: "rgba(14,14,14,0.55)" }}>No backline items specified</div>
+              ) : (p.backlineItems || []).filter(it => it.brand || it.model).map((it, idx) => {
+                const cat = SEED.backlineCategories.find(c => c.key === it.category) || SEED.backlineCategories[0];
+                return (
+                  <div key={it.id} style={{ marginBottom: 5, paddingBottom: 4, borderBottom: "0.25px solid #ddd" }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, marginBottom: 1, display: "flex", justifyContent: "space-between" }}>
+                      <span><span style={{ color: BRAND.orange }}>#{idx + 1}</span> · {cat.label}</span>
+                      {it.supplier && <span style={{ fontWeight: 400, color: "rgba(14,14,14,0.55)", fontSize: 9 }}>{it.supplier}</span>}
+                    </div>
+                    <div style={{ fontSize: 10 }}>
+                      {(it.brand || it.model) && (
+                        <span style={{ fontWeight: 600 }}>
+                          {it.brand}{it.brand && it.model ? " " : ""}{it.model}
+                        </span>
+                      )}
+                      {it.cab && <span style={{ color: "rgba(14,14,14,0.55)" }}> · Cab: {it.cab}</span>}
+                      {it.stand && <span style={{ color: "rgba(14,14,14,0.55)" }}> · Stand: {it.stand}</span>}
+                    </div>
+                    {it.specs && (
+                      <div style={{ fontSize: 9.5, color: "rgba(14,14,14,0.72)", marginTop: 1, whiteSpace: "pre-wrap" }}>
+                        {it.specs}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {p.sectionNotes?.backline && (
+                <div style={{ marginTop: 5, fontSize: 9.5, color: "rgba(14,14,14,0.72)", fontStyle: "italic", whiteSpace: "pre-wrap" }}>
+                  {p.sectionNotes.backline}
+                </div>
+              )}
+            </Block>
+          </div>
+        );
+      case "aux":
+        return wrap(
+          <div key="aux" data-section-id={block.sectionId}>
+            <Block num="08" title="Auxiliary Equipment" sectionId={block.sectionId}>
+              {p.auxRows.filter(r => r.item).length === 0
+                ? <div style={{ fontSize: 10, fontStyle: "italic", color: "rgba(14,14,14,0.55)" }}>No auxiliary items specified</div>
+                : p.auxRows.filter(r => r.item).map(r => (
+                  <div key={r.id} style={{ fontSize: 10, marginBottom: 1 }}>
+                    {r.extras?.qty && <span style={{ fontWeight: 700 }}>{r.extras.qty}× </span>}
+                    {r.item}
+                    {r.supplier && <span style={{ color: "rgba(14,14,14,0.55)" }}> · {r.supplier}</span>}
+                    {r.notes && <span style={{ color: "rgba(14,14,14,0.55)", fontStyle: "italic" }}> — {r.notes}</span>}
+                  </div>
+                ))}
+              {p.sectionNotes?.aux && (
+                <div style={{ marginTop: 6, fontSize: 9.5, color: "rgba(14,14,14,0.72)", fontStyle: "italic", whiteSpace: "pre-wrap" }}>
+                  {p.sectionNotes.aux}
+                </div>
+              )}
+            </Block>
+          </div>
+        );
+      case "plot": {
+        // Source resolution: user picks which plot prints from the General Info /
+        // sidebar toggle. We also have sensible fallbacks — if the chosen source
+        // is empty, fall back to the other one if available.
+        const requested = p.general.stagePlotSource || "live";
+        const hasLive = (p.plotItems || []).length > 0;
+        const hasUpload = !!p.general.stagePlotUpload;
+        let mode = requested;
+        if (mode === "live" && !hasLive && hasUpload) mode = "upload";
+        else if (mode === "upload" && !hasUpload && hasLive) mode = "live";
+        const showLive = mode === "live" || mode === "both";
+        const showUpload = mode === "upload" || mode === "both";
+        const titleSuffix = showLive ? `Stage Plot (${p.plotSize.w}' × ${p.plotSize.d}')` : "Stage Plot";
+        return wrap(
+          <div key="plot" data-section-id={block.sectionId}>
+            <Block num="—" title={titleSuffix} sectionId={block.sectionId}>
+              {!hasLive && !hasUpload ? (
+                <div style={{ fontSize: 10, color: "rgba(14,14,14,0.42)", fontStyle: "italic" }}>
+                  No stage plot yet — drop equipment in the Stage Plot Builder, or upload an image in General Info → Images.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {showLive && hasLive && (
+                    <StagePlotPreview items={p.plotItems} size={p.plotSize}/>
+                  )}
+                  {showUpload && hasUpload && (
+                    <div>
+                      {showLive && hasLive && (
+                        <div style={{
+                          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                          fontSize: 8.5, letterSpacing: "0.16em", textTransform: "uppercase",
+                          color: "rgba(14,14,14,0.55)", marginBottom: 4, marginTop: 8,
+                        }}>Provided by venue / artist</div>
+                      )}
+                      <img src={p.general.stagePlotUpload} alt="Uploaded stage plot"
+                        style={{
+                          width: "100%", maxWidth: 720, display: "block",
+                          border: "1px solid rgba(14,14,14,0.18)",
+                        }}/>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Block>
+          </div>
+        );
+      }
+      case "notes":
+        return wrap(
+          <div key="notes" data-section-id={block.sectionId}>
+            <Block num="09" title="Final Notes" sectionId={block.sectionId}>
+              <div style={{
+                fontSize: 10, whiteSpace: "pre-wrap", color: "rgba(14,14,14,0.92)",
+                fontFamily: "'JetBrains Mono', ui-monospace, monospace", lineHeight: 1.5,
+              }}>
+                {p.general.notes || <span style={{ color: "rgba(14,14,14,0.42)", fontStyle: "italic" }}>No additional notes.</span>}
+              </div>
+            </Block>
+          </div>
+        );
+      case "footer":
+        return wrap(
+          <div key="footer" data-section-id={block.sectionId} style={{ marginTop: 12, paddingTop: 6, borderTop: `0.5px solid ${BRAND.black}`, display: "flex", justifyContent: "space-between" }}>
+            {/* Free tier carries the BB attribution in the closing footer.
+                Paid tier shows a neutral version stamp instead — clean PDF, no
+                product marketing anywhere. */}
+            <Mono style={{ fontSize: 7, color: "rgba(14,14,14,0.42)" }}>
+              {isPaid ? "RIDER · v1.0" : "MADE WITH BACKSTAGE BLUEPRINT"}
+            </Mono>
+            <Mono style={{ fontSize: 7, color: "rgba(14,14,14,0.42)" }}>{p.general.date}</Mono>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Page-break marker rendered at the bottom of each non-final page.
+  const PageBreak = ({ num }) => (
+    <div style={{
+      margin: "12px 0 0",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+    }}>
+      <div style={{ flex: 1, borderTop: "1px dashed rgba(212,100,30,0.5)" }}/>
+      <Mono style={{ fontSize: 8, color: BRAND.orange, letterSpacing: "0.18em" }}>
+        Page {num}
+      </Mono>
+      <div style={{ flex: 1, borderTop: "1px dashed rgba(212,100,30,0.5)" }}/>
+    </div>
+  );
+
+  // --- Measurement plumbing ---
+  // Wrapper around the entire preview + sizer. We measure its parent's
+  // clientWidth (the pane padding wrapper) to compute page dimensions.
+  const wrapRef = React.useRef(null);
+
+  // pageContentH = height of one US Letter page worth of content area
+  // (after subtracting the 16px top + 16px bottom internal padding).
+  const [pageContentH, setPageContentH] = React.useState(900);
+
+  // Refs for each block in the hidden sizer. Order matches blocks[].
+  // Using a stable array — only refs that successfully render get measured.
+  const blockRefs = React.useRef([]);
+  blockRefs.current = blocks.map((_, i) => blockRefs.current[i] || React.createRef());
+
+  // Re-measure page dimensions whenever the pane (parent) resizes.
+  React.useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const parent = el.parentElement;
+    if (!parent) return;
+    const recompute = () => {
+      const usableW = Math.max(0, parent.clientWidth - 24);
+      if (usableW <= 0) return;
+      const pageH = usableW * (11 / 8.5);
+      const next = Math.max(200, Math.round(pageH - 32));
+      setPageContentH(prev => (Math.abs(prev - next) > 1 ? next : prev));
+    };
+    recompute();
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(recompute);
+      ro.observe(parent);
+      return () => ro.disconnect();
+    } else {
+      window.addEventListener("resize", recompute);
+      return () => window.removeEventListener("resize", recompute);
+    }
+  }, []);
+
+  // Layout signature — every prop that affects rendered height.
+  const layoutSig = React.useMemo(() => JSON.stringify([
+    p.general, p.crew,
+    p.paMain, p.paSubs, p.paSpecs, p.paCoverage, p.paConfig,
+    p.foh, p.mon,
+    p.iemRows, p.wedgeRows, p.sideFillRows, p.subFillRows,
+    p.backlineItems, p.auxRows,
+    p.inputs, p.mixes,
+    p.plotItems, p.plotSize,
+    p.sectionNotes,
+  ]), [p]);
+
+  // Pages = array of PageEntry objects. Each entry is one of:
+  //   { kind: "blocks", blockIdxs: number[] }  — normal page
+  //   { kind: "continuation", parentIdx: number } — empty slot below an
+  //                                                 oversized block that
+  //                                                 visually overflows into
+  //                                                 this page.
+  // Cover always alone on page 1.
+  const [pages, setPages] = React.useState(() => [{ kind: "blocks", blockIdxs: [0] }]);
+
+  React.useLayoutEffect(() => {
+    // Build measured node list, skipping null blocks (e.g. introContinued
+    // with no text). For each non-null block we consult its ref's offsetHeight.
+    const measured = [];
+    blocks.forEach((b, i) => {
+      const ref = blockRefs.current[i];
+      const node = ref && ref.current;
+      if (!node) {
+        // Block didn't render (returned null) — skip it.
+        return;
+      }
+      measured.push({
+        idx: i,
+        block: b,
+        height: node.offsetHeight || 0,
+      });
+    });
+    if (measured.length === 0) {
+      setPages([{ kind: "blocks", blockIdxs: [0] }]);
+      return;
+    }
+
+    const result = [];
+    let curPage = [];
+    let curH = 0;
+
+    const finalize = () => {
+      if (curPage.length > 0) result.push({ kind: "blocks", blockIdxs: curPage });
+      curPage = [];
+      curH = 0;
+    };
+
+    for (let m = 0; m < measured.length; m++) {
+      const { idx, block, height } = measured[m];
+
+      // Cover always alone on page 1.
+      if (block.id === "cover") {
+        finalize();
+        result.push({ kind: "blocks", blockIdxs: [idx] });
+        continue;
+      }
+
+      // Forced page break before this block (if current page has content).
+      if (block.forcePageBefore && curPage.length > 0) {
+        finalize();
+      }
+
+      // If a single block exceeds the page, place it alone AND emit
+      // continuation page slots beneath it so the document has logical
+      // page boundaries (markers + min-height) for every printed page
+      // the oversized block spans.
+      if (height > pageContentH && curPage.length === 0) {
+        const safePCH = Math.max(1, pageContentH);
+        const pagesNeeded = Math.max(1, Math.ceil(height / safePCH));
+        result.push({ kind: "blocks", blockIdxs: [idx] });
+        for (let k = 1; k < pagesNeeded; k++) {
+          result.push({ kind: "continuation", parentIdx: idx });
+        }
+        curPage = [];
+        curH = 0;
+        continue;
+      }
+
+      // If adding would overflow and the page already has content, break.
+      if (curH + height > pageContentH && curPage.length > 0) {
+        finalize();
+      }
+
+      curPage.push(idx);
+      curH += height;
+    }
+    finalize();
+
+    // Compare against existing — only setState if changed (cheap deep-equal
+    // via JSON).
+    setPages(prev => {
+      const a = JSON.stringify(prev);
+      const b = JSON.stringify(result);
+      return a === b ? prev : result;
+    });
+  }, [layoutSig, pageContentH]);
+
+  // --- Render ---
+  // Visible pages render first (so querySelector finds them), then the hidden
+  // sizer. Each page wrapper is min-height pageContentH; oversized blocks
+  // (taller than one US Letter page) make their wrapper grow naturally and
+  // we emit "continuation" page slots after them so the document has the
+  // correct number of logical pages stacked below.
+  //
+  // Markers live in a separate absolutely-positioned overlay. Their positions
+  // are MEASURED from the actual rendered .rider-page divs (not fixed
+  // pageContentH multiples), so they always sit exactly where the natural-flow
+  // page breaks fall — even when an oversized content block makes its page
+  // wrapper grow past minHeight.
+  const totalLogicalPages = pages.length;
+  const pageRefs = React.useRef([]);
+  pageRefs.current = pages.map((_, i) => pageRefs.current[i] || React.createRef());
+  const [pageBottoms, setPageBottoms] = React.useState([]);
+  React.useLayoutEffect(() => {
+    if (!wrapRef.current) return;
+    const wrapTop = wrapRef.current.getBoundingClientRect().top;
+    const bottoms = pageRefs.current.map(r => {
+      if (!r.current) return null;
+      const rect = r.current.getBoundingClientRect();
+      return rect.bottom - wrapTop;
+    }).filter(v => v != null);
+    setPageBottoms(prev => {
+      if (prev.length !== bottoms.length) return bottoms;
+      for (let i = 0; i < bottoms.length; i++) {
+        if (Math.abs((prev[i] || 0) - bottoms[i]) > 0.5) return bottoms;
+      }
+      return prev;
+    });
+  });
+  return (
+    <div ref={wrapRef} className="rider-preview-doc" style={{
+      backgroundColor: BRAND.bone,
+      color: BRAND.black,
+      fontFamily: "'Inter', system-ui, sans-serif",
+      fontSize: 9.5,
+      lineHeight: 1.35,
+      width: "100%",
+      boxSizing: "border-box",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+      position: "relative",
+    }}>
+      {/* Print stylesheet — page-break markers are workspace UI, never print */}
+      <style>{`@media print { .rider-page-marker { display: none !important; } }`}</style>
+
+      {/* Visible paginated document — natural flow, no inline markers */}
+      {pages.map((page, pageNum) => {
+        if (page.kind === "continuation") {
+          // Empty placeholder — the parent oversized block from a previous
+          // page slot already overflows visually into this space. We still
+          // need the slot to exist so the next page-break-after kicks in
+          // and so the print stylesheet sees the right number of pages.
+          return (
+            <div key={`page-${pageNum}`} ref={pageRefs.current[pageNum]} className="rider-page rider-page-continuation" style={{
+              minHeight: pageContentH,
+              padding: 16,
+              boxSizing: "border-box",
+              display: "flex",
+              flexDirection: "column",
+              pageBreakAfter: "always",
+            }}>
+              <div style={{ flex: 1 }} />
+            </div>
+          );
+        }
+        const blockIdxs = page.blockIdxs;
+        // The cover block has its own flex:1 fill behavior and absolute-positioned
+        // eyebrow/footer. It needs the full page wrapper to itself with no padding
+        // and no trailing spacer (the trailing spacer would compete with cover's
+        // own flex:1 and push the cover container into half the page).
+        const isCoverPage = blockIdxs.length === 1 && blocks[blockIdxs[0]].id === "cover";
+        return (
+          <div key={`page-${pageNum}`} ref={pageRefs.current[pageNum]} className={cls("rider-page", isCoverPage && "rider-page-cover")} style={{
+            minHeight: pageContentH,
+            padding: isCoverPage ? 0 : 16,
+            boxSizing: "border-box",
+            display: "flex",
+            flexDirection: "column",
+            pageBreakAfter: "always",
+          }}>
+            {blockIdxs.map(i => (
+              <React.Fragment key={blocks[i].id}>
+                {renderBlock(blocks[i])}
+              </React.Fragment>
+            ))}
+            {!isCoverPage && <div style={{ flex: 1 }} />}
+            {/* Per-page footer mark.
+                - Free tier: discreet "MADE WITH BACKSTAGE BLUEPRINT" line —
+                  a soft marketing footprint on every printed rider.
+                - Paid tier with brand logo: shows the artist's logo as a
+                  small bottom-corner mark — "your rider, your brand".
+                - Paid tier without a logo: nothing (clean rider).
+                Cover page skipped in all cases to keep the cover clean. */}
+            {!isCoverPage && !isPaid && (
+              <div style={{
+                paddingTop: 4,
+                borderTop: "0.25px solid rgba(14,14,14,0.18)",
+                display: "flex", justifyContent: "center",
+              }}>
+                <Mono style={{ fontSize: 6.5, color: "rgba(14,14,14,0.38)", letterSpacing: "0.18em" }}>
+                  MADE WITH BACKSTAGE BLUEPRINT
+                </Mono>
+              </div>
+            )}
+            {!isCoverPage && isPaid && p.general.brandLogo && (
+              <div style={{
+                paddingTop: 4,
+                borderTop: "0.25px solid rgba(14,14,14,0.18)",
+                display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6,
+              }}>
+                <img src={p.general.brandLogo} alt=""
+                  style={{ height: 14, maxWidth: 80, objectFit: "contain", opacity: 0.85 }}/>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Page-boundary markers — positioned at the MEASURED bottom of each
+          .rider-page div (one marker per break between pages). This keeps the
+          indicator visually aligned with where the actual page break will
+          occur in print, even when content blocks vary in height. */}
+      {pages.length > 1 && pageBottoms.slice(0, pageBottoms.length - 1).map((bottom, i) => (
+        <div key={`marker-${i}`} className="rider-page-marker"
+          style={{
+            position: "absolute",
+            top: bottom,
+            left: 16, right: 16,
+            pointerEvents: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            transform: "translateY(-50%)",
+          }}>
+          <div style={{ flex: 1, borderTop: "2px dashed rgba(14,14,14,0.40)" }}/>
+          <Mono style={{
+            fontSize: 11,
+            color: "rgba(14,14,14,0.55)",
+            letterSpacing: "0.20em",
+            fontWeight: 700,
+            backgroundColor: BRAND.bone,
+            padding: "2px 10px",
+          }}>
+            Page {i + 2}
+          </Mono>
+          <div style={{ flex: 1, borderTop: "2px dashed rgba(14,14,14,0.40)" }}/>
+        </div>
+      ))}
+
+      {/* Hidden sizer — measures every block's offsetHeight so pagination can
+          decide what fits on each page. data-sizer prevents querySelector
+          collisions with the visible copy. */}
+      <div aria-hidden="true" style={{
+        position: "absolute",
+        visibility: "hidden",
+        pointerEvents: "none",
+        zIndex: -1,
+        left: 0,
+        top: 0,
+        width: "100%",
+        padding: 16,
+        boxSizing: "border-box",
+      }}>
+        {blocks.map((b, i) => (
+          <React.Fragment key={`sizer-${b.id}`}>
+            {renderBlock(b, { ref: blockRefs.current[i], dataSizer: true })}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
