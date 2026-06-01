@@ -17,20 +17,25 @@
   status = 200
   force = true
 
-# /toolkit (no trailing slash) → /toolkit/ (with slash).
-# Without this, Netlify's pretty-URL behavior strips the slash off /toolkit/
-# and matches toolkit.html (the sales page) instead of /toolkit/index.html
-# (the React app). The force = true makes this redirect win over the
-# pretty-URL extension lookup.
+# /toolkit (no trailing slash) — REWRITE (not redirect) to the React app's
+# index.html. Without `force = true` Netlify's pretty-URL behavior strips
+# the slash off /toolkit/ and matches toolkit.html (the sales page) first.
+# Using status 200 (rewrite) instead of 301 (redirect) avoids redirect loops.
 [[redirects]]
   from = "/toolkit"
-  to = "/toolkit/"
-  status = 301
+  to = "/toolkit/index.html"
+  status = 200
   force = true
 
-# SPA fallback for /toolkit/* — any client-side route inside the React app
-# falls back to the app's index.html. Real assets (JS/CSS/images) still win
-# because this rule is non-forced (status = 200 only, no force).
+# /toolkit/ (with trailing slash) — same rewrite.
+[[redirects]]
+  from = "/toolkit/"
+  to = "/toolkit/index.html"
+  status = 200
+  force = true
+
+# SPA fallback for everything under /toolkit/* — non-forced so real assets
+# (JS bundle, CSS, icon images) win when they exist on disk.
 [[redirects]]
   from = "/toolkit/*"
   to = "/toolkit/index.html"
