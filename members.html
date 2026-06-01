@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backstage Blueprint // Member Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Teko:wght@400;700&family=Permanent+Marker&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --navy: #1B3D6E;
+    --navy-deep: #0A1828;
+    --cream: #F2EBDD;
+    --orange: #D85A1F;
+    --glow-rgb: 255, 220, 150;
+  }
+
+  body {
+    background: #0A1828;
+    color: var(--cream);
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* =========================================================
+     STAGE — bright navy room, "MEMBER HUB" monitor center,
+     mixer right, course/binder left, laminate badge right-center.
+     Same-canvas (4000x2250) layered PNG architecture.
+     ========================================================= */
+  .member-stage {
+    position: relative;
+    width: min(98vw, calc(98vh * 16/9));
+    aspect-ratio: 16 / 9;
+    max-width: 100vw;
+  }
+  .member-stage img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .member-bg { z-index: 1; }
+
+  /* Cover the awkward blue LED screen at the top center of the BG with a
+     dark gradient that blends down into the room. Sits above the BG but
+     below the items so it just paints over the offending pixels. */
+  .member-stage::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 18%;
+    z-index: 1;
+    background: linear-gradient(to bottom,
+      rgba(8, 18, 36, 1)    0%,
+      rgba(12, 28, 56, 0.95) 45%,
+      rgba(14, 38, 71, 0.55) 75%,
+      rgba(14, 38, 71, 0)   100%);
+    pointer-events: none;
+  }
+
+  /* Item z-indexes reflect depth on the desk */
+  .item-mixer    { z-index: 3; }
+  .item-course   { z-index: 3; }
+  .item-toolkit  { z-index: 3; }
+  .item-keyboard { z-index: 4; }
+  .item-binder   { z-index: 4; }
+  .item-laminate { z-index: 5; }
+
+  /* =========================================================
+     ENTRANCE — when arriving from Pass scene, the laminate
+     drops in from above and settles onto the desk. Bg + other
+     items fade in. JS adds .entering-from-pass to <body> based
+     on a sessionStorage flag set by the Pass scene click handler.
+     ========================================================= */
+  body.entering-from-pass .member-bg,
+  body.entering-from-pass .item-mixer,
+  body.entering-from-pass .item-course,
+  body.entering-from-pass .item-toolkit,
+  body.entering-from-pass .item-binder,
+  body.entering-from-pass .item-keyboard {
+    opacity: 0;
+    animation: bg-fade-in 700ms ease-out 600ms forwards;
+  }
+  body.entering-from-pass .item-laminate {
+    transform: translateY(-115%) rotate(-9deg);
+    opacity: 0;
+    animation: laminate-drop-in 1200ms cubic-bezier(0.34, 1.56, 0.64, 1) 280ms forwards;
+  }
+  body.entering-from-pass .member-stage::before { opacity: 0; animation: bg-fade-in 700ms ease-out 700ms forwards; }
+  /* Monitor screen comes in LAST — fades up after the scene has settled.
+     1500ms delay so the room/items appear first, then the screen wakes up. */
+  body.entering-from-pass .monitor-screen {
+    opacity: 0;
+    animation: bg-fade-in 700ms ease-out 1500ms forwards;
+  }
+  @keyframes bg-fade-in {
+    to { opacity: 1; }
+  }
+  @keyframes laminate-drop-in {
+    0%   { transform: translateY(-115%) rotate(-9deg); opacity: 0; }
+    25%  { opacity: 1; }
+    65%  { transform: translateY(2%)    rotate(3deg);  opacity: 1; }
+    80%  { transform: translateY(-1%)   rotate(-1.5deg); }
+    100% { transform: translateY(0%)    rotate(0deg);  opacity: 1; }
+  }
+
+  .member-item {
+    transition: transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+                filter    300ms ease-out;
+    transform-origin: center bottom;
+  }
+
+  /* =========================================================
+     INTERACTIVE HOTSPOTS — NEW DESK_5-31 layout (canvas % from alpha bboxes)
+       course   : 15-35 x 54-77  (LEFT, on top of binder stack)
+       binder   : 7-25  x 77-99  (BOTTOM-LEFT, under course)
+       keyboard : 39-61 x 69-80  (center-bottom, under monitor)
+       laminate : 29-41 x 81-96  (center-bottom, beside keyboard / left of it)
+       mixer    : 63-83 x 55-80  (right of monitor, moved up)
+       toolkit  : 70-94 x 80-100 (BOTTOM-RIGHT — new item, drafting paper + tools)
+     ========================================================= */
+  .item-hot {
+    position: absolute;
+    z-index: 10;
+    display: block;
+    cursor: pointer;
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+  .hot-course   { left: 15%; top: 54%; width: 21%; height: 23%; }
+  .hot-binder   { left: 7%;  top: 77%; width: 19%; height: 22%; }
+  .hot-keyboard { left: 39%; top: 69%; width: 22%; height: 11%; }
+  .hot-laminate { left: 29%; top: 81%; width: 12%; height: 15%; }
+  .hot-mixer    { left: 63%; top: 55%; width: 20%; height: 26%; }
+  .hot-toolkit  { left: 70%; top: 80%; width: 24%; height: 20%; }
+
+  /* =========================================================
+     HOVER RESPONSES — distinct per item
+     ========================================================= */
+  /* Hover responses are class-based (driven by JS on stage), since the items
+     come BEFORE the hotspots in DOM and `:hover ~` only matches subsequent
+     siblings. JS adds .hov-<item> to the stage on mouseenter, removes on
+     mouseleave. */
+  /* Mixer — lifts AND lights up, faux LED bloom */
+  .member-stage.hov-mixer .item-mixer {
+    transform: translateY(-22px) scale(1.025);
+    filter: brightness(1.22) saturate(1.18)
+            drop-shadow(0 22px 30px rgba(0, 0, 0, 0.55))
+            drop-shadow(0 0 32px rgba(216, 90, 31, 0.55))
+            drop-shadow(0 0 60px rgba(120, 180, 255, 0.25));
+  }
+  /* Course — lifts off the binder */
+  .member-stage.hov-course .item-course {
+    transform: translateY(-28px) translateX(6px) scale(1.04);
+    filter: drop-shadow(0 26px 32px rgba(0, 0, 0, 0.6))
+            drop-shadow(0 0 18px rgba(216, 90, 31, 0.18));
+  }
+  /* Binder — heavier, smaller lift */
+  .member-stage.hov-binder .item-binder {
+    transform: translateY(-18px) scale(1.03);
+    filter: drop-shadow(0 20px 28px rgba(0, 0, 0, 0.6));
+  }
+  /* Keyboard — keys glow cool blue + slight lift */
+  .member-stage.hov-keyboard .item-keyboard {
+    transform: translateY(-10px) scale(1.025);
+    filter: brightness(1.22)
+            drop-shadow(0 14px 22px rgba(0, 0, 0, 0.5))
+            drop-shadow(0 0 22px rgba(120, 200, 255, 0.55))
+            drop-shadow(0 0 40px rgba(120, 200, 255, 0.28));
+  }
+  /* Toolkit — drafting paper + tools, slight lift with cool blue accent */
+  .member-stage.hov-toolkit .item-toolkit {
+    transform: translateY(-18px) translateX(-6px) scale(1.04);
+    filter: drop-shadow(0 22px 30px rgba(0, 0, 0, 0.6))
+            drop-shadow(0 0 18px rgba(120, 200, 255, 0.32));
+  }
+  /* Laminate — subtle straight-up lift, no rotate (was drifting sideways) */
+  .member-stage.hov-laminate .item-laminate {
+    transform: translateY(-14px) scale(1.04);
+    filter: drop-shadow(0 22px 28px rgba(0, 0, 0, 0.55))
+            drop-shadow(0 0 16px rgba(216, 90, 31, 0.25));
+  }
+
+  /* =========================================================
+     STICKY NOTE — single central sticky, slides up from below the
+     keyboard. Updated via JS based on which item is hovered.
+     Matches the Production Office pattern.
+     ========================================================= */
+  .sticky {
+    position: absolute;
+    /* z-index BELOW the monitor — sticky starts hidden behind it and
+       rises up; the bottom edge stays tucked behind the monitor's top
+       edge, giving a "rising from behind the monitor" feel. */
+    z-index: 1;
+    /* Final resting position: just above the monitor's top edge */
+    left: 50%;
+    top: 11%;
+    /* Start state — slid down behind the monitor + invisible */
+    transform: translate(-50%, 70px) rotate(-1.5deg);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 260ms ease, transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: #0A1828;
+    background: #F2EBDD;
+    padding: 24px 44px 22px;
+    text-transform: uppercase;
+    text-align: center;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6),
+                0 1px 0 rgba(255, 255, 255, 0.12) inset;
+    white-space: nowrap;
+    line-height: 1.5;
+    min-width: 440px;
+  }
+  .sticky b { color: var(--orange); font-weight: 800; letter-spacing: 0.28em; }
+  .sticky::before {
+    /* Tape strip across the top — also scaled up */
+    content: "";
+    position: absolute;
+    left: 50%; top: -18px;
+    transform: translateX(-50%) rotate(-3deg);
+    width: 100px; height: 28px;
+    background: rgba(216, 90, 31, 0.7);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  .sticky.visible {
+    opacity: 1;
+    transform: translate(-50%, 0) rotate(-1.5deg);
+  }
+
+  /* =========================================================
+     LATCH STATE — first click. Dim scene, item glows + breathes.
+     ========================================================= */
+  .member-dim {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    background: rgba(0, 0, 0, 0.66);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 380ms ease;
+  }
+  .member-stage.has-latched .member-dim { opacity: 1; pointer-events: auto; }
+  .member-stage.has-latched .item-latched {
+    z-index: 9;
+    animation: latched-breathe 2.6s ease-in-out infinite;
+  }
+  .member-stage.has-latched .item-hot.is-latched { z-index: 11; }
+  /* =========================================================
+     MONITOR SCREEN — always-on display surface on the desk monitor PNG.
+     Lives INSIDE the stage so it scales 1:1 with the room (no more zoom
+     drift like the floating sticky had). Takes over the sticky-note role:
+     - WELCOME state (default): BB stamp + MEMBER HUB + member name
+     - INFO state (hover):    item label + detail (same content map as old sticky)
+     - INFO state (latched):  >> ACTION + // CLICK TO CONFIRM
+     Search panel sits on top of this when keyboard is clicked.
+     Bbox matches the monitor's visible SCREEN area (same as search overlay).
+     ========================================================= */
+  .monitor-screen {
+    position: absolute;
+    left: 36.4%;
+    top: 27.9%;
+    width: 27.2%;
+    height: 29%;              /* trimmed a hair off the bottom */
+    /* PERSPECTIVE TILT — top stays anchored, bottom recedes back so the
+       screen's bottom edge appears narrower than the top, matching the
+       trapezoidal bezel shape in the BG image. */
+    transform-origin: 50% 0%;
+    transform: perspective(1100px) rotateX(-4deg);
+    z-index: 14;
+    pointer-events: none;
+    overflow: hidden;
+    /* Flat overlay (no tilt). The 3D perspective was making the bottom
+       recede in a way that competed with the fixed-canvas scaling. */
+    /* Matches the experience boot splash — blueprint grid on navy with
+       two scales of cyan gridlines for depth. */
+    background-color: #0A1828;
+    background-image:
+      linear-gradient(rgba(140, 175, 230, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(140, 175, 230, 0.08) 1px, transparent 1px),
+      linear-gradient(rgba(140, 175, 230, 0.14) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(140, 175, 230, 0.14) 1px, transparent 1px);
+    background-size: 4cqi 4cqi, 4cqi 4cqi, 16cqi 16cqi, 16cqi 16cqi;
+    box-shadow:
+      inset 0 0 18px rgba(0, 0, 0, 0.55),
+      inset 0 0 0 1px rgba(120, 180, 255, 0.10);
+    color: var(--cream);
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    padding: 6% 8%;
+    transition: opacity 220ms ease;
+    /* Make this a SIZE container so all inner sizes can be expressed as
+       cqh / cqi (percentages of THIS box). That way the text scales locked
+       to the monitor screen — never drifts when the window resizes. */
+    container-type: size;
+    container-name: monitorscreen;
+  }
+  /* Subtle CRT scanlines */
+  .monitor-screen::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.18) 0px,
+      rgba(0, 0, 0, 0.18) 1px,
+      transparent 1px,
+      transparent 3px);
+    pointer-events: none;
+    opacity: 0.55;
+  }
+  /* Faint phosphor glow on the monitor screen itself — sells "screen is on".
+     (Old .item-monitor img is gone; monitor is baked into the bg PNG now.) */
+  .monitor-screen {
+    box-shadow:
+      inset 0 0 18px rgba(0, 0, 0, 0.55),
+      inset 0 0 0 1px rgba(120, 180, 255, 0.10),
+      0 0 14px rgba(120, 180, 255, 0.20);
+  }
+  /* Search active: monitor-screen content fades behind so the search panel takes over */
+  .member-stage.searching .monitor-screen { opacity: 0; }
+
+  /* =========================================================
+     ONE master font-size on the monitor screen (scales with the
+     container's width via cqi, clamped for legibility). All children
+     size themselves in em — relative to this master — so everything
+     scales together as a single locked unit. No JS, no drift.
+     ========================================================= */
+  .monitor-screen {
+    /* ONE master size — pure container-relative, no px bounds. Every child
+       scales from this number. Browser zoom scales the whole container
+       uniformly, so this grows/shrinks with it and ALL children follow. */
+    font-size: 2.6cqi;
+    text-align: center;
+  }
+
+  /* WELCOME — persistent header (logo + member info + status). Stays visible
+     at ALL times, even when hovering items. Hover info populates in the open
+     area below it instead of replacing the header. */
+  .screen-welcome {
+    position: absolute !important;
+    inset: 0 !important;
+    text-align: center;
+    opacity: 1;                  /* always visible — header role */
+    display: block !important;
+    padding: 0 !important;
+  }
+  /* Hover info sits in the open area below the header, pulled up close */
+  .screen-info {
+    position: absolute !important;
+    top: 25%;
+    left: 0; right: 0; bottom: 0;
+    text-align: center;
+    transition: opacity 200ms ease;
+    opacity: 0;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5em 1em !important;
+    gap: 0.4em;
+  }
+  .monitor-screen.showing-info .screen-info { opacity: 1; }
+
+  /* Logo at the top — width is em-based (relative to master font) so it
+     scales LOCKED with everything else. margin auto + display block to
+     force horizontal centering inside the flex column. */
+  /* Logo absolutely positioned at TOP of welcome panel — guaranteed never
+     to drift into the body text below. */
+  .screen-logo {
+    position: absolute !important;
+    top: 0.3em !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 4em !important;        /* shrunk further */
+    max-width: 34% !important;
+    height: auto !important;
+    pointer-events: none;
+    user-select: none;
+  }
+  /* LEFT block — // MEMBER HUB + GIBBY */
+  .screen-greet {
+    position: absolute;
+    top: 1.1em;
+    left: 1em;
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    font-size: 0.16em;
+    letter-spacing: 0.32em;
+    color: rgba(242, 235, 221, 0.82);
+    text-transform: uppercase;
+    line-height: 1;
+    margin: 0;
+    text-align: left;
+  }
+  .screen-name {
+    position: absolute;
+    top: 1.4em;
+    left: 1em;
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 0.32em;
+    letter-spacing: 0.06em;
+    color: var(--orange);
+    line-height: 1;
+    margin: 0;
+    text-align: left;
+  }
+  /* RIGHT block — // STATUS + ALL ACCESS.
+     Wrapper hugs the wider child (ALL ACCESS) and is right-anchored. Both
+     children are left-aligned inside the wrapper, so // STATUS starts at the
+     LEFT edge of ALL ACCESS (matching how the slashes sit above the G of
+     GIBBY on the left side). */
+  .screen-status-block {
+    position: absolute;
+    top: 0.25em;      /* nudged down a hair from 0.1em */
+    right: 0.2em;     /* further into the corner */
+    text-align: left;
+  }
+  .screen-status {
+    display: block;
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    font-size: 0.16em;
+    letter-spacing: 0.32em;
+    color: rgba(242, 235, 221, 0.82);
+    text-transform: uppercase;
+    line-height: 1;
+    margin: 0 0 0.5em 0;
+  }
+  .screen-status-val {
+    display: block;
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 0.32em;
+    letter-spacing: 0.06em;
+    color: var(--orange);
+    line-height: 1;
+    margin: 0;
+  }
+  .screen-info-label {
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    font-size: 0.5em;
+    letter-spacing: 0.22em;
+    color: var(--cream);
+    text-transform: uppercase;
+    line-height: 1.2;
+    margin: 0 auto;
+  }
+  .screen-info-label b { color: var(--orange); font-weight: 700; }
+  .screen-info-detail {
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    font-size: 0.38em;
+    letter-spacing: 0.18em;
+    color: rgba(242, 235, 221, 0.78);
+    text-transform: uppercase;
+    line-height: 1.5;
+    margin: 0 auto;
+  }
+
+  /* Obsolete wrappers — no longer rendered */
+  .screen-logo-box, .screen-cue, .screen-stage { display: contents; }
+
+  /* =========================================================
+     SEARCH OVERLAY — appears over the monitor when keyboard is clicked.
+     Rider Builder aesthetic: dark navy panel, orange accents, mono type.
+     ========================================================= */
+  .search-overlay {
+    position: absolute;
+    /* Matches the new NEW DESK_5-31 monitor screen bbox so the search panel
+       fills the bezel exactly. */
+    left: 36.4%;
+    top: 27.9%;
+    width: 27.2%;
+    height: 29%;
+    z-index: 15;
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.96);
+    transition: opacity 240ms ease, transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+  }
+  .member-stage.searching .search-overlay {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1);
+  }
+  /* (item-monitor removed — monitor is now part of the BG PNG. Wake-up
+     brightness is no longer needed since the BG doesn't move.) */
+  .search-panel {
+    flex: 1;
+    background: rgba(8, 16, 30, 0.96);
+    border: 1px solid rgba(216, 90, 31, 0.45);
+    padding: 14px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-family: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
+    color: var(--cream);
+    box-shadow: 0 0 32px rgba(0, 0, 0, 0.6),
+                inset 0 0 0 1px rgba(120, 180, 255, 0.06);
+  }
+  .search-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(242, 235, 221, 0.85);
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(216, 90, 31, 0.25);
+  }
+  .search-prompt { color: var(--orange); font-weight: 700; }
+  .search-tag { flex: 1; color: rgba(242, 235, 221, 0.55); font-size: 9px; }
+  .search-close {
+    background: transparent;
+    border: 1px solid rgba(242, 235, 221, 0.35);
+    color: rgba(242, 235, 221, 0.7);
+    font-family: inherit;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    padding: 3px 7px;
+    cursor: pointer;
+    transition: border-color 180ms, color 180ms;
+  }
+  .search-close:hover { border-color: var(--orange); color: var(--orange); }
+  .search-input {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(120, 180, 255, 0.25);
+    color: var(--cream);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    padding: 10px 12px;
+    outline: none;
+    caret-color: var(--orange);
+    transition: border-color 200ms, box-shadow 200ms;
+  }
+  .search-input::placeholder { color: rgba(242, 235, 221, 0.32); letter-spacing: 0.18em; font-size: 11px; }
+  .search-input:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 1px rgba(216, 90, 31, 0.35),
+                0 0 18px rgba(216, 90, 31, 0.2);
+  }
+  .search-results {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: rgba(242, 235, 221, 0.7);
+  }
+  .search-hint {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: rgba(242, 235, 221, 0.4);
+    text-transform: uppercase;
+    padding: 4px 0;
+  }
+  .search-result-item {
+    display: flex;
+    gap: 10px;
+    padding: 8px 6px;
+    border-bottom: 1px solid rgba(242, 235, 221, 0.08);
+    cursor: pointer;
+    transition: background 160ms, color 160ms;
+  }
+  .search-result-item:hover { background: rgba(216, 90, 31, 0.12); color: var(--cream); }
+  .search-result-item .where {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--orange);
+    text-transform: uppercase;
+    min-width: 70px;
+    padding-top: 2px;
+  }
+  .search-result-item .what { flex: 1; }
+
+  /* When latched, the sticky moves FORWARD (above the dim) so the CONFIRM
+     prompt stays bright and readable while the rest of the scene goes dark. */
+  .member-stage.has-latched .sticky {
+    z-index: 20;
+    opacity: 1;
+    transform: translate(-50%, 0) rotate(-1.5deg) scale(1.04);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.75),
+                0 0 32px rgba(var(--glow-rgb), 0.25),
+                0 1px 0 rgba(255, 255, 255, 0.12) inset;
+  }
+
+  @keyframes latched-breathe {
+    0%, 100% {
+      filter: brightness(1.10)
+              drop-shadow(0 0 24px rgba(var(--glow-rgb), 0.55))
+              drop-shadow(0 0 56px rgba(var(--glow-rgb), 0.28));
+    }
+    50% {
+      filter: brightness(1.22)
+              drop-shadow(0 0 38px rgba(var(--glow-rgb), 0.8))
+              drop-shadow(0 0 72px rgba(var(--glow-rgb), 0.45));
+    }
+  }
+
+  /* =========================================================
+     INSPECT MODE — HUD-in-the-room style.
+     Focus shifts: non-inspected items blur + dim, the inspected
+     item scales up and translates toward center, HUD overlays
+     fade in around it. Room stays visible (you're still here).
+     ========================================================= */
+
+  /* When inspecting LAMINATE: blur the entire room (including the small
+     canvas laminate — the hi-res close-up image in the HUD takes its place
+     as the focal point). */
+  body.inspecting-laminate .member-bg,
+  body.inspecting-laminate .item-mixer,
+  body.inspecting-laminate .item-course,
+  body.inspecting-laminate .item-toolkit,
+  body.inspecting-laminate .item-binder,
+  body.inspecting-laminate .item-keyboard,
+  body.inspecting-laminate .item-laminate,
+  body.inspecting-laminate .monitor-screen,
+  body.inspecting-mixer    .member-bg,
+  body.inspecting-mixer    .item-laminate,
+  body.inspecting-mixer    .item-course,
+  body.inspecting-mixer    .item-toolkit,
+  body.inspecting-mixer    .item-binder,
+  body.inspecting-mixer    .item-keyboard,
+  body.inspecting-mixer    .monitor-screen {
+    filter: blur(7px) brightness(0.4) saturate(0.6);
+    transition: filter 480ms ease-out;
+  }
+  /* The cover gradient at the top also blurs so the doorway area stays clean */
+  body.inspecting-laminate .member-stage::before,
+  body.inspecting-mixer    .member-stage::before { filter: blur(7px); }
+  /* Hotspots are disabled during inspect — clicks go to HUD instead */
+  body.inspecting-laminate .item-hot,
+  body.inspecting-mixer    .item-hot { pointer-events: none; }
+  /* Sticky hides during inspect */
+  body.inspecting-laminate .sticky,
+  body.inspecting-mixer    .sticky { opacity: 0 !important; transition: opacity 200ms ease; }
+
+  /* During mixer inspect the room mixer fades into the background — the
+     digital dashboard panel IS the inspect surface. */
+  body.inspecting-mixer .item-mixer {
+    filter: blur(7px) brightness(0.4) saturate(0.6);
+    transition: filter 480ms ease-out;
+  }
+
+  /* =========================================================
+     HUD overlay — viewport-fixed elements that appear during inspect
+     ========================================================= */
+  .hud-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    pointer-events: none;
+    display: none;
+  }
+  body.is-inspecting .hud-overlay { display: block; }
+
+  .hud-content {
+    display: none;
+    pointer-events: none;
+  }
+  body.inspecting-laminate .hud-laminate { display: block; }
+  body.inspecting-mixer    .hud-mixer    { display: block; }
+
+  .hud-header {
+    position: absolute;
+    top: 5vh;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.4em;
+    color: rgba(216, 90, 31, 0.95);
+    text-transform: uppercase;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    animation: hud-fade-in 460ms ease-out 200ms forwards;
+  }
+
+  /* Perspective container — gives the hud overlay 3D depth for the credential
+     parallax. Without this, rotateX/Y on the image is flat. */
+  .hud-overlay { perspective: 1400px; perspective-origin: 50% 35%; }
+
+  /* Hi-res credential close-up — rises into upper-center, then mouse-parallax
+     takes over once the entrance animation completes. JS reads --rx/--ry from
+     mousemove and applies them via the transform below. */
+  .hud-laminate-image {
+    position: absolute;
+    top: 11vh;
+    left: 50%;
+    height: 46vh;
+    width: auto;
+    max-width: 88vw;
+    --rx: 0deg;
+    --ry: 0deg;
+    transform: translateX(-50%) translateY(40px) scale(0.85)
+               rotateX(var(--rx)) rotateY(var(--ry));
+    opacity: 0;
+    pointer-events: none;
+    filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.75))
+            drop-shadow(0 0 32px rgba(216, 90, 31, 0.32));
+    transform-style: preserve-3d;
+    animation: cred-rise 720ms cubic-bezier(0.22, 1, 0.36, 1) 80ms forwards;
+    /* After the entrance animation, transform-driven parallax takes over.
+       The transition below smooths cursor-driven tilt changes. */
+    transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* Once entrance is done, .settled is added; mouse parallax becomes active */
+  .hud-laminate-image.settled {
+    animation: none;
+    transform: translateX(-50%) rotateX(var(--rx)) rotateY(var(--ry));
+    opacity: 1;
+  }
+  @keyframes cred-rise {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(50px) scale(0.78) rotateX(0) rotateY(0); }
+    100% { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1)    rotateX(0) rotateY(0); }
+  }
+
+  /* Laminate-specific HUD readouts: below the credential image */
+  .hud-laminate-info {
+    position: absolute;
+    bottom: 22vh;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    color: var(--cream);
+    opacity: 0;
+    animation: hud-fade-in 500ms ease-out 450ms forwards;
+  }
+  .hud-name {
+    font-family: 'Teko', sans-serif;
+    font-size: 64px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    line-height: 1;
+  }
+  .hud-sub {
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: rgba(242, 235, 221, 0.7);
+    margin-top: 6px;
+  }
+  .hud-rows {
+    position: absolute;
+    bottom: 12vh;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 48px;
+    font-family: 'SF Mono', monospace;
+    color: var(--cream);
+    opacity: 0;
+    animation: hud-fade-in 500ms ease-out 500ms forwards;
+  }
+  .hud-row { text-align: center; }
+  .hud-row .label { font-size: 9px; letter-spacing: 0.3em; opacity: 0.5; text-transform: uppercase; margin-bottom: 4px; }
+  .hud-row .value { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; }
+
+  .hud-actions {
+    position: absolute;
+    bottom: 4vh;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    opacity: 0;
+    pointer-events: auto;
+    animation: hud-fade-in 500ms ease-out 700ms forwards;
+  }
+  .hud-btn {
+    padding: 12px 22px;
+    background: rgba(10, 24, 40, 0.85);
+    border: 1px solid rgba(242, 235, 221, 0.4);
+    color: var(--cream);
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+  }
+  .hud-btn:hover { background: var(--orange); border-color: var(--orange); }
+
+  /* =========================================================
+     MIXER DASHBOARD V2 — full console UI shown during inspect
+     Central LCD + 4 channel strips (Course / Toolkit / Binder /
+     Membership) + secondary display + power LED.
+     ========================================================= */
+  .hud-mixer .console {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(92vw, 1100px);
+    height: min(78vh, 620px);
+    pointer-events: auto;
+    background:
+      linear-gradient(180deg, #1a1a1c 0%, #131316 50%, #0d0d10 100%);
+    border: 1px solid rgba(242, 235, 221, 0.14);
+    border-radius: 6px;
+    box-shadow:
+      0 40px 100px rgba(0, 0, 0, 0.85),
+      0 0 0 1px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    display: grid;
+    grid-template-rows: 56px 1fr;
+    overflow: hidden;
+    opacity: 0;
+    animation: hud-fade-in 480ms ease-out 280ms forwards;
+  }
+
+  /* corner brackets — engineering blueprint flavor */
+  .hud-mixer .console::before,
+  .hud-mixer .console::after {
+    content: ""; position: absolute; width: 14px; height: 14px;
+    border: 1.5px solid var(--orange); opacity: 0.75;
+  }
+  .hud-mixer .console::before { top: 8px; left: 8px; border-right: 0; border-bottom: 0; }
+  .hud-mixer .console::after  { bottom: 8px; right: 8px; border-left: 0; border-top: 0; }
+
+  /* TOP BAR — power LED, board name, runtime, close */
+  .mx-topbar {
+    display: flex; align-items: center; gap: 18px;
+    padding: 0 22px;
+    background: linear-gradient(180deg, #18181b, #101013);
+    border-bottom: 1px solid rgba(242, 235, 221, 0.10);
+  }
+  .mx-power {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #2ec46b;
+    box-shadow: 0 0 8px #2ec46b, 0 0 14px rgba(46, 196, 107, 0.5);
+    animation: mx-power-pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes mx-power-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.55; }
+  }
+  .mx-label {
+    font-family: 'SF Mono', monospace; font-size: 10px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: rgba(242, 235, 221, 0.65);
+  }
+  .mx-label b { color: var(--cream); font-weight: 700; }
+  .mx-divider {
+    width: 1px; height: 18px; background: rgba(242, 235, 221, 0.12);
+  }
+  .mx-runtime {
+    font-family: 'SF Mono', monospace; font-size: 10px;
+    letter-spacing: 0.18em; color: var(--orange);
+    margin-left: auto;
+  }
+  .mx-close {
+    margin-left: 18px; width: 26px; height: 26px;
+    background: transparent; border: 1px solid rgba(242, 235, 221, 0.18);
+    color: rgba(242, 235, 221, 0.6); cursor: pointer;
+    font-family: 'SF Mono', monospace; font-size: 13px; line-height: 1;
+    transition: all 0.18s;
+  }
+  .mx-close:hover { border-color: var(--orange); color: var(--orange); }
+
+  /* MAIN — left: LCD + activity, right: channel strips */
+  .mx-main {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 0;
+    padding: 18px;
+    min-height: 0;
+  }
+  .mx-left {
+    display: flex; flex-direction: column; gap: 14px;
+    padding-right: 18px;
+    border-right: 1px solid rgba(242, 235, 221, 0.08);
+  }
+
+  /* LCD MAIN DISPLAY */
+  .mx-lcd {
+    background:
+      linear-gradient(180deg, #0c2a14 0%, #061a0c 100%);
+    border: 1px solid rgba(46, 196, 107, 0.25);
+    border-radius: 3px;
+    padding: 14px 16px;
+    font-family: 'SF Mono', monospace;
+    color: #6fff9b;
+    text-shadow: 0 0 8px rgba(111, 255, 155, 0.5);
+    box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.65),
+                inset 0 0 2px rgba(46, 196, 107, 0.3);
+    position: relative;
+    overflow: hidden;
+  }
+  /* LCD scanlines */
+  .mx-lcd::after {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.18) 0px, rgba(0, 0, 0, 0.18) 1px,
+      transparent 1px, transparent 3px);
+    pointer-events: none;
+  }
+  .mx-lcd-row { font-size: 10px; letter-spacing: 0.22em; opacity: 0.6; margin-bottom: 4px; }
+  .mx-lcd-now { font-size: 18px; letter-spacing: 0.04em; font-weight: 700; margin: 4px 0 8px; }
+  .mx-lcd-meta { font-size: 10px; letter-spacing: 0.16em; opacity: 0.75; line-height: 1.7; }
+  .mx-lcd-meta span { color: var(--cream); text-shadow: none; opacity: 0.9; }
+
+  /* SECONDARY DISPLAY — activity feed */
+  .mx-activity {
+    flex: 1;
+    background: #08080a;
+    border: 1px solid rgba(242, 235, 221, 0.08);
+    border-radius: 3px;
+    padding: 12px 14px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .mx-activity-head {
+    font-family: 'SF Mono', monospace; font-size: 9px;
+    letter-spacing: 0.3em; color: rgba(242, 235, 221, 0.5);
+    text-transform: uppercase;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(242, 235, 221, 0.06);
+  }
+  .mx-activity-list {
+    flex: 1; overflow: hidden;
+    margin-top: 8px;
+    font-family: 'SF Mono', monospace; font-size: 11px;
+    color: rgba(242, 235, 221, 0.72);
+    line-height: 1.9;
+  }
+  .mx-activity-list .row { display: flex; gap: 10px; align-items: baseline; }
+  .mx-activity-list .ts { color: var(--orange); font-size: 9px; letter-spacing: 0.14em; min-width: 44px; }
+  .mx-activity-list .ch { color: var(--cream); font-size: 9px; letter-spacing: 0.18em; min-width: 58px; opacity: 0.8; }
+
+  /* CHANNEL STRIPS */
+  .mx-channels {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding-left: 18px;
+    min-height: 0;
+  }
+  .mx-strip {
+    background: linear-gradient(180deg, #181819 0%, #0e0e10 100%);
+    border: 1px solid rgba(242, 235, 221, 0.08);
+    border-radius: 3px;
+    padding: 10px 8px;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s, background 0.2s, transform 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .mx-strip:hover {
+    border-color: var(--orange);
+    background: linear-gradient(180deg, #1c1c1e 0%, #121215 100%);
+    transform: translateY(-2px);
+  }
+  .mx-strip:hover .mx-scribble { background: var(--cream); color: var(--navy-deep); }
+  .mx-strip:hover .mx-led {
+    background: var(--orange);
+    box-shadow: 0 0 10px var(--orange), 0 0 18px rgba(216, 90, 31, 0.6);
+  }
+
+  /* SCRIBBLE STRIP — paper tape label at top */
+  .mx-scribble {
+    background: rgba(242, 235, 221, 0.85);
+    color: var(--navy-deep);
+    font-family: 'Permanent Marker', 'Caveat', 'Comic Sans MS', cursive;
+    font-size: 13px; line-height: 1;
+    text-align: center;
+    padding: 6px 4px;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    border-radius: 2px;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: 0.02em;
+  }
+
+  /* LED indicator below scribble */
+  .mx-ledrow {
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px;
+    font-family: 'SF Mono', monospace; font-size: 8px;
+    letter-spacing: 0.22em; color: rgba(242, 235, 221, 0.5);
+    text-transform: uppercase;
+  }
+  .mx-led {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(216, 90, 31, 0.35);
+    box-shadow: 0 0 4px rgba(216, 90, 31, 0.3);
+    transition: all 0.2s;
+  }
+
+  /* METER + FADER body */
+  .mx-fader-area {
+    display: grid;
+    grid-template-columns: 14px 1fr;
+    gap: 8px;
+    align-items: stretch;
+    min-height: 0;
+    padding: 4px 0;
+  }
+  .mx-meter {
+    display: flex; flex-direction: column-reverse;
+    gap: 2px;
+    padding: 2px;
+    background: #06060a;
+    border: 1px solid rgba(242, 235, 221, 0.06);
+    border-radius: 1px;
+  }
+  .mx-meter-seg {
+    flex: 1;
+    background: rgba(46, 196, 107, 0.10);
+    transition: background 0.2s;
+  }
+  .mx-meter-seg.lit { background: #2ec46b; box-shadow: 0 0 3px #2ec46b; }
+  .mx-meter-seg.lit.warn { background: #d4a73d; box-shadow: 0 0 3px #d4a73d; }
+  .mx-meter-seg.lit.hot  { background: var(--orange); box-shadow: 0 0 3px var(--orange); }
+
+  /* Fader track + knob */
+  .mx-fader {
+    position: relative;
+    width: 100%;
+    background:
+      linear-gradient(180deg, #0a0a0c 0%, #050507 100%);
+    border: 1px solid rgba(242, 235, 221, 0.06);
+    border-radius: 1px;
+    margin: 0 auto;
+  }
+  .mx-fader-track {
+    position: absolute;
+    top: 8%;
+    bottom: 8%;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    background: rgba(242, 235, 221, 0.18);
+  }
+  .mx-fader-knob {
+    position: absolute;
+    left: 50%;
+    width: 26px;
+    height: 16px;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, #2a2a2e 0%, #161618 45%, #0c0c0e 100%);
+    border: 1px solid rgba(0, 0, 0, 0.85);
+    border-radius: 2px;
+    box-shadow:
+      0 4px 8px rgba(0, 0, 0, 0.7),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: top 0.3s ease-out;
+  }
+  .mx-fader-knob::after {
+    content: ""; position: absolute;
+    left: 4px; right: 4px;
+    top: 50%; height: 1px;
+    background: var(--orange); transform: translateY(-50%);
+    box-shadow: 0 0 4px rgba(216, 90, 31, 0.7);
+  }
+
+  /* CHANNEL FOOTER — number badge */
+  .mx-chnum {
+    font-family: 'SF Mono', monospace; font-size: 9px;
+    letter-spacing: 0.25em; color: rgba(242, 235, 221, 0.5);
+    text-align: center; text-transform: uppercase;
+    padding-top: 6px;
+    border-top: 1px solid rgba(242, 235, 221, 0.06);
+  }
+  .mx-chnum b { color: var(--cream); font-weight: 700; }
+
+  .hud-close {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    pointer-events: auto;
+    background: rgba(10, 24, 40, 0.7);
+    color: rgba(242, 235, 221, 0.85);
+    border: 1px solid rgba(242, 235, 221, 0.4);
+    padding: 9px 16px;
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: all 0.2s;
+    opacity: 0;
+    animation: hud-fade-in 460ms ease-out 200ms forwards;
+  }
+  .hud-close:hover { border-color: var(--orange); color: var(--cream); }
+
+  @keyframes hud-fade-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  .hud-close { animation-name: hud-fade-in-right; }
+  @keyframes hud-fade-in-right {
+    from { opacity: 0; transform: translateX(8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* =========================================================
+     UI CHROME
+     ========================================================= */
+  .member-header {
+    position: absolute;
+    top: 2.5vh;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.4em;
+    color: rgba(242, 235, 221, 0.7);
+    text-transform: uppercase;
+    pointer-events: none;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  }
+  .member-header .accent { color: var(--orange); }
+  .member-back {
+    position: absolute;
+    top: 2.5vh;
+    left: 2.5vw;
+    z-index: 20;
+    font-family: 'SF Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: rgba(242, 235, 221, 0.7);
+    text-decoration: none;
+    text-transform: uppercase;
+    border: 1px solid rgba(242, 235, 221, 0.25);
+    padding: 8px 14px;
+    transition: all 0.2s;
+  }
+  .member-back:hover { color: var(--cream); border-color: rgba(216, 90, 31, 0.7); background: rgba(216, 90, 31, 0.08); }
+
+  .member-status {
+    position: absolute;
+    bottom: 2.5vh;
+    right: 2.5vw;
+    z-index: 20;
+    font-family: 'SF Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: rgba(242, 235, 221, 0.55);
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+  .member-status .live-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(60, 220, 100, 0.85);
+    box-shadow: 0 0 6px rgba(60, 220, 100, 0.7);
+    margin-right: 8px;
+    vertical-align: middle;
+    animation: live-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes live-pulse {
+    0%, 100% { opacity: 0.65; }
+    50%      { opacity: 1; }
+  }
+
+</style>
+</head>
+<body>
+
+  <div class="member-stage" id="member-stage">
+    <img class="member-bg" src="Members%20Room/NEW%20DESK_5-31/01_BG_DESKANDROOM.png" alt="">
+
+    <div class="member-dim"></div>
+
+    <img class="member-item item-course"   src="Members%20Room/NEW%20DESK_5-31/02_THETHECOURSE.png"      alt="">
+    <img class="member-item item-toolkit"  src="Members%20Room/NEW%20DESK_5-31/03_TOOLKIT.png"           alt="">
+    <img class="member-item item-laminate" src="Members%20Room/NEW%20DESK_5-31/04_CREDENTIAL_LAMINATE.png" alt="">
+    <img class="member-item item-binder"   src="Members%20Room/NEW%20DESK_5-31/05_MYBINDER.png"          alt="">
+    <img class="member-item item-keyboard" src="Members%20Room/NEW%20DESK_5-31/06_KEYBOARD.png"          alt="">
+    <img class="member-item item-mixer"    src="Members%20Room/NEW%20DESK_5-31/07_AUDIO_MIXER.png"       alt="">
+
+    <a class="item-hot hot-course"   href="course-viewer.html"    data-item="course"                          aria-label="Open course modules"></a>
+    <a class="item-hot hot-toolkit"  href="/toolkit/"   data-item="toolkit"                         aria-label="Open rider toolkit"></a>
+    <a class="item-hot hot-binder"   href="my-binder.html" data-item="binder"                          aria-label="Open my binder"></a>
+    <a class="item-hot hot-keyboard" href="#"              data-item="keyboard" data-action="search"   aria-label="Search"></a>
+    <a class="item-hot hot-laminate" href="#"              data-item="laminate" data-action="inspect"  aria-label="Account credential"></a>
+    <a class="item-hot hot-mixer"    href="#"              data-item="mixer"    data-action="inspect"  aria-label="Open dashboard"></a>
+    <!-- Note: monitor is part of the BG now (no separate item-monitor img).
+         The monitor screen overlay below renders the live display content. -->
+
+    <!-- Monitor screen — always-on display surface sitting in the bezel of the
+         monitor PNG. Swaps between WELCOME (default) and INFO (hover/latch). -->
+    <div class="monitor-screen" id="monitor-screen">
+      <!-- Welcome: shown by default. All inner sizes are em-relative to the
+           monitor-screen's font-size, which scales with container width.
+           Everything moves as one locked unit. -->
+      <div class="screen-welcome">
+        <img class="screen-logo" src="bb-logo-internal.png" alt="Backstage Blueprint">
+        <div class="screen-greet">// MEMBER HUB</div>
+        <div class="screen-name" id="screen-member-name">GIBBY</div>
+        <div class="screen-status-block">
+          <div class="screen-status">// STATUS</div>
+          <div class="screen-status-val">ALL ACCESS</div>
+        </div>
+      </div>
+      <!-- Info: shown when hovering or latching an item. -->
+      <div class="screen-info">
+        <div class="screen-info-label" id="screen-info-label">REF&nbsp;//&nbsp;<b>—</b></div>
+        <div class="screen-info-detail" id="screen-info-detail">&nbsp;</div>
+      </div>
+    </div>
+
+    <!-- Search overlay — sits on top of the monitor item when keyboard is clicked.
+         Sized + positioned to match the monitor's visible bbox (33-65% x 25-70%).
+         Rider Builder aesthetic: navy panel, orange accents, JetBrains Mono. -->
+    <div class="search-overlay" id="search-overlay">
+      <div class="search-panel">
+        <div class="search-head">
+          <span class="search-prompt">&gt;_</span>
+          <span class="search-tag">// FIND ANYTHING &middot; MEMBER HUB</span>
+          <button class="search-close" id="search-close" type="button" aria-label="Close search">ESC</button>
+        </div>
+        <input class="search-input" id="search-input" type="text"
+               placeholder="MODULE / TEMPLATE / RIDER / SETTING..."
+               autocomplete="off" spellcheck="false">
+        <div class="search-results" id="search-results">
+          <div class="search-hint">&middot; type to search across modules, templates, the binder, and rider builder.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- (member-header removed — redundant now that the monitor screen shows MEMBER HUB) -->
+  <a class="member-back" href="experience.html#scene-pass">&larr; BACK TO STAGE</a>
+  <div class="member-status"><span class="live-dot"></span>SESSION&nbsp;LIVE &middot; MEMBER&nbsp;//&nbsp;GIBBY</div>
+
+  <!-- HUD overlay — appears during inspect, sits above the room (which
+       blurs back so you're still in it but focus is on the item). -->
+  <div class="hud-overlay" id="hud-overlay">
+    <button class="hud-close" id="hud-close">ESC &middot; EXIT INSPECT</button>
+
+    <!-- Laminate HUD — info about you, the member -->
+    <div class="hud-content hud-laminate">
+      <div class="hud-header">// BACKSTAGE CREDENTIAL</div>
+      <!-- Hi-res close-up of the credential, occupies upper-center -->
+      <img class="hud-laminate-image" src="Members%20Room/BB_UPDATED_MEMBER%20CREDENTIAL.png" alt="Backstage credential close-up">
+      <div class="hud-laminate-info">
+        <div class="hud-name">GIBBY</div>
+        <div class="hud-sub">All-Access &middot; Production Crew</div>
+      </div>
+      <div class="hud-rows">
+        <div class="hud-row"><div class="label">Plan</div><div class="value">All-Access Annual</div></div>
+        <div class="hud-row"><div class="label">Member Since</div><div class="value">May 2025</div></div>
+        <div class="hud-row"><div class="label">Renews</div><div class="value">May 2026</div></div>
+        <div class="hud-row"><div class="label">Status</div><div class="value" style="color: rgb(60, 220, 100);">ACTIVE</div></div>
+      </div>
+      <div class="hud-actions">
+        <button class="hud-btn" data-stub="settings">Account Settings</button>
+        <button class="hud-btn" data-stub="billing">Billing</button>
+        <button class="hud-btn" data-stub="signout">Sign Out</button>
+      </div>
+    </div>
+
+    <!-- Mixer HUD — full digital console (V2) -->
+    <div class="hud-content hud-mixer">
+      <div class="hud-header">// MEMBER CONSOLE &mdash; LIVE BOARD</div>
+
+      <div class="console" id="mxConsole">
+        <!-- TOP BAR -->
+        <div class="mx-topbar">
+          <div class="mx-power" title="Power"></div>
+          <div class="mx-label">// <b>BACKSTAGE BLUEPRINT</b> &nbsp;CONSOLE</div>
+          <div class="mx-divider"></div>
+          <div class="mx-label">CH 01&ndash;04 &middot; ALL LIVE</div>
+          <div class="mx-runtime" id="mxRuntime">RUNTIME 00:00:00</div>
+          <button class="mx-close" id="mxClose" aria-label="Close console">&times;</button>
+        </div>
+
+        <!-- MAIN -->
+        <div class="mx-main">
+          <!-- LEFT: LCD + ACTIVITY -->
+          <div class="mx-left">
+            <div class="mx-lcd">
+              <div class="mx-lcd-row">&gt; NOW MIXING</div>
+              <div class="mx-lcd-now" id="mxLcdNow">ALL CHANNELS LIVE</div>
+              <div class="mx-lcd-meta">
+                MEMBER &nbsp;&middot;&nbsp; <span>GIBBY</span><br>
+                STATUS &nbsp;&middot;&nbsp; <span>ALL-ACCESS</span><br>
+                BOARD &nbsp;&nbsp;&middot;&nbsp; <span>HEALTHY</span>
+              </div>
+            </div>
+            <div class="mx-activity">
+              <div class="mx-activity-head">// RECENT ACTIVITY</div>
+              <div class="mx-activity-list">
+                <div class="row"><span class="ts">17:04</span><span class="ch">COURSE</span><span>Module 01 opened</span></div>
+                <div class="row"><span class="ts">16:48</span><span class="ch">BINDER</span><span>Settlement template saved</span></div>
+                <div class="row"><span class="ts">16:22</span><span class="ch">TOOLKIT</span><span>Stage Plot &mdash; export</span></div>
+                <div class="row"><span class="ts">15:11</span><span class="ch">COURSE</span><span>Preface &mdash; complete</span></div>
+                <div class="row"><span class="ts">14:50</span><span class="ch">MEMBER</span><span>All-Access activated</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: 4 CHANNEL STRIPS -->
+          <div class="mx-channels">
+
+            <a class="mx-strip" href="course-viewer.html" data-ch="course" data-name="COURSE — THE BINDER">
+              <div class="mx-scribble">Course</div>
+              <div class="mx-ledrow"><span class="mx-led"></span>LIVE</div>
+              <div class="mx-fader-area">
+                <div class="mx-meter">
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit warn"></div>
+                  <div class="mx-meter-seg lit warn"></div>
+                  <div class="mx-meter-seg lit hot"></div>
+                  <div class="mx-meter-seg"></div>
+                  <div class="mx-meter-seg"></div>
+                  <div class="mx-meter-seg"></div>
+                </div>
+                <div class="mx-fader"><div class="mx-fader-track"></div><div class="mx-fader-knob" style="top: 32%;"></div></div>
+              </div>
+              <div class="mx-chnum">CH <b>01</b></div>
+            </a>
+
+            <a class="mx-strip" href="toolkit.html" data-ch="toolkit" data-name="TOOLKIT — RIDER + STAGE PLOT">
+              <div class="mx-scribble">Toolkit</div>
+              <div class="mx-ledrow"><span class="mx-led"></span>LIVE</div>
+              <div class="mx-fader-area">
+                <div class="mx-meter">
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit warn"></div>
+                  <div class="mx-meter-seg lit warn"></div>
+                  <div class="mx-meter-seg"></div>
+                  <div class="mx-meter-seg"></div>
+                  <div class="mx-meter-seg"></div>
+                  <div class="mx-meter-seg"></div>
+                  <div class="mx-meter-seg"></div>
+                </div>
+                <div class="mx-fader"><div class="mx-fader-track"></div><div class="mx-fader-knob" style="top: 48%;"></div></div>
+              </div>
+              <div class="mx-chnum">CH <b>02</b></div>
+            </a>
+
+            <a class="mx-strip" href="blueprint.html" data-ch="binder" data-name="MY BINDER — TEMPLATES + DOCS">
+              <div class="mx-scribble">My&nbsp;Binder</div>
+              <div class="mx-ledrow"><span class="mx-led"></span>LIVE</div>
+              <div class="mx-fader-area">
+                <div class="mx-meter">
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit warn"></div>
+                  <div class="mx-meter-seg lit warn"></div>
+                  <div class="mx-meter-seg lit hot"></div>
+                  <div class="mx-meter-seg lit hot"></div>
+                  <div class="mx-meter-seg"></div>
+                  <div class="mx-meter-seg"></div>
+                </div>
+                <div class="mx-fader"><div class="mx-fader-track"></div><div class="mx-fader-knob" style="top: 24%;"></div></div>
+              </div>
+              <div class="mx-chnum">CH <b>03</b></div>
+            </a>
+
+            <a class="mx-strip" href="#" data-ch="membership" data-name="MEMBERSHIP — STATUS + BILLING">
+              <div class="mx-scribble">Member</div>
+              <div class="mx-ledrow"><span class="mx-led"></span>LIVE</div>
+              <div class="mx-fader-area">
+                <div class="mx-meter">
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit"></div>
+                  <div class="mx-meter-seg lit warn"></div>
+                  <div class="mx-meter-seg lit warn"></div>
+                  <div class="mx-meter-seg lit hot"></div>
+                  <div class="mx-meter-seg lit hot"></div>
+                </div>
+                <div class="mx-fader"><div class="mx-fader-track"></div><div class="mx-fader-knob" style="top: 6%;"></div></div>
+              </div>
+              <div class="mx-chnum">CH <b>04</b></div>
+            </a>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // If we arrived from the Pass scene fall transition, play the entrance
+  // animation (laminate drops onto the desk + everything else fades in).
+  try {
+    if (sessionStorage.getItem('bb-from-pass') === '1') {
+      document.body.classList.add('entering-from-pass');
+      sessionStorage.removeItem('bb-from-pass');
+      // Remove the class after entrance animations complete (~2.5s) so the
+      // forwards-fill keyframes stop overriding interactive hover transforms
+      // on items like the credential.
+      setTimeout(() => {
+        document.body.classList.remove('entering-from-pass');
+      }, 2700);
+    }
+  } catch (_) {}
+
+  const stage = document.getElementById('member-stage');
+  const hotspots = stage.querySelectorAll('.item-hot');
+  const hudClose = document.getElementById('hud-close');
+  // The "sticky" surface is now the monitor screen. Same content writes,
+  // just rendered inside the bezel of the monitor PNG so it stays glued to
+  // the desk at all zoom levels.
+  const sticky = document.getElementById('monitor-screen');
+  const stickyLabel = document.getElementById('screen-info-label');
+  const stickyDetail = document.getElementById('screen-info-detail');
+
+  // Single sticky content lookup. JS swaps text based on hovered item.
+  const STICKY_CONTENT = {
+    course:   { label: 'THE COURSE',    detail: 'MODULES' },
+    binder:   { label: 'MY BINDER',     detail: 'TEMPLATES &middot; GUIDES' },
+    keyboard: { label: 'SEARCH',        detail: 'FIND ANYTHING' },
+    toolkit:  { label: 'TOOLKIT',       detail: 'RIDER &middot; STAGE PLOT &middot; INPUT LIST' },
+    laminate: { label: 'CREDENTIAL',    detail: 'ACCOUNT &middot; BILLING' },
+    mixer:    { label: 'DASHBOARD',     detail: 'CLICK TO INSPECT' },
+  };
+
+  // Monitor screen uses pure CSS em-based scaling now — no JS needed.
+
+  let latched = null;
+
+  function showSticky(item, opts = {}) {
+    const content = STICKY_CONTENT[item];
+    if (!content) return;
+    if (opts.confirm) {
+      const action = opts.action === 'inspect' ? 'INSPECT' :
+                     opts.action === 'search'  ? 'OPEN SEARCH' :
+                     'OPEN';
+      stickyLabel.innerHTML = `&gt;&gt;&nbsp;<b>${action}</b>`;
+      stickyDetail.innerHTML = '// CLICK&nbsp;TO&nbsp;CONFIRM';
+    } else {
+      stickyLabel.innerHTML = `REF&nbsp;//&nbsp;<b>${content.label}</b>`;
+      stickyDetail.innerHTML = content.detail;
+    }
+    // Toggle the monitor into INFO state — info panel fades in, welcome fades out.
+    sticky.classList.add('showing-info');
+  }
+  function hideSticky() {
+    sticky.classList.remove('showing-info');
+  }
+
+  function latchItem(hot) {
+    if (latched === hot) return;
+    if (latched) unlatch();
+    latched = hot;
+    stage.classList.add('has-latched');
+    // Keep the hover class on while latched — so the item stays LIFTED
+    // (transform from .hov-X stays applied) and the breathing-glow filter
+    // animation layers on top. Without this, mouseleave drops the item.
+    stage.classList.add('hov-' + hot.dataset.item);
+    hot.classList.add('is-latched');
+    const item = stage.querySelector('.item-' + hot.dataset.item);
+    if (item) item.classList.add('item-latched');
+    showSticky(hot.dataset.item, { confirm: true, action: hot.dataset.action });
+  }
+  function unlatch() {
+    if (!latched) return;
+    stage.classList.remove('has-latched');
+    stage.classList.remove('hov-' + latched.dataset.item);
+    latched.classList.remove('is-latched');
+    const item = stage.querySelector('.item-' + latched.dataset.item);
+    if (item) item.classList.remove('item-latched');
+    latched = null;
+    hideSticky();
+  }
+
+  const hudLaminateImage = document.querySelector('.hud-laminate-image');
+  let laminateSettleTimer = null;
+
+  function openInspect(name) {
+    if (latched) unlatch();
+    hideSticky();
+    document.body.classList.add('is-inspecting');
+    document.body.classList.add('inspecting-' + name);
+    // After the credential entrance animation completes (~800ms), flip to
+    // the .settled state so the cursor parallax can take over without
+    // fighting the keyframe animation.
+    if (name === 'laminate' && hudLaminateImage) {
+      clearTimeout(laminateSettleTimer);
+      laminateSettleTimer = setTimeout(() => {
+        hudLaminateImage.classList.add('settled');
+      }, 820);
+    }
+  }
+  function closeInspect() {
+    document.body.classList.remove('is-inspecting');
+    document.body.classList.remove('inspecting-laminate');
+    document.body.classList.remove('inspecting-mixer');
+    if (hudLaminateImage) {
+      hudLaminateImage.classList.remove('settled');
+      hudLaminateImage.style.removeProperty('--rx');
+      hudLaminateImage.style.removeProperty('--ry');
+    }
+  }
+
+  // Laminate parallax — once the credential has settled, the close-up follows
+  // the cursor with subtle 3D tilt (rotateX/Y). Damped so it feels like the
+  // card is "stuck" to your gaze but not jittery.
+  document.addEventListener('mousemove', (e) => {
+    if (!hudLaminateImage) return;
+    if (!hudLaminateImage.classList.contains('settled')) return;
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    const dx = (e.clientX - cx) / window.innerWidth;   // -0.5..0.5
+    const dy = (e.clientY - cy) / window.innerHeight;
+    // Max ~12° tilt either way, with damping so motion feels weighty
+    const ry = Math.max(-12, Math.min(12, dx * 24));
+    const rx = Math.max(-9,  Math.min(9,  -dy * 18));
+    hudLaminateImage.style.setProperty('--rx', rx + 'deg');
+    hudLaminateImage.style.setProperty('--ry', ry + 'deg');
+  });
+
+  // MIXER CONSOLE — runtime ticker, channel hover updates LCD, close button.
+  const mxConsole = document.getElementById('mxConsole');
+  const mxRuntime = document.getElementById('mxRuntime');
+  const mxLcdNow  = document.getElementById('mxLcdNow');
+  const mxClose   = document.getElementById('mxClose');
+  let mxStart = null;
+  function mxTick() {
+    if (!document.body.classList.contains('inspecting-mixer')) {
+      mxStart = null;
+      if (mxLcdNow && mxLcdNow.textContent !== 'ALL CHANNELS LIVE') {
+        mxLcdNow.textContent = 'ALL CHANNELS LIVE';
+      }
+      return;
+    }
+    if (!mxStart) mxStart = Date.now();
+    const s = Math.floor((Date.now() - mxStart) / 1000);
+    const hh = String(Math.floor(s / 3600)).padStart(2, '0');
+    const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+    const ss = String(s % 60).padStart(2, '0');
+    if (mxRuntime) mxRuntime.textContent = `RUNTIME ${hh}:${mm}:${ss}`;
+  }
+  setInterval(mxTick, 1000);
+  if (mxConsole) {
+    mxConsole.querySelectorAll('.mx-strip').forEach(strip => {
+      strip.addEventListener('mouseenter', () => {
+        if (mxLcdNow) mxLcdNow.textContent = strip.getAttribute('data-name') || 'CHANNEL';
+      });
+      strip.addEventListener('mouseleave', () => {
+        if (mxLcdNow) mxLcdNow.textContent = 'ALL CHANNELS LIVE';
+      });
+    });
+  }
+  if (mxClose) {
+    mxClose.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); closeInspect(); });
+  }
+
+  // SEARCH — keyboard click opens a BB-themed search bar overlay on the monitor.
+  // No latch, no leaving the page — the user just starts typing.
+  const searchOverlay = document.getElementById('search-overlay');
+  const searchInput   = document.getElementById('search-input');
+  const searchClose   = document.getElementById('search-close');
+  const searchResults = document.getElementById('search-results');
+  function openSearch() {
+    if (latched) unlatch();
+    hideSticky();
+    // If the cursor was already over the monitor when search opened, the
+    // hov-monitor class might be lingering — strip it so the monitor sits flat
+    // beneath the search panel.
+    stage.classList.remove('hov-monitor');
+    stage.classList.add('searching');
+    // Defer focus a tick so the transition can start before focus jump
+    setTimeout(() => searchInput && searchInput.focus(), 80);
+  }
+  function closeSearch() {
+    stage.classList.remove('searching');
+    if (searchInput) { searchInput.value = ''; searchInput.blur(); }
+    if (searchResults) {
+      searchResults.innerHTML = '<div class="search-hint">&middot; type to search across modules, templates, the binder, and rider builder.</div>';
+    }
+  }
+  if (searchClose) searchClose.addEventListener('click', closeSearch);
+  // Stub: live-search results placeholder. Real index lives in V2.
+  const SEARCH_INDEX = [
+    { where: 'COURSE',    what: 'Module 4 — Stage Plot Construction' },
+    { where: 'COURSE',    what: 'Module 7 — Power Distribution' },
+    { where: 'TEMPLATE',  what: 'Audio Input List — Generic Band' },
+    { where: 'TEMPLATE',  what: 'Show Call Sheet — Standard' },
+    { where: 'BINDER',    what: 'My Rider — Spring Tour 2026' },
+    { where: 'RIDER',     what: 'Stage Plot Builder — open' },
+    { where: 'SETTING',   what: 'Account Settings &middot; Billing' },
+    { where: 'SETTING',   what: 'Notification Preferences' },
+  ];
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) {
+        searchResults.innerHTML = '<div class="search-hint">&middot; type to search across modules, templates, the binder, and rider builder.</div>';
+        return;
+      }
+      const hits = SEARCH_INDEX.filter(r => r.what.toLowerCase().includes(q) || r.where.toLowerCase().includes(q));
+      if (hits.length === 0) {
+        searchResults.innerHTML = '<div class="search-hint">&middot; no matches. try a different term.</div>';
+      } else {
+        searchResults.innerHTML = hits.slice(0, 6).map(h =>
+          `<div class="search-result-item"><div class="where">${h.where}</div><div class="what">${h.what}</div></div>`
+        ).join('');
+      }
+    });
+  }
+
+  hotspots.forEach(hot => {
+    // Hover → add stage class for the item's hover response + write info to
+    // the monitor screen. (Monitor hotspot was removed — it's now a display
+    // surface, not a click target, so no monitor-specific guards needed.)
+    hot.addEventListener('mouseenter', () => {
+      if (latched) return;  // hover effects suppressed while latched
+      stage.classList.add('hov-' + hot.dataset.item);
+      showSticky(hot.dataset.item);
+    });
+    hot.addEventListener('mouseleave', () => {
+      // If THIS item is the latched one, keep its hover class so it stays lifted
+      if (latched === hot) return;
+      stage.classList.remove('hov-' + hot.dataset.item);
+      if (latched) return;
+      hideSticky();
+    });
+
+    hot.addEventListener('click', (e) => {
+      const item = hot.dataset.item;
+      const action = hot.dataset.action;
+
+      // If search is open and the user clicks ANYTHING other than the keyboard,
+      // dismiss the search overlay first. Then process the new click normally.
+      if (stage.classList.contains('searching') && item !== 'keyboard') {
+        closeSearch();
+      }
+
+      // Inspect items (laminate, mixer): click goes STRAIGHT to inspect HUD.
+      // No latch step — you just pick it up and look at it.
+      if (action === 'inspect') {
+        e.preventDefault();
+        openInspect(item);
+        return;
+      }
+      // Search (keyboard): click goes STRAIGHT to search overlay on the monitor.
+      // No latch — you're not leaving the page, you're just opening a tool.
+      if (action === 'search') {
+        e.preventDefault();
+        openSearch();
+        return;
+      }
+
+      // All other items use the latch → click-again-to-confirm pattern
+      // because they NAVIGATE away from this page.
+      if (latched && latched !== hot) {
+        e.preventDefault();
+        unlatch();
+        return;
+      }
+      if (!latched) {
+        e.preventDefault();
+        latchItem(hot);
+        return;
+      }
+      // Second click — let the link navigate (course / binder / monitor)
+    });
+  });
+
+  stage.querySelector('.member-dim').addEventListener('click', unlatch);
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (stage.classList.contains('searching')) closeSearch();
+    else if (document.body.classList.contains('is-inspecting')) closeInspect();
+    else if (latched) unlatch();
+  });
+  hudClose.addEventListener('click', closeInspect);
+  // Click on the blurred-out background also exits inspect — but NOT on
+  // hotspots (those are what opened it in the first place — bubbling event
+  // would close it immediately) and NOT on HUD content / the inspected item.
+  document.addEventListener('click', (e) => {
+    if (!document.body.classList.contains('is-inspecting')) return;
+    if (e.target.closest('.item-hot'))    return;  // the hotspot that opened us
+    if (e.target.closest('.hud-content')) return;  // HUD info & buttons
+    if (e.target.closest('.hud-close'))   return;  // close button handles itself
+    if (e.target.classList.contains('item-laminate') ||
+        e.target.classList.contains('item-mixer')) return;  // the lifted item
+    closeInspect();
+  });
+  document.querySelectorAll('[data-stub]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      alert(`"${btn.dataset.stub.toUpperCase()}" coming in V2.`);
+    });
+  });
+})();
+</script>
+</body>
+</html>

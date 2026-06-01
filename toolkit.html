@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1B3D6E">
+<title>The Toolkit — Rider + Stage Plot Builders | Backstage Blueprint</title>
+<meta name="description" content="Two web tools every tour needs: Rider Builder and Stage Plot Builder. Free with a Guest Pass — $5/mo launch for the full feature set.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#1B3D6E; --navy-deep:#142C4F; --navy-glass:rgba(20,44,79,0.78);
+  --orange:#D85A1F; --cream:#F2EBDD; --ink:#0D0D0D;
+  --grid-line:rgba(242,235,221,0.08); --grid-major:rgba(242,235,221,0.14);
+  --line:rgba(242,235,221,0.18); --line-strong:rgba(242,235,221,0.32);
+  --dim:rgba(242,235,221,0.60);
+  --display-font:'Archivo',sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100vh; overflow:hidden; }
+body {
+  background-color:var(--navy);
+  background-image:
+    linear-gradient(var(--grid-line) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-line) 1px,transparent 1px),
+    linear-gradient(var(--grid-major) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-major) 1px,transparent 1px);
+  background-size:40px 40px,40px 40px,200px 200px,200px 200px;
+  background-attachment:fixed;
+  color:var(--cream);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+/* HEADER */
+.site-header { position:fixed; top:0; left:0; right:0; z-index:200; display:flex; align-items:center; justify-content:space-between; padding:18px 32px; background:linear-gradient(180deg,rgba(20,44,79,0.78) 0%,rgba(20,44,79,0) 100%); pointer-events:none; }
+.site-header > * { pointer-events:auto; }
+.brand-mark { font-family:var(--display-font); font-size:20px; font-weight:900; letter-spacing:-0.005em; text-transform:uppercase; color:var(--cream); text-decoration:none; line-height:1; display:inline-flex; align-items:center; transition:color 200ms ease; }
+.brand-mark:hover { color:var(--orange); }
+.brand-mark .reg { display:inline-block; width:13px; height:13px; border:1.25px solid currentColor; border-radius:50%; font-family:'SF Mono',monospace; font-size:8.5px; font-weight:700; line-height:11px; text-align:center; vertical-align:4px; margin-left:6px; }
+.header-back { font-family:'SF Mono',monospace; font-size:11px; font-weight:700; letter-spacing:0.28em; color:var(--cream); text-decoration:none; text-transform:uppercase; padding:9px 16px; border:1px solid var(--line-strong); background:rgba(20,44,79,0.5); backdrop-filter:blur(6px); transition:border-color 200ms ease, color 200ms ease; }
+.header-back:hover { border-color:var(--orange); color:var(--orange); }
+
+/* TOUR */
+.tour { position:relative; width:100%; height:100vh; overflow-y:scroll; overflow-x:hidden; scroll-snap-type:y mandatory; scroll-behavior:smooth; perspective:1500px; perspective-origin:50% 50%; }
+.tour::-webkit-scrollbar { width:0; }
+.tour { scrollbar-width:none; }
+.screen { position:relative; width:100%; height:100vh; scroll-snap-align:start; scroll-snap-stop:always; display:flex; align-items:center; justify-content:center; padding:100px 28px 80px; transform-style:preserve-3d; }
+.table-anchor { width:min(940px,92vw); max-height:calc(100vh - 180px); position:relative; transform-style:preserve-3d; transform:translateZ(-700px) translateY(60px) rotateX(10deg); opacity:0; transition:transform 1100ms cubic-bezier(0.22,1,0.36,1), opacity 600ms ease-out; pointer-events:none; }
+.screen.in-view .table-anchor { transform:translateZ(0) translateY(0) rotateX(0); opacity:1; pointer-events:auto; }
+.table { position:relative; background:var(--navy-glass); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid var(--line-strong); border-left:3px solid var(--orange); padding:42px 50px; transform-style:preserve-3d; transform:rotateX(0) rotateY(0); transition:transform 600ms cubic-bezier(0.22,1,0.36,1); will-change:transform; box-shadow:0 30px 80px rgba(0,0,0,0.45), 0 8px 22px rgba(0,0,0,0.35), inset 0 0 0 0.5px rgba(242,235,221,0.08); }
+.table-id { position:absolute; top:14px; right:18px; font-family:'SF Mono',monospace; font-size:10px; letter-spacing:0.32em; color:var(--dim); text-transform:uppercase; pointer-events:none; }
+
+.mono-label { font-family:'SF Mono',monospace; font-size:11px; font-weight:700; letter-spacing:0.3em; color:var(--orange); text-transform:uppercase; margin-bottom:16px; }
+.table-title { font-family:var(--display-font); font-size:clamp(32px,4.2vw,60px); font-weight:900; letter-spacing:-0.012em; line-height:0.95; text-transform:uppercase; }
+.table-title .accent { color:var(--orange); }
+.table-rule { width:48px; height:2px; background:var(--orange); margin:14px 0 22px; }
+.body-p { font-size:14.5px; line-height:1.7; color:rgba(242,235,221,0.88); margin-bottom:12px; }
+.body-p:last-child { margin-bottom:0; }
+.body-p strong { color:var(--cream); font-weight:600; }
+
+/* HERO */
+.hero-grid { display:grid; grid-template-columns:1.05fr 0.95fr; gap:44px; align-items:center; }
+.hero-title { font-family:var(--display-font); font-size:clamp(38px,5.4vw,76px); font-weight:900; letter-spacing:-0.014em; line-height:0.92; text-transform:uppercase; color:var(--cream); }
+.hero-title .accent { color:var(--orange); }
+.hero-sub { margin-top:18px; font-size:clamp(14.5px,1.35vw,18px); line-height:1.5; color:var(--cream); max-width:460px; }
+.hero-body { margin-top:14px; font-size:14px; line-height:1.65; color:rgba(242,235,221,0.85); max-width:460px; }
+.buy-row { margin-top:24px; display:flex; gap:14px; flex-wrap:wrap; }
+.cta-primary { display:inline-flex; align-items:center; gap:10px; padding:15px 26px; font-family:var(--display-font); font-size:12.5px; font-weight:900; letter-spacing:0.18em; text-transform:uppercase; background:var(--orange); color:var(--cream); border:none; cursor:pointer; white-space:nowrap; transition:transform 200ms cubic-bezier(0.22,1.2,0.36,1), filter 200ms ease, box-shadow 200ms ease; text-decoration:none; }
+.cta-primary:hover { transform:translateY(-2px); filter:brightness(1.08); box-shadow:0 8px 22px rgba(216,90,31,0.45); }
+.cta-secondary { display:inline-flex; align-items:center; gap:12px; padding:14px 24px; font-family:'SF Mono',monospace; font-size:11px; font-weight:700; letter-spacing:0.28em; text-transform:uppercase; color:var(--cream); background:transparent; border:1px solid var(--cream); text-decoration:none; white-space:nowrap; cursor:pointer; transition:border-color 200ms ease, color 200ms ease, transform 200ms cubic-bezier(0.22,1.2,0.36,1); }
+.cta-secondary:hover { border-color:var(--orange); color:var(--orange); transform:translateY(-2px); }
+.hero-meta-line { margin-top:18px; font-family:'SF Mono',monospace; font-size:10.5px; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim); }
+.hero-meta-line strong { color:var(--cream); font-weight:600; }
+
+.hero-cover-frame { position:relative; transform:rotate(-2deg); }
+.hero-cover { display:block; width:100%; max-width:460px; margin:0 auto; filter:drop-shadow(0 16px 30px rgba(0,0,0,0.55)) drop-shadow(0 4px 10px rgba(0,0,0,0.3)); user-select:none; -webkit-user-drag:none; }
+.cover-spec { position:absolute; bottom:-10px; right:8px; padding:4px 10px; font-family:'SF Mono',monospace; font-size:9.5px; letter-spacing:0.32em; text-transform:uppercase; color:var(--cream); background:var(--navy-deep); border-left:2px solid var(--orange); box-shadow:0 4px 12px rgba(0,0,0,0.5); }
+
+/* TOOL TABLE */
+.tool-grid { display:grid; grid-template-columns:1fr 0.85fr; gap:40px; align-items:center; }
+.tool-title { font-family:var(--display-font); font-size:clamp(28px,3.6vw,50px); font-weight:900; letter-spacing:-0.012em; line-height:0.95; text-transform:uppercase; }
+.tool-title .accent { color:var(--orange); }
+.tool-features { margin-top:18px; list-style:none; display:flex; flex-direction:column; gap:8px; }
+.tool-feat { display:grid; grid-template-columns:18px 1fr; gap:12px; align-items:baseline; padding:8px 12px; background:rgba(13,13,13,0.25); border-left:1px solid var(--line-strong); font-size:13.5px; line-height:1.5; color:rgba(242,235,221,0.9); }
+.tool-feat-mark { font-family:'SF Mono',monospace; font-size:13px; color:var(--orange); font-weight:700; }
+.tool-img-frame { position:relative; transform:rotate(1.5deg); }
+.tool-img { display:block; width:100%; max-width:340px; margin:0 auto; filter:drop-shadow(0 14px 28px rgba(0,0,0,0.5)); user-select:none; }
+.tool-img.placeholder { background:var(--navy-deep); aspect-ratio:1.4/1; display:flex; align-items:center; justify-content:center; font-family:'SF Mono',monospace; font-size:10px; letter-spacing:0.28em; text-transform:uppercase; color:var(--dim); padding:24px; text-align:center; border:1px dashed var(--line-strong); }
+
+/* TIER COMPARISON */
+.tiers-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:8px; }
+.tier-card { padding:24px 26px; background:rgba(13,13,13,0.3); border:0.5px solid var(--line-strong); display:flex; flex-direction:column; }
+.tier-card.paid { border-left:3px solid var(--orange); background:rgba(216,90,31,0.08); }
+.tier-name { font-family:var(--display-font); font-size:22px; font-weight:900; letter-spacing:0; text-transform:uppercase; color:var(--cream); line-height:1; }
+.tier-card.paid .tier-name { color:var(--orange); }
+.tier-price { margin-top:8px; font-family:var(--display-font); font-size:36px; font-weight:900; letter-spacing:-0.01em; line-height:1; color:var(--cream); }
+.tier-card.paid .tier-price { color:var(--orange); }
+.tier-aside { font-family:'SF Mono',monospace; font-size:10.5px; letter-spacing:0.2em; text-transform:uppercase; color:var(--dim); margin-top:6px; }
+.tier-card.paid .tier-aside { color:rgba(242,235,221,0.7); }
+.tier-list { margin-top:14px; list-style:none; display:flex; flex-direction:column; gap:6px; flex:1; }
+.tier-row { display:grid; grid-template-columns:16px 1fr; gap:10px; font-size:12.5px; color:rgba(242,235,221,0.86); line-height:1.5; }
+.tier-mark { color:var(--orange); font-family:'SF Mono',monospace; font-size:12px; font-weight:700; text-align:center; }
+.tier-row.no .tier-mark { color:var(--dim); }
+.tier-row.no { color:var(--dim); text-decoration:line-through; text-decoration-thickness:0.5px; }
+.tier-cta { margin-top:18px; }
+
+/* CROSS-SELL */
+.cross-sell-grid { display:grid; grid-template-columns:1fr auto; gap:32px; align-items:center; }
+
+/* MODAL */
+.modal-backdrop { position:fixed; inset:0; z-index:500; background:rgba(0,0,0,0.72); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; padding:24px; opacity:0; visibility:hidden; transition:opacity 240ms ease, visibility 0ms 240ms; }
+.modal-backdrop.open { opacity:1; visibility:visible; transition:opacity 240ms ease, visibility 0ms 0ms; }
+.modal { width:min(520px,100%); background:var(--navy-deep); border:1px solid var(--line-strong); border-left:3px solid var(--orange); padding:32px 36px; position:relative; transform:translateY(20px) scale(0.96); transition:transform 320ms cubic-bezier(0.22,1.2,0.36,1); box-shadow:0 30px 80px rgba(0,0,0,0.5); }
+.modal-backdrop.open .modal { transform:translateY(0) scale(1); }
+.modal-close { position:absolute; top:14px; right:14px; width:30px; height:30px; background:transparent; border:1px solid var(--line-strong); color:var(--cream); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; transition:border-color 200ms ease, color 200ms ease; }
+.modal-close:hover { border-color:var(--orange); color:var(--orange); }
+.modal-label { font-family:'SF Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:0.32em; text-transform:uppercase; color:var(--orange); margin-bottom:14px; }
+.modal-title { font-family:var(--display-font); font-size:26px; font-weight:900; letter-spacing:-0.01em; line-height:1; text-transform:uppercase; color:var(--cream); }
+.modal-rule { width:40px; height:2px; background:var(--orange); margin:14px 0 16px; }
+.modal-body { font-size:13.5px; line-height:1.65; color:rgba(242,235,221,0.88); }
+.modal-body strong { color:var(--cream); font-weight:600; }
+.modal-body code { font-family:'SF Mono',monospace; font-size:11.5px; color:var(--orange); background:rgba(255,255,255,0.08); padding:1px 5px; border-radius:2px; }
+
+/* PERSISTENT UI */
+.cue-list { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:150; display:flex; gap:14px; }
+.cue-dot { width:8px; height:8px; border-radius:50%; border:1px solid rgba(242,235,221,0.45); background:transparent; cursor:pointer; padding:0; transition:background 240ms ease, border-color 240ms ease, transform 240ms ease; }
+.cue-dot.active { background:var(--orange); border-color:var(--orange); transform:scale(1.25); }
+.cue-dot:hover { border-color:var(--cream); }
+.footer-status { position:fixed; bottom:22px; left:32px; z-index:150; font-family:'SF Mono',monospace; font-size:11px; font-weight:700; letter-spacing:0.26em; text-transform:uppercase; color:rgba(242,235,221,0.85); display:inline-flex; align-items:center; }
+.footer-status .live-dot { display:inline-block; width:6px; height:6px; background:var(--orange); border-radius:50%; margin-right:10px; animation:live-pulse 1.6s ease-in-out infinite; }
+@keyframes live-pulse { 0%,100% { opacity:0.4; } 50% { opacity:1; } }
+.footer-meta { position:fixed; bottom:22px; right:32px; z-index:150; font-family:'SF Mono',monospace; font-size:10px; letter-spacing:0.26em; text-transform:uppercase; color:var(--dim); }
+
+@media (max-width:880px) {
+  .table { padding:34px 32px; }
+  .hero-grid, .tool-grid { grid-template-columns:1fr; gap:22px; }
+  .hero-cover-frame, .tool-img-frame { max-width:240px; margin:0 auto; }
+  .tiers-grid { grid-template-columns:1fr; gap:14px; }
+  .cross-sell-grid { grid-template-columns:1fr; gap:20px; }
+  .cta-secondary { justify-content:center; }
+  .footer-meta { display:none; }
+}
+@media (max-width:560px) {
+  .site-header { padding:14px 18px; }
+  .brand-mark { font-size:17px; }
+  .header-back { font-size:9.5px; letter-spacing:0.22em; padding:7px 12px; }
+  .table { padding:26px 22px; }
+  .footer-status { font-size:10px; bottom:18px; left:18px; }
+  .cue-list { bottom:18px; }
+}
+@media (max-height:720px) {
+  .table-anchor { max-height:calc(100vh - 140px); }
+  .table { padding:28px 36px; }
+  .hero-title { font-size:clamp(32px,4.4vw,54px); }
+  .table-title { font-size:clamp(26px,3.4vw,44px); }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand-mark" href="experience.html">BCKSTG &middot; BLPRNT<span class="reg">M</span></a>
+  <a class="header-back" href="experience.html#scene-production-office">&larr; FRONT OF HOUSE</a>
+</header>
+
+
+<div class="tour" id="tour">
+
+  <!-- TBL 01 HERO -->
+  <section class="screen" id="screen-1" data-cue="1">
+    <div class="table-anchor">
+      <div class="table">
+        <div class="table-id">// TBL 01/5</div>
+        <div class="hero-grid">
+          <div>
+            <div class="mono-label">// THE TOOLKIT &middot; TWO WEB TOOLS</div>
+            <h1 class="hero-title">Build your rider.<br>Build your stage plot<span class="accent">.</span></h1>
+            <p class="hero-sub">Two web tools. Every tour needs both.</p>
+            <p class="hero-body">Stop building riders in Word. Stop drawing stage plots in PowerPoint. The Toolkit handles both &mdash; fast, clean, exportable.</p>
+            <div class="buy-row">
+              <button class="cta-primary" id="signup-btn" type="button">START FREE <span>&rarr;</span></button>
+              <button class="cta-secondary" id="upgrade-btn" type="button">UPGRADE TO PAID</button>
+            </div>
+            <p class="hero-meta-line">// FREE WITH A <strong>GUEST PASS</strong> &middot; <strong>$5/MO LAUNCH</strong> FOR FULL FEATURES</p>
+          </div>
+          <div class="hero-cover-frame">
+            <img class="hero-cover" src="toolkit-covers/cover_rider_builder.png" alt="The Toolkit &mdash; Rider Builder cover" loading="eager">
+            <span class="cover-spec">DOC BB-301 &middot; WEB APP</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- TBL 02 RIDER BUILDER -->
+  <section class="screen" id="screen-2" data-cue="2">
+    <div class="table-anchor">
+      <div class="table">
+        <div class="table-id">// TBL 02/5</div>
+        <div class="mono-label">// TOOL 01 &middot; RIDER BUILDER</div>
+        <h2 class="tool-title">Build the rider.<br>Skip the Word doc<span class="accent">.</span></h2>
+        <div class="table-rule"></div>
+        <div class="tool-grid" style="margin-top:18px;">
+          <div>
+            <p class="body-p">Pick your gear, your needs, your specs from BB&rsquo;s library. The Rider Builder auto-generates a clean PDF you can email to a venue or production manager. Replaces the manual Word-doc rider workflow most TMs run.</p>
+            <ul class="tool-features">
+              <li class="tool-feat"><span class="tool-feat-mark">+</span><span>Drag-and-drop input list, channel mapping, console scenes</span></li>
+              <li class="tool-feat"><span class="tool-feat-mark">+</span><span>Stage layout snapshot embedded into the PDF</span></li>
+              <li class="tool-feat"><span class="tool-feat-mark">+</span><span>Power, rigging, comms, hospitality sections built-in</span></li>
+              <li class="tool-feat"><span class="tool-feat-mark">+</span><span>Save &middot; load &middot; iterate &middot; export &mdash; tied to your Guest Pass</span></li>
+            </ul>
+          </div>
+          <div class="tool-img-frame">
+            <img class="tool-img" src="toolkit-covers/preview_rider_builder.png" alt="Rider Builder preview" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- TBL 03 STAGE PLOT BUILDER -->
+  <section class="screen" id="screen-3" data-cue="3">
+    <div class="table-anchor">
+      <div class="table">
+        <div class="table-id">// TBL 03/5</div>
+        <div class="mono-label">// TOOL 02 &middot; STAGE PLOT BUILDER</div>
+        <h2 class="tool-title">Drag, drop, ship<span class="accent">.</span></h2>
+        <div class="table-rule"></div>
+        <div class="tool-grid" style="margin-top:18px;">
+          <div>
+            <p class="body-p">A drag-and-drop stage plot builder. Lay out drum kits, amps, monitors, performer positions on a canvas. Auto-generates a clean PDF stage plot. Replaces the &ldquo;PowerPoint stage plot&rdquo; most touring acts ship around.</p>
+            <ul class="tool-features">
+              <li class="tool-feat"><span class="tool-feat-mark">+</span><span>Pre-built gear sprites &mdash; drums, amps, wedges, mics, IEM packs</span></li>
+              <li class="tool-feat"><span class="tool-feat-mark">+</span><span>Scaled stage with downstage / upstage / wings clearly marked</span></li>
+              <li class="tool-feat"><span class="tool-feat-mark">+</span><span>Multiple plots per tour &mdash; opener, headline, festival variant</span></li>
+              <li class="tool-feat"><span class="tool-feat-mark">+</span><span>Exports clean as PDF or PNG &mdash; venue-ready</span></li>
+            </ul>
+          </div>
+          <div class="tool-img-frame">
+            <img class="tool-img" src="toolkit-covers/cover_stage_plot_builder.png" alt="Stage Plot Builder cover" loading="lazy" style="max-width:340px;">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- TBL 04 TIER COMPARISON -->
+  <section class="screen" id="screen-4" data-cue="4">
+    <div class="table-anchor">
+      <div class="table">
+        <div class="table-id">// TBL 04/5</div>
+        <div class="mono-label">// PRICING &middot; FREE OR PAID</div>
+        <h2 class="table-title">Two tiers<span class="accent">.</span></h2>
+        <div class="table-rule"></div>
+        <div class="tiers-grid">
+          <div class="tier-card">
+            <div class="tier-name">FREE</div>
+            <div class="tier-price">$0</div>
+            <div class="tier-aside">// REQUIRES A GUEST PASS</div>
+            <ul class="tier-list">
+              <li class="tier-row"><span class="tier-mark">+</span><span>Rider Builder &mdash; core features</span></li>
+              <li class="tier-row"><span class="tier-mark">+</span><span>Stage Plot Builder &mdash; core features</span></li>
+              <li class="tier-row"><span class="tier-mark">+</span><span>Save &middot; load your work</span></li>
+              <li class="tier-row no"><span class="tier-mark">&times;</span><span>Multiple tours per account</span></li>
+              <li class="tier-row no"><span class="tier-mark">&times;</span><span>Branded PDF exports</span></li>
+              <li class="tier-row no"><span class="tier-mark">&times;</span><span>Advanced features unlocked</span></li>
+            </ul>
+            <div class="tier-cta">
+              <button class="cta-primary" type="button" onclick="document.getElementById('signup-btn').click();">START FREE <span>&rarr;</span></button>
+            </div>
+          </div>
+
+          <div class="tier-card paid">
+            <div class="tier-name">PAID</div>
+            <div class="tier-price">$5<span style="font-size:18px;color:var(--dim);font-weight:400;letter-spacing:0.18em;">/MO LAUNCH</span></div>
+            <div class="tier-aside">// STANDARD <strong style="color:var(--cream);">$10/MO</strong></div>
+            <ul class="tier-list">
+              <li class="tier-row"><span class="tier-mark">+</span><span>Everything in Free</span></li>
+              <li class="tier-row"><span class="tier-mark">+</span><span>Multiple tours per account</span></li>
+              <li class="tier-row"><span class="tier-mark">+</span><span>Branded PDF exports</span></li>
+              <li class="tier-row"><span class="tier-mark">+</span><span>Full feature set, both tools</span></li>
+              <li class="tier-row"><span class="tier-mark">+</span><span>Priority support</span></li>
+              <li class="tier-row"><span class="tier-mark">+</span><span>Included free with The Course</span></li>
+            </ul>
+            <div class="tier-cta">
+              <button class="cta-primary" type="button" onclick="document.getElementById('upgrade-btn').click();">UPGRADE NOW <span>&rarr;</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- TBL 05 CROSS-SELL -->
+  <section class="screen" id="screen-5" data-cue="5">
+    <div class="table-anchor">
+      <div class="table">
+        <div class="table-id">// TBL 05/5</div>
+        <div class="cross-sell-grid">
+          <div>
+            <div class="mono-label">// PAID TOOLKIT INCLUDED FREE</div>
+            <h2 class="table-title">The Course<span class="accent">.</span></h2>
+            <div class="table-rule"></div>
+            <p class="body-p">Picking up The Course? The paid Toolkit comes with it &mdash; full feature set, no extra subscription. The Course is the foundational training BB ships; the Toolkit is the working layer on top.</p>
+          </div>
+          <a class="cta-secondary" href="course.html">EXPLORE THE COURSE <span>&rarr;</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- TBL 01 CLONE -->
+  <section class="screen" id="screen-1-clone" data-cue="1" aria-hidden="true">
+    <div class="table-anchor">
+      <div class="table">
+        <div class="table-id">// TBL 01/5</div>
+        <div class="hero-grid">
+          <div>
+            <div class="mono-label">// THE TOOLKIT &middot; TWO WEB TOOLS</div>
+            <h1 class="hero-title">Build your rider.<br>Build your stage plot<span class="accent">.</span></h1>
+            <p class="hero-sub">Two web tools. Every tour needs both.</p>
+            <p class="hero-body">Stop building riders in Word. Stop drawing stage plots in PowerPoint. The Toolkit handles both &mdash; fast, clean, exportable.</p>
+            <div class="buy-row">
+              <button class="cta-primary" type="button" onclick="document.getElementById('tour').scrollTo({top:0,behavior:'smooth'});">START FREE <span>&rarr;</span></button>
+            </div>
+            <p class="hero-meta-line">// FREE WITH A <strong>GUEST PASS</strong> &middot; <strong>$5/MO LAUNCH</strong> FOR FULL FEATURES</p>
+          </div>
+          <div class="hero-cover-frame">
+            <img class="hero-cover" src="toolkit-covers/cover_rider_builder.png" alt="" loading="lazy">
+            <span class="cover-spec">DOC BB-301 &middot; WEB APP</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+
+<!-- MODALS -->
+<div class="modal-backdrop" id="signup-modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal">
+    <button class="modal-close" data-close-modal aria-label="Close">&times;</button>
+    <div class="modal-label">// SIGNUP &middot; PLACEHOLDER</div>
+    <h3 class="modal-title">Guest Pass Signup</h3>
+    <div class="modal-rule"></div>
+    <p class="modal-body"><strong>The Guest Pass signup form goes live when Clerk + Supabase wiring lands.</strong></p>
+    <p class="modal-body" style="margin-top:12px;">Free signup creates a Guest Pass account, drops you straight into the Rider Builder. Wiring documented in <code>03_Wiring/toolkit_signup.md</code> once provided.</p>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="upgrade-modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal">
+    <button class="modal-close" data-close-modal aria-label="Close">&times;</button>
+    <div class="modal-label">// CHECKOUT &middot; PLACEHOLDER</div>
+    <h3 class="modal-title">Paid Upgrade</h3>
+    <div class="modal-rule"></div>
+    <p class="modal-body"><strong>The Stripe Checkout flow goes live when the Stripe subscription price ID is wired.</strong></p>
+    <p class="modal-body" style="margin-top:12px;">$5/mo launch / $10/mo standard. Recurring subscription, unlocks full feature set on both tools. Documented in <code>03_Wiring/toolkit_stripe.md</code> once provided.</p>
+  </div>
+</div>
+
+
+<nav class="cue-list" id="cue-list">
+  <button class="cue-dot active" data-go="1"></button>
+  <button class="cue-dot" data-go="2"></button>
+  <button class="cue-dot" data-go="3"></button>
+  <button class="cue-dot" data-go="4"></button>
+  <button class="cue-dot" data-go="5"></button>
+</nav>
+
+<div class="footer-status"><span class="live-dot"></span>BCKSTG &middot; BLPRNT &middot; THE TOOLKIT</div>
+<div class="footer-meta" style="text-align:right;">
+  <div style="margin-bottom:4px;"><a href="experience.html" style="color:inherit;text-decoration:none;">THE TOUR</a> &middot; <a href="experience.html#scene-console" style="color:inherit;text-decoration:none;">CONTACT</a> &middot; <a href="experience.html#scene-production-office" style="color:inherit;text-decoration:none;">FRONT OF HOUSE</a> &middot; <a href="privacy.html" style="color:inherit;text-decoration:none;">PRIVACY</a> &middot; <a href="terms.html" style="color:inherit;text-decoration:none;">TERMS</a></div>
+  <div>EST. 2026 &middot; BACKSTAGEBLUEPRINT.CO</div>
+</div>
+
+
+<script>
+(function() {
+  const tour = document.getElementById('tour');
+  const screens = Array.from(tour.querySelectorAll('.screen'));
+  const cueDots = Array.from(document.querySelectorAll('.cue-dot'));
+  const cloneScreen = document.getElementById('screen-1-clone');
+
+  const inViewObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.intersectionRatio >= 0.55) e.target.classList.add('in-view'); });
+  }, { threshold:[0,0.25,0.55,0.75,1] });
+  screens.forEach(s => inViewObs.observe(s));
+  requestAnimationFrame(() => screens[0].classList.add('in-view'));
+
+  function updateActiveCue() {
+    const h = tour.clientHeight;
+    let idx = Math.round(tour.scrollTop / h);
+    if (idx >= 5) idx = 0;
+    cueDots.forEach((d, i) => d.classList.toggle('active', i === idx));
+  }
+
+  let scrollTimer = null, isJumping = false;
+  function maybeLoop() {
+    if (isJumping) return;
+    const cloneTop = cloneScreen.offsetTop;
+    if (Math.abs(tour.scrollTop - cloneTop) < 4) {
+      isJumping = true;
+      tour.style.scrollBehavior = 'auto';
+      tour.scrollTop = 0;
+      requestAnimationFrame(() => {
+        tour.style.scrollBehavior = 'smooth';
+        isJumping = false;
+        screens[0].classList.add('in-view');
+        updateActiveCue();
+      });
+    }
+  }
+  tour.addEventListener('scroll', () => {
+    updateActiveCue();
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(maybeLoop, 220);
+  });
+
+  cueDots.forEach((d, i) => {
+    d.addEventListener('click', () => {
+      if (screens[i]) screens[i].scrollIntoView({ behavior:'smooth', block:'start' });
+    });
+  });
+
+  // Parallax
+  const TX = 8, TY = 10, LIFT = 18;
+  screens.forEach(screen => {
+    const table = screen.querySelector('.table');
+    if (!table) return;
+    let raf = null, pending = null;
+    function apply(rx, ry, tz) { table.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) translateZ(${tz}px)`; }
+    screen.addEventListener('mousemove', (e) => {
+      const r = screen.getBoundingClientRect();
+      const dx = (e.clientX - r.left - r.width/2) / (r.width/2);
+      const dy = (e.clientY - r.top - r.height/2) / (r.height/2);
+      const c = v => Math.max(-1, Math.min(1, v));
+      pending = { rx:-c(dy)*TX, ry:c(dx)*TY, tz:(1-Math.min(1,Math.hypot(dx,dy)))*LIFT };
+      if (!raf) raf = requestAnimationFrame(() => { if (pending) apply(pending.rx, pending.ry, pending.tz); raf = null; });
+    });
+    screen.addEventListener('mouseleave', () => {
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      apply(0, 0, 0);
+    });
+  });
+
+  // Modals
+  const signupModal = document.getElementById('signup-modal');
+  const upgradeModal = document.getElementById('upgrade-modal');
+  function open(m) { m.classList.add('open'); m.setAttribute('aria-hidden','false'); }
+  function close(m) { m.classList.remove('open'); m.setAttribute('aria-hidden','true'); }
+  // Order 009 · CTA routing.
+  // Free button → land in the Toolkit app at free tier. Clerk middleware
+  // (when configured at /toolkit/) handles the signup gate; until then,
+  // app loads and runs in dev mode for anyone hitting the route.
+  // Paid button → land in the app with ?upgrade=prompt so the upgrade
+  // modal opens automatically; the in-app Stripe Checkout takes over from
+  // there (or falls back to dev-toggle if Stripe price ID isn't wired).
+  document.getElementById('signup-btn').addEventListener('click', () => {
+    window.location.href = '/toolkit/';
+  });
+  document.getElementById('upgrade-btn').addEventListener('click', () => {
+    window.location.href = '/toolkit/?upgrade=prompt';
+  });
+  document.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', (e) => close(e.target.closest('.modal-backdrop'))));
+  [signupModal, upgradeModal].forEach(m => m.addEventListener('click', (e) => { if (e.target === m) close(m); }));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (signupModal.classList.contains('open')) close(signupModal);
+      if (upgradeModal.classList.contains('open')) close(upgradeModal);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (signupModal.classList.contains('open') || upgradeModal.classList.contains('open')) return;
+    if (['ArrowDown','PageDown','Space'].includes(e.key) || e.code === 'Space') {
+      e.preventDefault();
+      const h = tour.clientHeight;
+      const next = Math.min(screens.length - 1, Math.round(tour.scrollTop / h) + 1);
+      screens[next].scrollIntoView({ behavior:'smooth', block:'start' });
+    } else if (['ArrowUp','PageUp'].includes(e.key)) {
+      e.preventDefault();
+      const h = tour.clientHeight;
+      const prev = Math.max(0, Math.round(tour.scrollTop / h) - 1);
+      screens[prev].scrollIntoView({ behavior:'smooth', block:'start' });
+    }
+  });
+
+  updateActiveCue();
+})();
+</script>
+
+</body>
+</html>

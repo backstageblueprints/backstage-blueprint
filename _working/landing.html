@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1B3D6E">
+<title>Backstage Blueprint — Production · Live · Touring Systems</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700&family=Teko:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   PALETTE & TUNABLES
+   ========================================================= */
+:root {
+  --navy:        #1B3D6E;
+  --navy-deep:   #142C4F;
+  --orange:      #D85A1F;
+  --cream:       #F2EBDD;
+  --ink:         #0D0D0D;
+  --glow-color:  255, 245, 215;
+
+  /* Phase 1 breath */
+  --breath-duration: 6s;
+  --breath-scale-low: 1.000;
+  --breath-scale-high: 1.010;
+
+  /* Phase 2 hover glow (slower + gentler than before) */
+  --glow-pulse-duration: 3.6s;
+
+  /* Phase 3 tunnel */
+  --tunnel-duration: 1200ms;
+  --tunnel-hold:     280ms;
+
+  /* Establishing animation (page load) */
+  --establish-duration: 1.4s;
+  --establish-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--navy);
+  color: var(--cream);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* =========================================================
+   ESTABLISHING ANIMATION — page fades in from navy on load
+   ========================================================= */
+.desk {
+  opacity: 0;
+  transform: scale(0.96);
+  transition: opacity var(--establish-duration) ease,
+              transform calc(var(--establish-duration) + 0.2s) var(--establish-ease);
+}
+body.loaded .desk {
+  opacity: 1;
+  transform: scale(1);
+}
+
+header, footer {
+  opacity: 0;
+  transition: opacity 0.9s ease 0.4s;
+}
+body.loaded header,
+body.loaded footer {
+  opacity: 1;
+}
+
+/* Phase-aware overrides for header/footer that wait for the load to finish */
+body.loaded.phase-2 header,
+body.loaded.phase-2 footer {
+  opacity: 0.75;
+  transition: opacity 600ms ease;
+}
+body.loaded.phase-3 header,
+body.loaded.phase-3 footer {
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+
+/* =========================================================
+   HEADER (matches live site)
+   ========================================================= */
+header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 80;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28px 48px;
+  pointer-events: none;
+}
+
+.header-mark {
+  font-family: 'Teko', 'Oswald', 'Impact', 'Arial Narrow', sans-serif;
+  font-size: 18px;
+  letter-spacing: 1.5px;
+  color: var(--cream);
+  pointer-events: auto;
+}
+.header-mark .reg {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--cream);
+  border-radius: 50%;
+  font-size: 9px;
+  line-height: 12px;
+  text-align: center;
+  vertical-align: 4px;
+  margin-left: 6px;
+  letter-spacing: 0;
+}
+.header-meta {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 500;
+  opacity: 0.85;
+  pointer-events: auto;
+}
+
+/* =========================================================
+   HERO & DESK
+   ========================================================= */
+.hero {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.hero::before,
+.hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+.hero::before {
+  top: 0;
+  height: 140px;
+  background: linear-gradient(180deg, rgba(20,44,79,0.55) 0%, rgba(20,44,79,0) 100%);
+}
+.hero::after {
+  bottom: 0;
+  height: 140px;
+  background: linear-gradient(0deg, rgba(20,44,79,0.55) 0%, rgba(20,44,79,0) 100%);
+}
+
+.desk {
+  position: relative;
+  aspect-ratio: 4000 / 2250;
+  width: min(100vw, calc(100vh * 4000 / 2250));
+  overflow: hidden;
+}
+
+.world {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+}
+
+/* =========================================================
+   LAYERS (same-canvas PNGs stacked at the same coordinates)
+   ========================================================= */
+.layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* --- BG: two layers we crossfade between based on phase --- */
+.bg-phase-1 { z-index: 1; transition: opacity 600ms ease; }
+.bg-phase-2 {
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+body.phase-2 .bg-phase-1,
+body.phase-3 .bg-phase-1 { opacity: 0; }
+body.phase-2 .bg-phase-2 { opacity: 1; }
+body.phase-3 .bg-phase-2 {
+  opacity: 0;                          /* fade BG out during the tunnel so we don't see "nested holes" */
+  transition: opacity 700ms ease 450ms;
+}
+
+/* Dim veil — darkens BG in Phase 2/3, sits below cables/circle */
+.dim-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background-color: rgba(0, 0, 0, 0);
+  pointer-events: none;
+  transition: background-color 600ms ease;
+}
+body.phase-2 .dim-veil,
+body.phase-3 .dim-veil {
+  background-color: rgba(0, 0, 0, 0.45);
+}
+
+/* =========================================================
+   XLR CABLE 1 — breath always
+   ========================================================= */
+.cable-1-wrapper {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  transform: scale(1);
+  transform-origin: 50% 50%;
+  transition: transform 900ms cubic-bezier(0.22, 1.2, 0.36, 1),
+              filter   600ms ease;
+}
+body.phase-2 .cable-1-wrapper { transform: scale(1.05); }
+body.phase-3 .cable-1-wrapper {
+  opacity: 0;                                    /* fade out so only the tunnel veil's cable flies forward */
+  transform: scale(1.05);                        /* stays fixed in the world — no scale change */
+  transition: opacity 550ms ease 100ms, transform 0ms;
+}
+
+.cable-1 {
+  width: 100%;
+  height: 100%;
+  display: block;
+  animation: cable-breathe var(--breath-duration) ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+@keyframes cable-breathe {
+  0%, 100% {
+    transform: scale(var(--breath-scale-low));
+    filter:
+      drop-shadow(0 0 0 rgba(var(--glow-color), 0))
+      drop-shadow(0 1px 2px rgba(0, 0, 0, 0.20));
+  }
+  50% {
+    transform: scale(var(--breath-scale-high));
+    filter:
+      drop-shadow(0 0 0 rgba(var(--glow-color), 0))
+      drop-shadow(0 9px 16px rgba(0, 0, 0, 0.45));
+  }
+}
+
+/* =========================================================
+   XLR CABLE 2 — clockwise 180° entrance, exits in reverse
+   ========================================================= */
+.cable-2-wrapper {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  opacity: 0;
+  transform: scale(0.92) rotate(180deg);
+  transform-origin: 50% 50%;
+  transition: opacity 1000ms ease,
+              transform 1100ms cubic-bezier(0.22, 1.0, 0.32, 1.0),
+              filter   600ms ease;
+  filter:
+    drop-shadow(0 0 0 rgba(var(--glow-color), 0))
+    drop-shadow(0 14px 26px rgba(0, 0, 0, 0.50));
+}
+
+body.phase-2 .cable-2-wrapper {
+  opacity: 1;
+  transform: scale(1.10) rotate(360deg);
+}
+
+body.phase-3 .cable-2-wrapper {
+  opacity: 0;
+  transform: scale(1.10) rotate(360deg);     /* stays fixed in the world — only opacity fades */
+  transition: opacity 550ms ease 100ms, transform 0ms;
+}
+
+.cable-2 {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* =========================================================
+   OPTIONS CIRCLE BG (Phase 2)
+   ========================================================= */
+.circle-bg {
+  z-index: 14;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 700ms ease 100ms,
+              transform 800ms cubic-bezier(0.22, 1.2, 0.36, 1) 100ms;
+  filter: drop-shadow(0 18px 32px rgba(0, 0, 0, 0.55));
+}
+
+body.phase-2 .circle-bg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+body.phase-3 .circle-bg {
+  opacity: 0;
+  transform: scale(0.32);                       /* shrinks away into the center */
+  transition: opacity 400ms ease, transform 600ms ease-in;
+}
+
+/* =========================================================
+   PRODUCTS / MEMBERS TEXT — each line positioned independently
+   so they can highlight independently. Archivo Bold, ~2× the
+   prior size, separated well above/below the dashed center line.
+   ========================================================= */
+.text-line {
+  position: absolute;
+  left: 50%;
+  z-index: 16;
+  font-family: 'Archivo', 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: clamp(19px, 1.95vw, 31px);   /* ~15% smaller than before */
+  letter-spacing: 0.06em;
+  color: var(--cream);
+  white-space: nowrap;
+  text-align: center;
+  pointer-events: none;                    /* hidden in phase 1 — no hover triggers */
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.9);
+  transition: opacity 600ms ease 300ms,
+              transform 700ms cubic-bezier(0.22, 1.2, 0.36, 1) 300ms,
+              color 280ms ease,
+              text-shadow 280ms ease;
+}
+
+/* In Phase 2 the text becomes the hover/click target — hover bounds = the word itself */
+body.phase-2 .text-line {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Symmetric placement around the dashed line (y = 49% of canvas) */
+.text-products { top: 42%; }
+.text-members  { top: 56%; }
+
+body.phase-2 .text-products,
+body.phase-2 .text-members {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+body.phase-3 .text-products,
+body.phase-3 .text-members {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.45);
+  transition: opacity 300ms ease,
+              transform 450ms ease-in;
+}
+
+/* Selective hover highlight — only the hovered line lights up */
+body.phase-2.top-hover .text-products {
+  color: rgb(var(--glow-color));
+  text-shadow:
+    0 0 12px rgba(var(--glow-color), 0.85),
+    0 0 28px rgba(var(--glow-color), 0.45);
+}
+body.phase-2.bottom-hover .text-members {
+  color: rgb(var(--glow-color));
+  text-shadow:
+    0 0 12px rgba(var(--glow-color), 0.85),
+    0 0 28px rgba(var(--glow-color), 0.45);
+}
+
+/* =========================================================
+   CLICK TO BEGIN — Phase 1 only, snappy hover response
+   ========================================================= */
+.click-to-begin {
+  z-index: 20;
+  opacity: 1;
+  transform: scale(1);
+  /* Out (Phase 1 -> 2) gets the gentle ease,
+     hover-in gets the snappy ease — handled in :hover rule below */
+  transition: opacity 450ms ease,
+              transform 500ms cubic-bezier(0.4, 0, 0.2, 1),
+              filter   300ms ease;
+  /* Modest CSS shadow on top of whatever is baked into the PNG */
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.22));
+}
+
+body.phase-2 .click-to-begin,
+body.phase-3 .click-to-begin {
+  opacity: 0;
+  transform: scale(0.92);
+  pointer-events: none;
+}
+
+/* Snappier hover-in: button lifts quickly with warm halo (shadow toned down a notch) */
+body.phase-1 .hot-begin:hover ~ .click-to-begin {
+  transform: scale(1.045);
+  filter: drop-shadow(0 9px 16px rgba(0, 0, 0, 0.42))
+          drop-shadow(0 0 18px rgba(var(--glow-color), 0.45));
+  transition: transform 160ms cubic-bezier(0.22, 1.2, 0.36, 1),
+              filter    160ms ease;
+}
+
+/* =========================================================
+   HOT ZONES — tighter to the text areas
+   ========================================================= */
+.hot {
+  position: absolute;
+  z-index: 25;
+  cursor: pointer;
+}
+
+/* Click-to-begin hot zone (Phase 1) */
+.hot-begin {
+  left: 42%; top: 36%; width: 16%; height: 14%;
+}
+body:not(.phase-1) .hot-begin { display: none; }
+
+/* Hemisphere hot zones removed — the text elements themselves are the hover/click targets now */
+
+/* Debug toggle — uncomment to see hot zones in orange:
+.hot { background: rgba(255, 122, 58, 0.22); outline: 1px dashed rgba(255,255,255,0.5); }
+*/
+
+/* =========================================================
+   PHASE-2 HEMISPHERE HOVER: gentler directional cable glow
+   ========================================================= */
+body.phase-2.top-hover .cable-1-wrapper,
+body.phase-2.top-hover .cable-2-wrapper {
+  animation: cable-glow-top var(--glow-pulse-duration) ease-in-out infinite;
+}
+
+body.phase-2.bottom-hover .cable-1-wrapper,
+body.phase-2.bottom-hover .cable-2-wrapper {
+  animation: cable-glow-bottom var(--glow-pulse-duration) ease-in-out infinite;
+}
+
+/* Glow keyframes: lower alphas, smaller swing, slower */
+@keyframes cable-glow-top {
+  0%, 100% {
+    filter:
+      drop-shadow(0 -8px 18px rgba(var(--glow-color), 0.16))
+      drop-shadow(0 14px 28px rgba(0, 0, 0, 0.55));
+  }
+  50% {
+    filter:
+      drop-shadow(0 -12px 28px rgba(var(--glow-color), 0.32))
+      drop-shadow(0 14px 28px rgba(0, 0, 0, 0.55));
+  }
+}
+
+@keyframes cable-glow-bottom {
+  0%, 100% {
+    filter:
+      drop-shadow(0 8px 18px rgba(var(--glow-color), 0.16))
+      drop-shadow(0 -14px 28px rgba(0, 0, 0, 0.55));
+  }
+  50% {
+    filter:
+      drop-shadow(0 12px 28px rgba(var(--glow-color), 0.32))
+      drop-shadow(0 -14px 28px rgba(0, 0, 0, 0.55));
+  }
+}
+
+/* =========================================================
+   TUNNEL VEIL (Phase 3) — scales up dramatically; its alpha
+   hole grows to fill the screen.
+   ========================================================= */
+.tunnel-veil {
+  z-index: 50;
+  opacity: 0;
+  transform: scale(1);
+  transform-origin: 50% 50%;
+  transition: opacity 350ms ease,
+              transform var(--tunnel-duration) cubic-bezier(0.5, 0, 0.75, 0.05);
+  pointer-events: none;
+}
+
+body.phase-3 .tunnel-veil {
+  opacity: 1;
+  transform: scale(8);
+  transition: opacity 350ms ease 200ms,
+              transform var(--tunnel-duration) cubic-bezier(0.5, 0, 0.75, 0.05) 200ms;
+}
+
+/* Blackout — final hold before navigation */
+.blackout {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms ease;
+}
+.blackout.show { opacity: 1; }
+
+/* =========================================================
+   FOOTER (matches live site)
+   ========================================================= */
+footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 80;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 24px 48px 28px;
+}
+
+.tagline {
+  font-family: 'Teko', 'Oswald', 'Impact', 'Arial Narrow', sans-serif;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--cream);
+  opacity: 0.95;
+}
+.tagline .dot {
+  color: var(--orange);
+  margin: 0 8px;
+}
+.contact {
+  font-size: 12px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--cream);
+  text-decoration: none;
+  border-bottom: 1.5px solid var(--orange);
+  padding-bottom: 4px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.contact:hover { color: var(--orange); }
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+@media (max-width: 720px) {
+  header { padding: 20px 24px; }
+  footer {
+    padding: 20px 24px 24px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .header-meta { font-size: 9px;  letter-spacing: 1.5px; }
+  .header-mark { font-size: 13px; letter-spacing: 1px;   }
+  .tagline     { font-size: 11px; letter-spacing: 2.5px; }
+  .contact     { font-size: 11px; letter-spacing: 2px;   }
+}
+</style>
+</head>
+<body class="phase-1">
+
+<header>
+  <div class="header-mark">BCKSTG &middot; BLPRNT<span class="reg">M</span></div>
+  <div class="header-meta">EST. 2026</div>
+</header>
+
+<main class="hero">
+  <div class="desk">
+    <div class="world" id="world">
+
+      <!-- BACKDROPS — bg-phase-1 visible in Phase 1; bg-phase-2 takes over in Phase 2/3 (so no baked CLICK TO BEGIN is exposed during the tunnel) -->
+      <img class="layer bg-phase-1" src="HOME_PAGE/LANDING PAGE OPTIONS ASSETS/LANDING_PAGE_REFERENCE.png" alt="">
+      <img class="layer bg-phase-2" src="HOME_PAGE/LANDING PAGE OPTIONS ASSETS/EXPAND_THROUGH_CENTER_HOLE.png" alt="">
+
+      <!-- Dim veil — sits above BG, below cables -->
+      <div class="dim-veil"></div>
+
+      <!-- XLR CABLE 1 — breathes always -->
+      <div class="cable-1-wrapper">
+        <img class="layer cable-1" src="HOME_PAGE/LANDING PAGE OPTIONS ASSETS/XLRCABLE_1.png" alt="">
+      </div>
+
+      <!-- XLR CABLE 2 — clockwise 180° entrance in Phase 2 -->
+      <div class="cable-2-wrapper">
+        <img class="layer cable-2" src="HOME_PAGE/LANDING PAGE OPTIONS ASSETS/XLRCABLE_2.png" alt="">
+      </div>
+
+      <!-- OPTIONS CIRCLE BG (Phase 2) -->
+      <img class="layer circle-bg" src="HOME_PAGE/LANDING PAGE OPTIONS ASSETS/OPTIONS_CIRCLE_BG.png" alt="">
+
+      <!-- OPTIONS TEXT — text elements are themselves the hover/click targets in Phase 2 -->
+      <span class="text-line text-products" data-target="blueprint-page.html">BROWSE PRODUCTS</span>
+      <span class="text-line text-members"  data-target="members.html">MEMBERS AREA</span>
+
+      <!-- CLICK-TO-BEGIN hot zone (invisible, Phase 1 only) -->
+      <div class="hot hot-begin"></div>
+
+      <!-- CLICK TO BEGIN BUTTON (Phase 1) -->
+      <img class="layer click-to-begin" src="HOME_PAGE/LANDING PAGE OPTIONS ASSETS/CLICK_TO_BEGIN.png" alt="">
+
+      <!-- TUNNEL VEIL (Phase 3) -->
+      <img class="layer tunnel-veil" src="HOME_PAGE/LANDING PAGE OPTIONS ASSETS/EXPAND_THROUGH_CENTER_HOLE.png" alt="">
+
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="tagline">Backstage Blueprint <span class="dot">&middot;</span> Every Show Needs A Blueprint</div>
+  <a class="contact" href="mailto:hello@backstageblueprint.com">Get In Touch</a>
+</footer>
+
+<div class="blackout" id="blackout"></div>
+
+<script>
+  const body       = document.body;
+  const hotBegin   = document.querySelector('.hot-begin');
+  const hotProd    = document.querySelector('.text-products');     /* the text IS the hover target */
+  const hotMembers = document.querySelector('.text-members');
+  const blackout   = document.getElementById('blackout');
+
+  // === ESTABLISHING ANIMATION on load ===
+  window.addEventListener('load', () => {
+    setTimeout(() => body.classList.add('loaded'), 60);
+  });
+  // Fallback in case 'load' is slow (large images)
+  setTimeout(() => body.classList.add('loaded'), 2500);
+
+  // === PHASE 1 -> PHASE 2 ===
+  hotBegin.addEventListener('click', () => {
+    if (!body.classList.contains('phase-1')) return;
+    body.classList.remove('phase-1');
+    body.classList.add('phase-2');
+  });
+
+  // === PHASE 2 HOVER (directional cable glow) ===
+  function setHoverHemisphere(which) {
+    body.classList.remove('top-hover', 'bottom-hover');
+    if (which) body.classList.add(which);
+  }
+  hotProd.addEventListener('mouseenter',    () => { if (body.classList.contains('phase-2')) setHoverHemisphere('top-hover'); });
+  hotProd.addEventListener('mouseleave',    () => setHoverHemisphere(null));
+  hotMembers.addEventListener('mouseenter', () => { if (body.classList.contains('phase-2')) setHoverHemisphere('bottom-hover'); });
+  hotMembers.addEventListener('mouseleave', () => setHoverHemisphere(null));
+
+  // === PHASE 2 -> PHASE 3 (tunnel + navigate) ===
+  function navigateThroughTunnel(url) {
+    if (!body.classList.contains('phase-2')) return;
+    setHoverHemisphere(null);
+    body.classList.remove('phase-2');
+    body.classList.add('phase-3');
+
+    const tunnelMs = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tunnel-duration')) || 1200;
+    const holdMs   = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tunnel-hold'))     || 280;
+
+    // Blackout starts ~200ms before tunnel finishes
+    setTimeout(() => blackout.classList.add('show'), tunnelMs - 150);
+
+    // Navigate after the blackout hold
+    setTimeout(() => { window.location.href = url; }, tunnelMs + holdMs);
+  }
+  hotProd.addEventListener('click',    () => navigateThroughTunnel(hotProd.dataset.target));
+  hotMembers.addEventListener('click', () => navigateThroughTunnel(hotMembers.dataset.target));
+
+  // Escape exits Phase 2 -> Phase 1 (handy while iterating)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && body.classList.contains('phase-2')) {
+      body.classList.remove('phase-2');
+      body.classList.add('phase-1');
+      setHoverHemisphere(null);
+    }
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,2866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Binder — Backstage Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black:#0E0E0E; --black2:#141414;
+    --blue:#1B3A5C; --blue-d:#122947; --blue-l:#9FC5E7;
+    --bone:#F4F1EA; --orange:#D4641E;
+    --scale:1;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    background:var(--black);
+    background-image:
+      linear-gradient(rgba(27,58,92,0.16) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(27,58,92,0.16) 1px,transparent 1px);
+    background-size:26px 26px;
+    color:var(--bone);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  /* ============ LOGIN GATE ============ */
+  .gate{
+    position:fixed; inset:0; z-index:200;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--black);
+    background-image:
+      linear-gradient(rgba(27,58,92,0.20) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(27,58,92,0.20) 1px,transparent 1px);
+    background-size:26px 26px;
+    transition:opacity .6s ease, visibility .6s;
+  }
+  .gate.hidden{opacity:0; visibility:hidden;}
+  .gate-card{
+    width:380px; max-width:90vw;
+    background:var(--black2);
+    border:1px solid rgba(244,241,234,0.14);
+    box-shadow:0 30px 80px rgba(0,0,0,0.7);
+    padding:38px 38px 34px;
+    position:relative;
+  }
+  .gate-card::before,.gate-card::after{
+    content:""; position:absolute; width:16px; height:16px;
+    border:1.5px solid var(--orange); opacity:.7;
+  }
+  .gate-card::before{top:10px;left:10px;border-right:0;border-bottom:0;}
+  .gate-card::after{bottom:10px;right:10px;border-left:0;border-top:0;}
+  .gate-mark{
+    display:inline-block; border:1px solid rgba(244,241,234,0.55);
+    margin-bottom:22px;
+  }
+  .gate-mark .top,.gate-mark .bot{
+    font-family:'Archivo',sans-serif; font-size:13px; line-height:1;
+    letter-spacing:3px; padding:5px 12px;
+  }
+  .gate-mark .top{font-weight:900;}
+  .gate-mark .bot{font-weight:300;border-top:.5px solid rgba(244,241,234,0.4);}
+  /* Internal logo image — replaces the CSS-drawn stacked text mark. */
+  .gate-mark-img {
+    display: block;
+    width: 280px;
+    max-width: 100%;
+    height: auto;
+    margin: 0 0 22px;
+    user-select: none;
+  }
+  .gate-tag{
+    font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700;
+    letter-spacing:3px; color:var(--orange); margin-bottom:8px;
+  }
+  .gate-title{
+    font-family:'Archivo',sans-serif; font-weight:900; font-size:34px;
+    letter-spacing:1px; line-height:.95; margin-bottom:6px;
+  }
+  .gate-sub{
+    font-size:12.5px; color:rgba(244,241,234,0.6); margin-bottom:26px;
+  }
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block; font-family:'JetBrains Mono',monospace;
+    font-size:9px; font-weight:700; letter-spacing:2px;
+    color:rgba(244,241,234,0.5); margin-bottom:5px;
+  }
+  .field input{
+    width:100%; background:var(--black); color:var(--bone);
+    border:1px solid rgba(244,241,234,0.18);
+    padding:11px 12px; font-family:'Inter',sans-serif; font-size:13px;
+    outline:none; transition:border-color .2s;
+  }
+  .field input:focus{border-color:var(--orange);}
+  .gate-btn{
+    width:100%; margin-top:10px;
+    background:var(--orange); color:var(--black);
+    border:0; padding:13px; cursor:pointer;
+    font-family:'JetBrains Mono',monospace; font-weight:700;
+    font-size:11px; letter-spacing:2.5px;
+    transition:transform .12s ease, filter .15s ease;
+  }
+  .gate-btn:hover{filter:brightness(1.08);}
+  .gate-btn:active{transform:scale(.985);}
+  .gate-note{
+    margin-top:16px; font-family:'JetBrains Mono',monospace;
+    font-size:9px; letter-spacing:1px; color:rgba(244,241,234,0.32);
+    text-align:center; line-height:1.6;
+  }
+
+  /* ============ APP SHELL ============ */
+  .app{
+    height:100vh; display:flex; flex-direction:column;
+    opacity:0; transition:opacity .7s ease .15s;
+  }
+  .app.live{opacity:1;}
+
+  /* top bar */
+  .topbar{
+    flex-shrink:0; height:60px;
+    display:flex; align-items:center; gap:18px;
+    padding:0 22px;
+    border-bottom:1px solid rgba(244,241,234,0.10);
+    background:rgba(14,14,14,0.6);
+  }
+  .tb-mark{
+    display:flex; flex-direction:column; line-height:1;
+    border:1px solid rgba(244,241,234,0.5); flex-shrink:0;
+  }
+  .tb-mark span{
+    font-family:'Archivo',sans-serif; font-size:9px; letter-spacing:2px;
+    padding:3px 8px;
+  }
+  .tb-mark .a{font-weight:900;}
+  .tb-mark .b{font-weight:300;border-top:.5px solid rgba(244,241,234,0.4);}
+  /* Internal logo image — replaces the CSS-drawn stacked text mark in topbar. */
+  .tb-mark-img {
+    display: block; height: 40px; width: auto;
+    flex-shrink: 0; user-select: none;
+  }
+  .tb-name{
+    font-family:'JetBrains Mono',monospace; font-size:11px;
+    letter-spacing:3px; color:rgba(244,241,234,0.55);
+  }
+  .tb-spacer{flex:1;}
+  .module-select{
+    position:relative;
+  }
+  .module-select select{
+    appearance:none; -webkit-appearance:none;
+    background:var(--black2); color:var(--bone);
+    border:1px solid rgba(244,241,234,0.20);
+    padding:9px 38px 9px 14px;
+    font-family:'JetBrains Mono',monospace; font-size:11px;
+    letter-spacing:1.5px; cursor:pointer; outline:none;
+    transition:border-color .2s;
+  }
+  .module-select select:hover{border-color:var(--orange);}
+  .module-select::after{
+    content:"\25BC"; position:absolute; right:13px; top:50%;
+    transform:translateY(-50%); font-size:8px; color:var(--orange);
+    pointer-events:none;
+  }
+  .signout{
+    background:none; border:1px solid rgba(244,241,234,0.18);
+    color:rgba(244,241,234,0.6); cursor:pointer;
+    font-family:'JetBrains Mono',monospace; font-size:9px;
+    letter-spacing:2px; padding:8px 12px; transition:all .18s;
+  }
+  .signout:hover{border-color:var(--orange); color:var(--orange);}
+
+  /* Back-to-hub link — sits next to the sign-out button */
+  .back-hub{
+    background:none; border:1px solid rgba(244,241,234,0.18);
+    color:rgba(244,241,234,0.6); cursor:pointer; text-decoration:none;
+    font-family:'JetBrains Mono',monospace; font-size:9px;
+    letter-spacing:2px; padding:8px 12px; transition:all .18s;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .back-hub:hover{border-color:var(--orange); color:var(--orange);}
+  .back-hub .arr{font-size:11px; line-height:1;}
+
+  /* main reading area */
+  .reading{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    gap:34px; padding:24px 40px; min-height:0;
+  }
+
+  /* binder spine + rings */
+  .spine{
+    flex-shrink:0; width:64px;
+    background:linear-gradient(100deg,var(--blue-d),var(--blue) 55%,var(--blue-d));
+    border:1px solid rgba(244,241,234,0.12);
+    border-radius:5px 2px 2px 5px;
+    box-shadow:inset -8px 0 18px rgba(0,0,0,0.45), 0 18px 40px rgba(0,0,0,0.5);
+    position:relative;
+  }
+  .spine::before{
+    content:""; position:absolute; inset:6px 8px;
+    border:1px dashed rgba(159,197,231,0.30);
+  }
+  .ring{
+    position:absolute; right:-30px; width:60px; height:60px;
+    border-radius:50%;
+    background:linear-gradient(135deg,#f0f0f3 0%,#b6b6be 38%,#5c5c64 62%,#d2d2d9 100%);
+    box-shadow:inset 0 3px 4px rgba(255,255,255,0.7),
+               inset 0 -4px 7px rgba(0,0,0,0.55),
+               0 5px 10px rgba(0,0,0,0.55);
+    z-index:6;
+  }
+  .ring::before{
+    content:""; position:absolute; inset:19px;
+    border-radius:50%;
+    background:var(--black);
+    box-shadow:inset 0 3px 6px rgba(0,0,0,0.85);
+  }
+  .ring.r1{top:20%;} .ring.r2{top:50%;margin-top:-30px;} .ring.r3{bottom:20%;}
+
+  /* page flip stage */
+  .stage-wrap{position:relative;}
+  .stage{
+    width:816px; height:1056px;
+    transform:scale(var(--scale));
+    transform-origin:top left;
+    perspective:2400px;
+  }
+  .leaf-area{
+    position:relative; width:816px; height:1056px;
+    transform-style:preserve-3d;
+  }
+  .page-shadow{
+    position:absolute; inset:0;
+    box-shadow:0 38px 80px rgba(0,0,0,0.62);
+    z-index:0;
+  }
+  .leaf{
+    position:absolute; inset:0;
+    transform-origin:left center;
+    transform:rotateY(0deg);
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+    transition:transform .72s cubic-bezier(.45,.05,.25,1);
+  }
+  .leaf iframe{
+    width:816px; height:1056px; border:0; display:block;
+    background:#ffffff;
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+  }
+  .leaf-shade{
+    position:absolute; inset:0; pointer-events:none; opacity:0;
+    background:linear-gradient(90deg,rgba(0,0,0,0.55),rgba(0,0,0,0) 42%);
+  }
+  @keyframes flipShadeFwd{0%{opacity:0}48%{opacity:.5}100%{opacity:0}}
+  .leaf.flipping .leaf-shade{animation:flipShadeFwd .72s cubic-bezier(.45,.05,.25,1);}
+
+  /* "coming soon" panel for locked modules */
+  .locked{
+    width:816px; height:1056px;
+    transform:scale(var(--scale)); transform-origin:top left;
+    display:none; flex-direction:column;
+    align-items:center; justify-content:center; gap:14px;
+    background:var(--black2); border:1px solid rgba(244,241,234,0.12);
+    text-align:center;
+  }
+  .locked .lk-tag{
+    font-family:'JetBrains Mono',monospace; font-size:12px;
+    font-weight:700; letter-spacing:3px; color:var(--orange);
+  }
+  .locked .lk-title{
+    font-family:'Archivo',sans-serif; font-weight:900; font-size:44px;
+    letter-spacing:1px;
+  }
+  .locked .lk-sub{font-size:13px; color:rgba(244,241,234,0.5);}
+
+  /* notes panel */
+  .notes{
+    flex-shrink:0; width:414px;
+    display:flex; flex-direction:column;
+    background:#FBF7EA;
+    border:1px solid rgba(0,0,0,0.25);
+    box-shadow:0 24px 56px rgba(0,0,0,0.5);
+  }
+  .notes-head{
+    flex-shrink:0; padding:13px 18px 11px;
+    background:var(--blue-d);
+    border-bottom:2px solid var(--orange);
+  }
+  .notes-head .nh-label{
+    font-family:'JetBrains Mono',monospace; font-size:9px;
+    font-weight:700; letter-spacing:3px; color:var(--orange);
+  }
+  .notes-head .nh-mod{
+    font-family:'Archivo',sans-serif; font-weight:900; font-size:16px;
+    letter-spacing:.5px; color:var(--bone); margin-top:3px;
+  }
+  .notes-paper{position:relative; flex:1; min-height:0;}
+  .notes-paper::before{
+    content:""; position:absolute; top:0; bottom:0; left:42px;
+    width:2px; background:rgba(212,100,30,0.45); z-index:2;
+  }
+  .notes textarea{
+    position:absolute; inset:0; width:100%; height:100%;
+    border:0; outline:none; resize:none;
+    background:repeating-linear-gradient(
+      #FBF7EA, #FBF7EA 29px,
+      rgba(27,58,92,0.22) 29px, rgba(27,58,92,0.22) 30px);
+    font-family:'Inter',sans-serif; font-size:13px;
+    line-height:30px; color:#1a1a1a;
+    padding:8px 18px 18px 56px;
+  }
+  .notes textarea::placeholder{color:rgba(14,14,14,0.30);}
+  .notes-foot{
+    flex-shrink:0; padding:8px 16px;
+    border-top:1px solid rgba(0,0,0,0.15);
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:'JetBrains Mono',monospace; font-size:9px;
+    letter-spacing:1.5px; color:rgba(14,14,14,0.45);
+  }
+  .save-state{color:var(--blue);}
+  .save-state.saved{color:#2d7d3f;}
+
+  /* bottom nav */
+  .navbar{
+    flex-shrink:0; height:70px;
+    display:flex; align-items:center; justify-content:center; gap:22px;
+    border-top:1px solid rgba(244,241,234,0.10);
+    background:rgba(14,14,14,0.6);
+  }
+  .nav-btn{
+    display:flex; align-items:center; gap:9px;
+    background:var(--black2); color:var(--bone);
+    border:1px solid rgba(244,241,234,0.20);
+    padding:11px 20px; cursor:pointer;
+    font-family:'JetBrains Mono',monospace; font-weight:700;
+    font-size:10px; letter-spacing:2px;
+    transition:all .16s ease;
+  }
+  .nav-btn:hover:not(:disabled){
+    border-color:var(--orange); color:var(--orange);
+  }
+  .nav-btn:active:not(:disabled){transform:scale(.97);}
+  .nav-btn:disabled{opacity:.28; cursor:default;}
+  .nav-btn .arw{font-size:13px;}
+  .counter{
+    font-family:'JetBrains Mono',monospace; font-size:12px;
+    letter-spacing:2px; color:rgba(244,241,234,0.7);
+    min-width:120px; text-align:center;
+  }
+  .counter b{color:var(--orange); font-weight:700;}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN GATE ============ -->
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <img class="gate-mark-img" src="bb-logo-internal.png" alt="Backstage Blueprint">
+    <div class="gate-tag">— COURSE LIBRARY —</div>
+    <div class="gate-title">THE BINDER</div>
+    <div class="gate-sub">Sign in to open your course modules.</div>
+    <form id="gateForm">
+      <div class="field">
+        <label>EMAIL</label>
+        <input type="email" id="gEmail" placeholder="you@example.com" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>ACCESS CODE</label>
+        <input type="password" id="gCode" placeholder="••••••••" autocomplete="off">
+      </div>
+      <button type="submit" class="gate-btn">OPEN THE BINDER</button>
+    </form>
+    <div class="gate-note">PROTOTYPE · ANY CREDENTIALS WILL OPEN THE BINDER</div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div class="app" id="app">
+
+  <div class="topbar">
+    <img class="tb-mark-img" src="bb-logo-internal.png" alt="Backstage Blueprint">
+    <div class="tb-name">THE&nbsp;BINDER</div>
+    <div class="tb-spacer"></div>
+    <div class="module-select">
+      <select id="moduleSelect"></select>
+    </div>
+    <a class="back-hub" href="members.html" aria-label="Back to Members Hub"><span class="arr">&larr;</span> MEMBERS HUB</a>
+    <button class="signout" id="signout">SIGN OUT</button>
+  </div>
+
+  <div class="reading">
+    <div class="spine" id="spine">
+      <div class="ring r1"></div>
+      <div class="ring r2"></div>
+      <div class="ring r3"></div>
+    </div>
+
+    <div class="stage-wrap" id="stageWrap">
+      <div class="stage" id="stage">
+        <div class="leaf-area">
+          <div class="page-shadow"></div>
+          <div class="leaf" id="leaf1"><div class="leaf-shade"></div><iframe id="ifr1" scrolling="no"></iframe></div>
+          <div class="leaf" id="leaf2"><div class="leaf-shade"></div><iframe id="ifr2" scrolling="no"></iframe></div>
+        </div>
+      </div>
+      <div class="locked" id="locked">
+        <div class="lk-tag">— LOCKED —</div>
+        <div class="lk-title" id="lkTitle">MODULE</div>
+        <div class="lk-sub">This module isn't loaded into the binder yet.</div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="notes-head">
+        <div class="nh-label">— NOTES —</div>
+        <div class="nh-mod" id="notesMod">Module</div>
+      </div>
+      <div class="notes-paper">
+        <textarea id="notesArea" placeholder="Your notes for this module&hellip;" spellcheck="true"></textarea>
+      </div>
+      <div class="notes-foot">
+        <span>SAVED ON THIS DEVICE</span>
+        <span class="save-state" id="saveState">READY</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="navbar">
+    <button class="nav-btn" id="prevBtn"><span class="arw">&#8249;</span> PREV</button>
+    <div class="counter" id="counter">PG <b>01</b> / 01</div>
+    <button class="nav-btn" id="nextBtn">NEXT <span class="arw">&#8250;</span></button>
+  </div>
+
+</div>
+
+<!-- ============ MODULE SOURCE (raw, non-executed) ============ -->
+<script type="text/html" id="mod-100">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BB — Before We Begin (Preface)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black:  #0E0E0E;
+    --black2: #141414;
+    --blue:   #1B3A5C;
+    --blue-d: #122947;
+    --blue-l: #9FC5E7;
+    --bone:   #F4F1EA;
+    --orange: #D4641E;
+    --page-w: 816px;
+    --page-h: 1056px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: letter; margin: 0; }
+  html, body { background: #1a1a1a; }
+  body {
+    color: var(--bone);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 30px 0 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .format-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: rgba(244,241,234,0.35);
+    text-align: center;
+    padding: 0 0 14px;
+  }
+  .page-wrapper {
+    width: var(--page-w);
+    height: var(--page-h);
+    background: var(--black);
+    border: 0.5px solid rgba(244,241,234,0.15);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin-top: 32px;
+  }
+  .page-wrapper:first-of-type { margin-top: 0; }
+
+  /* HEADER */
+  .page-header {
+    padding: 10px 36px;
+    border-bottom: 2px solid var(--orange);
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+  .tb-mark { display: inline-block; border: 1px solid rgba(244,241,234,0.55); color: var(--bone); flex-shrink: 0; }
+  .tb-mark .hrow, .tb-mark .frow { display: flex; justify-content: space-between; padding: 1px 6px; font-family: 'JetBrains Mono', monospace; font-size: 6px; letter-spacing: 1.5px; gap: 8px; }
+  .tb-mark .hrow { border-bottom: 0.5px solid rgba(244,241,234,0.4); opacity: 0.7; }
+  .tb-mark .frow { border-top: 0.5px solid rgba(244,241,234,0.4); opacity: 0.5; }
+  .tb-mark .body { padding: 3px 8px 4px; }
+  .tb-mark .top { font-family: 'Archivo', sans-serif; font-size: 9px; font-weight: 900; letter-spacing: 2px; line-height: 1; }
+  .tb-mark .bot { font-family: 'Archivo', sans-serif; font-size: 9px; font-weight: 300; letter-spacing: 2px; line-height: 1; margin-top: 2px; }
+  .header-meta { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1.8px; color: rgba(244,241,234,0.5); line-height: 1.6; }
+  .doc-stamp { text-align: right; flex-shrink: 0; }
+  .doc-stamp .doc-num { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1.8px; color: rgba(244,241,234,0.5); margin-bottom: 2px; }
+  .doc-stamp .doc-rev { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--orange); border-bottom: 1px solid var(--orange); padding-bottom: 1px; }
+  .doc-stamp .pg-num { font-family: 'JetBrains Mono', monospace; font-weight: 400; font-size: 8px; letter-spacing: 1.8px; color: rgba(244,241,234,0.5); margin-top: 2px; line-height: 1.4; }
+  .doc-stamp .pg-num .pg-of { margin-left: 2px; }
+
+  /* ============================================ */
+  /* PAGE 1 — COVER (BLUEPRINT SCHEMATIC STYLE)   */
+  /* ============================================ */
+  .cover-page {
+    background: var(--black);
+    background-image:
+      linear-gradient(rgba(27,58,92,0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,58,92,0.18) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .cover-page .page-header {
+    background: var(--black);
+    background-image:
+      linear-gradient(rgba(27,58,92,0.2) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,58,92,0.2) 1px, transparent 1px);
+    background-size: 22px 22px;
+    border-bottom: 2px solid var(--orange);
+  }
+  .cover-canvas {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .cover-eyebrow {
+    padding: 26px 50px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--orange);
+    position: relative;
+    z-index: 2;
+  }
+  .cover-eyebrow-rule {
+    flex: 1;
+    height: 1px;
+    background: var(--orange);
+    opacity: 0.5;
+    margin: 0 14px;
+  }
+
+  /* The square inset that holds the routing map + compass hero */
+  .cover-hero {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+    padding: 22px 0 22px;
+  }
+  .cover-square {
+    position: relative;
+    width: 480px;
+    height: 480px;
+    background: var(--blue);
+    background-image:
+      linear-gradient(rgba(159,197,231,0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(159,197,231,0.18) 1px, transparent 1px),
+      linear-gradient(rgba(159,197,231,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(159,197,231,0.08) 1px, transparent 1px);
+    background-size: 80px 80px, 80px 80px, 20px 20px, 20px 20px;
+    border: 2px solid rgba(244,241,234,0.6);
+    box-shadow:
+      0 0 0 1px rgba(244,241,234,0.18),
+      0 6px 24px rgba(0,0,0,0.45);
+    overflow: hidden;
+  }
+
+  /* Architect's title block in the bottom-right of the schematic */
+  .cover-titleblock {
+    position: absolute;
+    bottom: 22px;
+    right: 22px;
+    width: 168px;
+    border: 1px solid rgba(244,241,234,0.45);
+    background: rgba(27,58,92,0.55);
+    padding: 0;
+    z-index: 5;
+    opacity: 0.78;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .cover-titleblock .tbk-row {
+    display: flex;
+    border-bottom: 1px solid rgba(244,241,234,0.35);
+    font-size: 7.5px;
+    letter-spacing: 1.5px;
+    line-height: 1.3;
+  }
+  .cover-titleblock .tbk-row:last-child { border-bottom: 0; }
+  .cover-titleblock .tbk-key {
+    padding: 4px 6px;
+    color: rgba(244,241,234,0.55);
+    border-right: 1px solid rgba(244,241,234,0.35);
+    flex: 0 0 38%;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .cover-titleblock .tbk-val {
+    padding: 4px 6px;
+    color: rgba(244,241,234,0.92);
+    flex: 1;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .cover-titleblock .tbk-head {
+    padding: 5px 6px 4px;
+    color: var(--orange);
+    border-bottom: 1px solid rgba(244,241,234,0.35);
+    font-size: 8px;
+    letter-spacing: 2px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  /* Corner ticks on the inset */
+  .cover-square::before,
+  .cover-square::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--orange);
+    opacity: 0.6;
+  }
+  .cover-square::before {
+    top: 8px; left: 8px;
+    border-right: 0;
+    border-bottom: 0;
+  }
+  .cover-square::after {
+    bottom: 8px; right: 8px;
+    border-left: 0;
+    border-top: 0;
+  }
+
+  /* The routing map SVG inside the square */
+  .cover-map {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+  .cover-map svg { width: 100%; height: 100%; display: block; }
+
+  /* The compass SVG sitting ON TOP of the map */
+  .cover-compass {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+  }
+  .cover-compass svg {
+    width: 320px;
+    height: auto;
+    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.4));
+  }
+
+  /* Gears positioned around the compass */
+  .cover-gear {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    z-index: 4;
+    opacity: 0.92;
+  }
+  .cover-gear-tr {
+    top: 22px;
+    right: 22px;
+    width: 110px;
+    height: 110px;
+  }
+  .cover-gear-bl {
+    bottom: 26px;
+    left: 26px;
+    width: 78px;
+    height: 78px;
+    opacity: 0.85;
+  }
+  .cover-gear svg { width: 100%; height: 100%; }
+
+  /* Cover crosshairs at outer corners of the page */
+  .cover-crosshair {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    z-index: 2;
+  }
+  .cover-crosshair::before,
+  .cover-crosshair::after {
+    content: "";
+    position: absolute;
+    background: var(--orange);
+    opacity: 0.55;
+  }
+  .cover-crosshair::before { width: 100%; height: 1px; top: 50%; }
+  .cover-crosshair::after { width: 1px; height: 100%; left: 50%; }
+  .cover-ch-tl { top: 18px; left: 18px; }
+  .cover-ch-tr { top: 18px; right: 18px; }
+  .cover-ch-bl { bottom: 18px; left: 18px; }
+  .cover-ch-br { bottom: 18px; right: 18px; }
+
+  .cover-title-block {
+    padding: 0 50px 36px;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--orange);
+    margin-bottom: 14px;
+  }
+  .cover-main {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 86px;
+    letter-spacing: 2px;
+    line-height: 0.9;
+    color: var(--bone);
+    margin-bottom: 10px;
+  }
+  .cover-main .accent { color: var(--orange); }
+  .cover-sub {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 300;
+    font-size: 18px;
+    letter-spacing: 4px;
+    color: rgba(244,241,234,0.75);
+    text-transform: uppercase;
+    margin-top: 10px;
+  }
+  .cover-rule {
+    width: 80px;
+    height: 2px;
+    background: var(--orange);
+    margin-top: 22px;
+  }
+  .cover-meta {
+    margin-top: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2.5px;
+    color: rgba(244,241,234,0.6);
+    line-height: 1.7;
+  }
+
+  /* ============================================ */
+  /* CONTENT PAGES                                 */
+  /* ============================================ */
+  .page2 { background: #FFFFFF; color: var(--black); }
+  .page2 .page-header { background: var(--black); background-image: linear-gradient(rgba(27,58,92,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(27,58,92,0.2) 1px, transparent 1px); background-size: 22px 22px; border-bottom: 2px solid var(--orange); }
+  .page2 .body-area { padding: 22px 40px 26px; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .page2 .module-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--orange);
+    margin-bottom: 8px;
+  }
+  .page2 .page-title {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 36px;
+    letter-spacing: 1px;
+    line-height: 0.95;
+    color: var(--black);
+    margin-bottom: 6px;
+  }
+  .page2 .page-sub {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 300;
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: var(--black);
+    margin-bottom: 16px;
+  }
+  .page2 .para {
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px;
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--black);
+    margin-bottom: 11px;
+  }
+  .page2 .para strong { font-weight: 700; }
+  .page2 .para em { font-style: italic; color: rgba(14,14,14,0.78); }
+
+  /* SECTION HEADERS in body */
+  .sec-head {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: var(--black);
+    text-transform: uppercase;
+    margin: 16px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--orange);
+  }
+
+  /* ICON LEGEND ROW (page 2 housekeeping) */
+  .icon-legend {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 10px 0 18px;
+  }
+  .icon-legend .il-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 0.5px solid rgba(14,14,14,0.25);
+    background: rgba(14,14,14,0.025);
+  }
+  .icon-legend .il-cell.binder {
+    background: rgba(212,100,30,0.06);
+    border: 1px solid var(--orange);
+  }
+  .icon-legend .il-cell.toolkit {
+    background: var(--black);
+    border-color: var(--orange);
+    border-left: 3px solid var(--orange);
+  }
+  .icon-legend .il-icon {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+  }
+  .icon-legend .il-icon svg { width: 100%; height: 100%; }
+  .icon-legend .il-text {
+    flex: 1;
+  }
+  .icon-legend .il-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--orange);
+    margin-bottom: 2px;
+  }
+  .icon-legend .il-name {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .icon-legend .toolkit .il-name {
+    color: var(--bone);
+  }
+  .icon-legend .binder .il-name {
+    color: var(--black);
+  }
+
+  /* CONTEXT LIST (Van Tours, Nashville, etc.) */
+  .context-list {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px 12px;
+    margin: 8px 0 12px;
+  }
+  .context-list .cl-cell {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--black);
+    padding: 4px 0 4px 14px;
+    position: relative;
+  }
+  .context-list .cl-cell::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--orange);
+    font-weight: 700;
+  }
+
+  /* CTA blocks for closing */
+  .cta-block {
+    border-left: 3px solid var(--orange);
+    padding: 10px 14px;
+    margin: 10px 0;
+    background: rgba(212,100,30,0.05);
+  }
+  .cta-block .cta-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--orange);
+    margin-bottom: 4px;
+  }
+  .cta-block .cta-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--black);
+  }
+  .cta-block .cta-text strong { font-weight: 700; }
+
+  /* PRINT */
+  @media print {
+    body { background: white; padding: 0; }
+    .format-label { display: none; }
+    .page-wrapper {
+      box-shadow: none; border: none;
+      width: 8.5in; height: 11in;
+      margin-top: 0;
+      page-break-after: always;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="format-label">BB · BEFORE WE BEGIN · DOC-100 · LETTER 8.5×11</div>
+
+<!-- ============================================ -->
+<!-- PAGE 1 — COVER                                 -->
+<!-- ============================================ -->
+<div class="page-wrapper cover-page">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-100</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        BEFORE WE BEGIN<br>
+        PREFACE
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-100 / REV.01</div>
+      <div class="doc-rev">BACKSTAGEBLUEPRINT.CO</div>
+      <div class="pg-num">PG 01<span class="pg-of">/ 03</span></div>
+    </div>
+  </div>
+
+  <div class="cover-canvas">
+    <!-- Corner crosshairs on the outer dark page -->
+    <span class="cover-crosshair cover-ch-tl"></span>
+    <span class="cover-crosshair cover-ch-tr"></span>
+    <span class="cover-crosshair cover-ch-bl"></span>
+    <span class="cover-crosshair cover-ch-br"></span>
+
+    <!-- Eyebrow rule across the top of the dark page -->
+    <div class="cover-eyebrow">
+      <span>— DOC-100 —</span>
+      <span class="cover-eyebrow-rule"></span>
+      <span>— PREFACE / REV.01 —</span>
+    </div>
+
+    <!-- Square inset: holds the routing-map blueprint + compass hero + corner gear -->
+    <div class="cover-hero">
+      <div class="cover-square">
+
+        <!-- Schematic construction marks underneath the compass -->
+        <div class="cover-map">
+          <svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" fill="none">
+            <!-- Large construction circles, dashed bone-colored, like the reference image -->
+            <g stroke="rgba(244,241,234,0.28)" stroke-width="1" stroke-dasharray="3,4">
+              <circle cx="160" cy="180" r="150"/>
+              <circle cx="320" cy="200" r="125"/>
+              <circle cx="240" cy="340" r="105"/>
+            </g>
+
+            <!-- Smaller, fainter construction circles for depth -->
+            <g stroke="rgba(244,241,234,0.18)" stroke-width="0.8" stroke-dasharray="2,3">
+              <circle cx="100" cy="380" r="60"/>
+              <circle cx="400" cy="380" r="50"/>
+              <circle cx="380" cy="100" r="55"/>
+            </g>
+
+            <!-- Center crosshair / reference cross -->
+            <g stroke="rgba(244,241,234,0.22)" stroke-width="0.8" stroke-dasharray="4,5">
+              <line x1="0" y1="240" x2="480" y2="240"/>
+              <line x1="240" y1="0" x2="240" y2="480"/>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Gear in upper-right of the inset -->
+        <div class="cover-gear cover-gear-tr">
+          <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#D4641E" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+            <!-- Gear teeth -->
+            <g>
+              <rect x="55" y="6" width="10" height="14" fill="#D4641E"/>
+              <rect x="55" y="100" width="10" height="14" fill="#D4641E"/>
+              <rect x="6" y="55" width="14" height="10" fill="#D4641E"/>
+              <rect x="100" y="55" width="14" height="10" fill="#D4641E"/>
+              <rect x="55" y="6" width="10" height="14" fill="#D4641E" transform="rotate(30 60 60)"/>
+              <rect x="55" y="6" width="10" height="14" fill="#D4641E" transform="rotate(60 60 60)"/>
+              <rect x="55" y="6" width="10" height="14" fill="#D4641E" transform="rotate(120 60 60)"/>
+              <rect x="55" y="6" width="10" height="14" fill="#D4641E" transform="rotate(150 60 60)"/>
+            </g>
+            <circle cx="60" cy="60" r="42" stroke-width="2.5" fill="#1B3A5C"/>
+            <circle cx="60" cy="60" r="34" stroke-width="1" stroke-dasharray="2,3" opacity="0.6"/>
+            <circle cx="60" cy="60" r="14" stroke-width="2" fill="#1B3A5C"/>
+            <circle cx="60" cy="60" r="3" fill="#D4641E" stroke="none"/>
+            <g stroke-width="0.7" opacity="0.4">
+              <line x1="34" y1="50" x2="50" y2="34"/>
+              <line x1="38" y1="56" x2="56" y2="38"/>
+              <line x1="70" y1="34" x2="86" y2="50"/>
+              <line x1="64" y1="38" x2="82" y2="56"/>
+              <line x1="34" y1="70" x2="50" y2="86"/>
+              <line x1="38" y1="64" x2="56" y2="82"/>
+              <line x1="70" y1="86" x2="86" y2="70"/>
+              <line x1="64" y1="82" x2="82" y2="64"/>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Second, smaller gear in bottom-left -->
+        <div class="cover-gear cover-gear-bl">
+          <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#D4641E" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+            <!-- Gear teeth (slightly different rotation for variety — 10 teeth) -->
+            <g>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E"/>
+              <rect x="56" y="102" width="8" height="12" fill="#D4641E"/>
+              <rect x="6" y="56" width="12" height="8" fill="#D4641E"/>
+              <rect x="102" y="56" width="12" height="8" fill="#D4641E"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(36 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(72 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(108 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(144 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(216 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(252 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(288 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(324 60 60)"/>
+            </g>
+            <circle cx="60" cy="60" r="42" stroke-width="2.5" fill="#1B3A5C"/>
+            <circle cx="60" cy="60" r="34" stroke-width="1" stroke-dasharray="2,3" opacity="0.6"/>
+            <circle cx="60" cy="60" r="12" stroke-width="2" fill="#1B3A5C"/>
+            <circle cx="60" cy="60" r="2.5" fill="#D4641E" stroke="none"/>
+            <!-- Spokes from hub to inner ring -->
+            <g stroke-width="1.6" opacity="0.85">
+              <line x1="60" y1="36" x2="60" y2="48"/>
+              <line x1="60" y1="72" x2="60" y2="84"/>
+              <line x1="36" y1="60" x2="48" y2="60"/>
+              <line x1="72" y1="60" x2="84" y2="60"/>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Architect's title block — bottom-right of the schematic -->
+        <div class="cover-titleblock">
+          <div class="tbk-head">— ARCHITECT —</div>
+          <div class="tbk-row">
+            <div class="tbk-key">FIRM</div>
+            <div class="tbk-val">Backstage Blueprint</div>
+          </div>
+          <div class="tbk-row">
+            <div class="tbk-key">DOC</div>
+            <div class="tbk-val">DOC-100</div>
+          </div>
+          <div class="tbk-row">
+            <div class="tbk-key">REV</div>
+            <div class="tbk-val">01</div>
+          </div>
+          <div class="tbk-row">
+            <div class="tbk-key">SCALE</div>
+            <div class="tbk-val">1 : 1</div>
+          </div>
+        </div>
+
+        <!-- Drafting compass on top of the schematic — beefier, more tangible build -->
+        <div class="cover-compass">
+          <svg viewBox="0 0 400 460" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#D4641E" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+            <!-- Top finger-grip knob (rounded top, thicker cylinder) -->
+            <path d="M 184 14 Q 184 8 200 8 Q 216 8 216 14 L 216 88 L 184 88 Z" stroke-width="3.5" fill="#1B3A5C"/>
+            <!-- Knob horizontal grip ridges (hatching) -->
+            <g stroke-width="1.4" opacity="0.85">
+              <line x1="186" y1="24" x2="214" y2="24"/>
+              <line x1="186" y1="32" x2="214" y2="32"/>
+              <line x1="186" y1="40" x2="214" y2="40"/>
+              <line x1="186" y1="48" x2="214" y2="48"/>
+              <line x1="186" y1="56" x2="214" y2="56"/>
+              <line x1="186" y1="64" x2="214" y2="64"/>
+              <line x1="186" y1="72" x2="214" y2="72"/>
+              <line x1="186" y1="80" x2="214" y2="80"/>
+            </g>
+
+            <!-- Pivot/head — chunkier rounded form with collar -->
+            <circle cx="200" cy="124" r="40" stroke-width="4" fill="#1B3A5C"/>
+            <!-- Inner pivot ring -->
+            <circle cx="200" cy="124" r="30" stroke-width="1.5" opacity="0.7"/>
+            <!-- Pivot center pin -->
+            <circle cx="200" cy="124" r="8" fill="#D4641E" stroke="none"/>
+            <circle cx="200" cy="124" r="4" fill="#1B3A5C" stroke="none"/>
+            <!-- Hatching on pivot for shading -->
+            <g stroke-width="1.2" opacity="0.7">
+              <line x1="172" y1="110" x2="228" y2="110"/>
+              <line x1="168" y1="120" x2="232" y2="120"/>
+              <line x1="170" y1="130" x2="230" y2="130"/>
+              <line x1="176" y1="140" x2="224" y2="140"/>
+            </g>
+
+            <!-- Neck connecting knob to pivot head -->
+            <line x1="200" y1="88" x2="200" y2="124" stroke-width="3"/>
+
+            <!-- Left leg — thicker, with parallel line for tube thickness -->
+            <path d="M 178 152 L 96 412" stroke-width="4.5"/>
+            <!-- Inner edge of left leg (parallel highlight) -->
+            <path d="M 184 152 L 102 412" stroke-width="1" opacity="0.55"/>
+            <!-- Left leg cross-hatching for shading -->
+            <g stroke-width="1.2" opacity="0.65">
+              <line x1="166" y1="186" x2="180" y2="180"/>
+              <line x1="156" y1="220" x2="170" y2="214"/>
+              <line x1="146" y1="254" x2="160" y2="248"/>
+              <line x1="136" y1="288" x2="150" y2="282"/>
+              <line x1="126" y1="322" x2="140" y2="316"/>
+              <line x1="116" y1="356" x2="130" y2="350"/>
+              <line x1="106" y1="390" x2="120" y2="384"/>
+            </g>
+
+            <!-- Right leg — mirror -->
+            <path d="M 222 152 L 304 412" stroke-width="4.5"/>
+            <!-- Inner edge of right leg -->
+            <path d="M 216 152 L 298 412" stroke-width="1" opacity="0.55"/>
+            <!-- Right leg cross-hatching -->
+            <g stroke-width="1.2" opacity="0.65">
+              <line x1="234" y1="186" x2="220" y2="180"/>
+              <line x1="244" y1="220" x2="230" y2="214"/>
+              <line x1="254" y1="254" x2="240" y2="248"/>
+              <line x1="264" y1="288" x2="250" y2="282"/>
+              <line x1="274" y1="322" x2="260" y2="316"/>
+              <line x1="284" y1="356" x2="270" y2="350"/>
+              <line x1="294" y1="390" x2="280" y2="384"/>
+            </g>
+
+            <!-- CROSSBAR — defined, dimensional -->
+            <!-- Main horizontal bar (filled rectangle for solidity) -->
+            <rect x="116" y="252" width="168" height="14" fill="#D4641E" stroke-width="2.5"/>
+            <!-- Top highlight edge on bar -->
+            <line x1="118" y1="254" x2="282" y2="254" stroke="#1B3A5C" stroke-width="1.2" opacity="0.45"/>
+            <!-- End caps on bar (chunkier vertical ticks) -->
+            <line x1="116" y1="246" x2="116" y2="272" stroke-width="3"/>
+            <line x1="284" y1="246" x2="284" y2="272" stroke-width="3"/>
+
+            <!-- Adjustment knob/dial at center of crossbar -->
+            <circle cx="200" cy="259" r="18" stroke-width="3.2" fill="#1B3A5C"/>
+            <!-- Inner ring on dial -->
+            <circle cx="200" cy="259" r="11" stroke-width="1.5" opacity="0.75"/>
+            <!-- Cross-hatch detail on knob -->
+            <line x1="186" y1="259" x2="214" y2="259" stroke-width="2.2"/>
+            <line x1="200" y1="245" x2="200" y2="273" stroke-width="2.2"/>
+            <!-- Knurled grip marks around knob edge -->
+            <g stroke-width="1.6" opacity="0.9">
+              <line x1="188" y1="248" x2="184" y2="245"/>
+              <line x1="212" y1="248" x2="216" y2="245"/>
+              <line x1="188" y1="270" x2="184" y2="273"/>
+              <line x1="212" y1="270" x2="216" y2="273"/>
+              <line x1="182" y1="259" x2="178" y2="259"/>
+              <line x1="218" y1="259" x2="222" y2="259"/>
+            </g>
+
+            <!-- LEFT FOOT — graphite holder + pencil tip -->
+            <!-- Holder (chunky cylinder with collar) -->
+            <rect x="86" y="378" width="28" height="22" stroke-width="3" fill="#1B3A5C"/>
+            <!-- Holder grip ring -->
+            <line x1="88" y1="386" x2="112" y2="386" stroke-width="1.4" opacity="0.7"/>
+            <line x1="88" y1="392" x2="112" y2="392" stroke-width="1.4" opacity="0.7"/>
+            <!-- Pencil/graphite point coming out the bottom -->
+            <path d="M 92 400 L 88 438 L 112 438 L 108 400 Z" stroke-width="2.8" fill="#D4641E" fill-opacity="0.25"/>
+            <!-- Tip mark -->
+            <circle cx="100" cy="438" r="3" fill="#D4641E" stroke="none"/>
+
+            <!-- RIGHT FOOT — needle holder + needle tip -->
+            <rect x="286" y="378" width="28" height="22" stroke-width="3" fill="#1B3A5C"/>
+            <line x1="288" y1="386" x2="312" y2="386" stroke-width="1.4" opacity="0.7"/>
+            <line x1="288" y1="392" x2="312" y2="392" stroke-width="1.4" opacity="0.7"/>
+            <!-- Needle (thinner, sharper) -->
+            <path d="M 296 400 L 294 442 L 306 442 L 304 400 Z" stroke-width="2.8" fill="#D4641E" fill-opacity="0.25"/>
+            <circle cx="300" cy="442" r="2" fill="#D4641E" stroke="none"/>
+          </svg>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Title block at bottom -->
+    <div class="cover-title-block">
+      <div class="cover-tag">— DOC-100 / PREFACE —</div>
+      <div class="cover-main">BEFORE<br>WE BEGIN<span class="accent">.</span></div>
+      <div class="cover-sub">Welcome to the course</div>
+      <div class="cover-rule"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 2 — WELCOME + HOUSEKEEPING + SCOPE       -->
+<!-- ============================================ -->
+<div class="page-wrapper page2">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-100</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        BEFORE WE BEGIN<br>
+        WELCOME / HOUSEKEEPING / SCOPE
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-100 / REV.01</div>
+      <div class="pg-num">PG 02<span class="pg-of">/ 03</span></div>
+    </div>
+  </div>
+
+  <div class="body-area">
+    <div class="module-tag">— BEFORE WE BEGIN / PG 02 —</div>
+    <div class="page-title">WELCOME.</div>
+    <div class="page-sub">A few things to know before you dig in.</div>
+
+    <p class="para">These pages weren&rsquo;t in the original plan, but as we kept building, we realized the value of the context we can provide you in stepping into this. Touring is definitely not a one-size-fits-all scenario, so taking a beat to make a plan before we talk about the plans is always a good plan.</p>
+
+    <p class="para">Before we jump in, I&rsquo;d be remiss if I didn&rsquo;t take a moment to say <strong>thank you for being here</strong> and working through the Backstage Blueprint course. The intent behind putting together Backstage Blueprint was to spark conversation, community, and extend a hand to the people stepping up and trying to navigate the live production and touring industry. These systems have worked well for us, and personally I&rsquo;ve been able to apply them to many areas within my workflows. Of course, we love hearing how you&rsquo;re currently running your teams and crews if you&rsquo;re actively in the industry. We want this to be an open conversation. Reach out, send an email, hit us in the DMs. Let&rsquo;s connect.</p>
+
+    <div class="sec-head">A Few Housekeeping Items</div>
+
+    <p class="para">As you move through this, the first thing I want to point your attention toward is that you also have, along with the modules, a package of <strong>templates, tools, and a dictionary</strong>. Anytime there&rsquo;s a mention throughout a module that aligns with one of those templates or tools, you&rsquo;ll see an icon along with a brief description. Each one should be fairly self-contained in explaining its function.</p>
+
+    <div class="icon-legend">
+      <div class="il-cell binder">
+        <span class="il-icon">
+          <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#D4641E" stroke-width="1.4" stroke-linejoin="miter">
+            <rect x="6" y="3" width="11" height="14"/>
+            <rect x="4" y="5" width="11" height="14"/>
+            <rect x="2" y="7" width="11" height="14"/>
+            <line x1="4" y1="11" x2="11" y2="11"/>
+            <line x1="4" y1="14" x2="11" y2="14"/>
+            <line x1="4" y1="17" x2="9" y2="17"/>
+          </svg>
+        </span>
+        <div class="il-text">
+          <div class="il-label">— FROM THE BINDER —</div>
+          <div class="il-name">Template</div>
+        </div>
+      </div>
+
+      <div class="il-cell toolkit">
+        <span class="il-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#D4641E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="9" x2="18.5" y2="19.5"/>
+            <path d="M9 8 a3.2 3.2 0 1 1 -4.5 -4.5 l1.6 1.6 -1 1 1.3 1.3 1 -1 z"/>
+            <line x1="16" y1="8" x2="5" y2="19"/>
+            <path d="M14.2 4.2 l3.6 -3.6 4 4 -3.6 3.6 z" transform="translate(0.2 0.2)"/>
+          </svg>
+        </span>
+        <div class="il-text">
+          <div class="il-label">— FROM THE TOOLKIT —</div>
+          <div class="il-name">Tool</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="para">You&rsquo;ve also been given the <strong>Backstage Blueprint Production Dictionary</strong>. To some, it&rsquo;ll just look like a book of random words &mdash; but if you&rsquo;ve spent any time in this world, you know that words like <em>doors</em>, <em>load</em>, <em>advance</em>, or <em>runner</em> mean something completely different inside production than they do outside it. The dictionary decodes all the wild terminology, acronyms, and shop-talk that gets thrown around on a tour. To someone who hasn&rsquo;t lived it, that vocabulary sounds like a foreign language. We wanted to make sure no one gets left out.</p>
+
+    <div class="sec-head">A Note on the Tech</div>
+
+    <p class="para"><strong>One thing you may notice as we move through the course is that there&rsquo;s not too much tech talk.</strong> For as much as this production and touring industry is built around gear and equipment, we&rsquo;ve found as we were building these modules out that the gear isn&rsquo;t the whole story. The systems and workflows in this course are designed to give you a clear road map that sits underneath any production &mdash; no matter what the gear is, what the lighting looks like, or what the tech package includes, these systems can serve as the foundation that keeps it all moving.</p>
+
+    <p class="para">In the near future, one of our goals is to write modules dedicated to more specific, honed-in roles within a tour. There are countless thoughts on how cool that could be. We&rsquo;ll get there. For now, we&rsquo;re casting a wide net and starting with a comprehensive view on the approach, workflows, and systems that help with live touring and production.</p>
+
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 3 — CLOSING + CTAs                       -->
+<!-- ============================================ -->
+<div class="page-wrapper page2">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-100</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        BEFORE WE BEGIN<br>
+        WHERE TO START / GET CONNECTED
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-100 / REV.01</div>
+      <div class="pg-num">PG 03<span class="pg-of">/ 03</span></div>
+    </div>
+  </div>
+
+  <div class="body-area">
+    <div class="module-tag">— BEFORE WE BEGIN / PG 03 —</div>
+    <div class="page-title">TOURS COME IN<br>ALL SHAPES.</div>
+    <div class="page-sub">A wide net &mdash; and a few last things before we get going.</div>
+
+    <p class="para">Building this out with a model that fits everyone individually would be like writing a tour book for every tour that ever rolled. The goal here was to build framing and systems that translate into most elements of the live and touring space. Some of the contexts these tools and systems can help you in directly:</p>
+
+    <div class="context-list">
+      <div class="cl-cell">Van Tours</div>
+      <div class="cl-cell">Nashville Touring</div>
+      <div class="cl-cell">Routed Tours · Club Level</div>
+      <div class="cl-cell">Routed Tours · Arena Level</div>
+      <div class="cl-cell">Fly Dates</div>
+      <div class="cl-cell">International Touring</div>
+      <div class="cl-cell">Press &amp; Promo Events</div>
+      <div class="cl-cell">Rehearsals</div>
+    </div>
+
+    <p class="para">From the start, <strong>Backstage Blueprint was built to give a view behind the curtain</strong> &mdash; a glimpse into the systems that run the unseen parts of the tours, shows, and festivals that travel around the world. With a particular target: we set out to help the up-and-coming artists and teams stepping into their first tour, their first festival slot, or just starting to scale up. That&rsquo;s really where we built a lot of this package toward. No matter where you are in the production world &mdash; touring, festivals, one-off shows, or just getting started and trying to figure out where you wind up &mdash; we&rsquo;re here to help and provide systems of approach that have been tested and have worked for us.</p>
+
+    <p class="para">In these modules you&rsquo;re going to find a lot of useful information. But if you have any questions, or if you need a more honed-in examination of your dynamic or your scenario in particular, <strong>please reach out</strong>. Send us an email or hit us on social media. We can chat, set up a call, or get boots on the ground and really partner with you.</p>
+
+    <div class="cta-block">
+      <div class="cta-label">— IF YOU&apos;RE JUST GETTING STARTED —</div>
+      <div class="cta-text">
+        If you&rsquo;re just stepping into this and curious about the live production field &mdash; wanting to learn and find resources &mdash; <strong>I commend you</strong>. It&rsquo;s a tough industry to really learn. My biggest encouragement is to find a local production company in your area, jump in, and get involved. Even if it&rsquo;s not strictly live touring or concerts, getting plugged into your local live events market is one of the best ways to learn and gain applicable experience.
+      </div>
+    </div>
+
+    <div class="cta-block">
+      <div class="cta-label">— IF YOU&apos;RE AN ARTIST OR ARTIST REPRESENTATION —</div>
+      <div class="cta-text">
+        If you&rsquo;re cautiously navigating some of these aspects for your artist, please look into the resources we name and provide throughout this course for getting connected with verified and trusted industry pros. A <strong>Backstage Blueprint Partner</strong> is also a great resource &mdash; we love helping build an approach and finding a system that works best for your needs. Our network of partners has a real pool of talent that can help be a voice and a guide through the many options and outcomes along the way.
+      </div>
+    </div>
+
+    <div class="cta-block">
+      <div class="cta-label">— IF YOU&apos;RE IN THE WORK —</div>
+      <div class="cta-text">
+        If you&rsquo;re actively in the industry and want to compare notes &mdash; we want to hear it. Send an email, hit us in the DMs, drop a comment. The whole reason we built Backstage Blueprint was to keep the conversation open. <strong>Let&rsquo;s connect.</strong>
+      </div>
+    </div>
+
+    <p class="para" style="margin-top: 18px; text-align: center; font-family: 'Archivo', sans-serif; font-weight: 300; font-size: 14px; letter-spacing: 4px; text-transform: uppercase; color: rgba(14,14,14,0.6);">
+      — NOW LET&apos;S GET INTO IT —
+    </p>
+
+  </div>
+</div>
+
+</body>
+</html>
+
+</script>
+<script type="text/html" id="mod-101">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BB — Module One: The Big Picture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black:  #0E0E0E;
+    --black2: #141414;
+    --blue:   #1B3A5C;
+    --bone:   #F4F1EA;
+    --orange: #D4641E;
+
+    --page-w: 816px;
+    --page-h: 1056px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  @page { size: letter; margin: 0; }
+
+  html, body { background: #1a1a1a; }
+
+  body {
+    color: var(--bone);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 30px 0 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  .format-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: rgba(244,241,234,0.35);
+    text-align: center;
+    padding: 0 0 14px;
+  }
+
+  .page-wrapper {
+    width: var(--page-w);
+    height: var(--page-h);
+    background: var(--black);
+    border: 0.5px solid rgba(244,241,234,0.15);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin-top: 32px;
+  }
+  .page-wrapper:first-of-type { margin-top: 0; }
+  .page-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(27,58,92,0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,58,92,0.18) 1px, transparent 1px);
+    background-size: 22px 22px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .page-wrapper > * { position: relative; z-index: 1; }
+
+  /* HEADER */
+  .page-header {
+    padding: 10px 36px;
+    border-bottom: 2px solid var(--orange);
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+  }
+  .tb-mark {
+    display: inline-block;
+    border: 1px solid rgba(244,241,234,0.55);
+    color: var(--bone);
+    flex-shrink: 0;
+  }
+  .tb-mark .hrow, .tb-mark .frow {
+    display: flex;
+    justify-content: space-between;
+    padding: 1px 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 6px;
+    letter-spacing: 1.5px;
+    gap: 8px;
+  }
+  .tb-mark .hrow { border-bottom: 0.5px solid rgba(244,241,234,0.4); opacity: 0.7; }
+  .tb-mark .frow { border-top: 0.5px solid rgba(244,241,234,0.4); opacity: 0.5; }
+  .tb-mark .body { padding: 3px 8px 4px; }
+  .tb-mark .top {
+    font-family: 'Archivo', sans-serif;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  .tb-mark .bot {
+    font-family: 'Archivo', sans-serif;
+    font-size: 9px;
+    font-weight: 300;
+    letter-spacing: 2px;
+    line-height: 1;
+    margin-top: 2px;
+  }
+  .header-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 1.8px;
+    color: rgba(244,241,234,0.5);
+    line-height: 1.6;
+  }
+  .doc-stamp { text-align: right; flex-shrink: 0; }
+  .doc-stamp .doc-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 1.8px;
+    color: rgba(244,241,234,0.5);
+    margin-bottom: 2px;
+  }
+  .doc-stamp .doc-rev {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--orange);
+    border-bottom: 1px solid var(--orange);
+    padding-bottom: 1px;
+  }
+  .doc-stamp .pg-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 400;
+    font-size: 8px;
+    letter-spacing: 1.8px;
+    color: rgba(244,241,234,0.5);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+  .doc-stamp .pg-num .pg-of {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 400;
+    font-size: 8px;
+    letter-spacing: 1.8px;
+    color: rgba(244,241,234,0.5);
+    margin-left: 2px;
+  }
+
+  /* COVER PAGE */
+  .cover-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 0 60px;
+    position: relative;
+  }
+  .cover-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--orange);
+    margin-bottom: 18px;
+  }
+  .cover-main {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 110px;
+    letter-spacing: 4px;
+    line-height: 0.9;
+    color: var(--bone);
+    margin-bottom: 8px;
+  }
+  .cover-sub {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 300;
+    font-size: 22px;
+    letter-spacing: 5px;
+    color: var(--bone);
+    margin-top: 14px;
+  }
+  .cover-rule {
+    width: 80px;
+    height: 2px;
+    background: var(--orange);
+    margin: 30px auto 24px;
+  }
+  .cover-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: rgba(244,241,234,0.55);
+    line-height: 1.7;
+    max-width: 480px;
+  }
+  .cover-corners .corner {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border: 1.5px solid var(--orange);
+  }
+  .cover-corners .tl { top: 40px;    left: 60px;    border-right: 0; border-bottom: 0; }
+  .cover-corners .tr { top: 40px;    right: 60px;   border-left:  0; border-bottom: 0; }
+  .cover-corners .bl { bottom: 40px; left: 60px;    border-right: 0; border-top:    0; }
+  .cover-corners .br { bottom: 40px; right: 60px;   border-left:  0; border-top:    0; }
+
+  /* CONTENT PAGE (bone bg) */
+  .page2 {
+    background: #FFFFFF;
+    color: var(--black);
+  }
+  .page2::before { display: none; }
+  .page2 .page-header {
+    background: var(--black);
+    background-image:
+      linear-gradient(rgba(27,58,92,0.2) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,58,92,0.2) 1px, transparent 1px);
+    background-size: 22px 22px;
+    border-bottom: 2px solid var(--orange);
+  }
+  .page2 .body-area {
+    padding: 26px 36px 32px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .page2 .module-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--orange);
+    margin-bottom: 6px;
+  }
+  .page2 .page-title {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 56px;
+    letter-spacing: 1px;
+    line-height: 0.95;
+    color: var(--black);
+    margin-bottom: 8px;
+  }
+  .page2 .page-sub {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    letter-spacing: 1px;
+    line-height: 1.2;
+    color: var(--black);
+    margin-bottom: 18px;
+  }
+  .page2 .para {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--black);
+    margin-bottom: 11px;
+  }
+  .page2 .para strong { font-weight: 700; }
+  .page2 .pull-quote {
+    border-left: 3px solid var(--orange);
+    padding: 12px 16px;
+    margin: 16px 0;
+    background: rgba(14,14,14,0.04);
+  }
+  .page2 .pull-quote p {
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    font-weight: 700;
+    line-height: 1.5;
+    color: var(--black);
+    margin-bottom: 0;
+  }
+  .page2 .sec-head {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 15px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--black);
+    margin: 16px 0 6px;
+    padding-bottom: 3px;
+    border-bottom: 0.5px solid rgba(14,14,14,0.25);
+  }
+  .page2 ul.topics {
+    list-style: none;
+    margin: 0 0 8px 0;
+    padding: 0;
+  }
+  .page2 ul.topics > li {
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--black);
+    padding: 3px 0 3px 16px;
+    position: relative;
+  }
+  .page2 ul.topics > li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 9px;
+    width: 5px;
+    height: 5px;
+    background: var(--orange);
+  }
+  .page2 ul.topics > li strong { font-weight: 700; }
+
+  /* Three-question framework block */
+  .three-q {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin: 14px 0 16px;
+  }
+  .three-q .q {
+    border: 0.5px solid rgba(14,14,14,0.25);
+    border-top: 2px solid var(--orange);
+    padding: 12px 14px;
+    background: rgba(14,14,14,0.02);
+  }
+  .three-q .q-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2.5px;
+    color: var(--orange);
+    margin-bottom: 6px;
+  }
+  .three-q .q-text {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+    color: var(--black);
+    text-transform: uppercase;
+  }
+
+  /* Module preview tag — used on pages 4-11 */
+  .preview-stamp {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    color: var(--orange);
+    border: 1px solid var(--orange);
+    padding: 3px 8px;
+    margin-bottom: 10px;
+  }
+
+  /* Checklist cross-reference — small callout at bottom of preview pages */
+  .checklist-ref {
+    margin-top: 14px;
+    padding: 8px 12px;
+    background: rgba(212,100,30,0.06);
+    border-left: 2px solid var(--orange);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: rgba(14,14,14,0.7);
+    line-height: 1.6;
+  }
+  .checklist-ref .ref-label {
+    color: var(--orange);
+    font-weight: 700;
+    margin-right: 6px;
+  }
+
+  /* Module landing strip — at bottom of preview pages */
+  .next-up {
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 0.5px solid rgba(14,14,14,0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: rgba(14,14,14,0.55);
+  }
+  .next-up .arrow { color: var(--orange); }
+
+  /* Closing page — three-block trio */
+  .trio {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    margin: 18px 0;
+  }
+  .trio .block {
+    border: 0.5px solid rgba(14,14,14,0.25);
+    border-left: 3px solid var(--orange);
+    padding: 14px 16px;
+    background: rgba(14,14,14,0.02);
+  }
+  .trio .b-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    color: var(--orange);
+    margin-bottom: 6px;
+  }
+  .trio .b-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--black);
+  }
+
+  /* Module index list — for page 11 */
+  .mod-index {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 18px;
+    margin-top: 8px;
+  }
+  .mod-index .mi {
+    border-left: 2px solid var(--orange);
+    padding: 4px 0 4px 12px;
+  }
+  .mod-index .mi-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--orange);
+  }
+  .mod-index .mi-name {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    color: var(--black);
+    text-transform: uppercase;
+    margin-top: 2px;
+    line-height: 1.15;
+  }
+
+  /* ── PREFACE PAGE — schematic letter on blueprint ── */
+  .preface-stage {
+    flex: 1;
+    background: var(--black);
+    background-image:
+      linear-gradient(rgba(27,58,92,0.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,58,92,0.35) 1px, transparent 1px);
+    background-size: 22px 22px;
+    padding: 50px 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .preface-stage::before {
+    content: '';
+    position: absolute;
+    top: 22px;
+    left: 22px;
+    width: 40px;
+    height: 40px;
+    border-left: 1px solid rgba(212,100,30,0.55);
+    border-top: 1px solid rgba(212,100,30,0.55);
+  }
+  .preface-stage::after {
+    content: '';
+    position: absolute;
+    bottom: 22px;
+    right: 22px;
+    width: 40px;
+    height: 40px;
+    border-right: 1px solid rgba(212,100,30,0.55);
+    border-bottom: 1px solid rgba(212,100,30,0.55);
+  }
+  .letter {
+    width: 100%;
+    max-width: 580px;
+    background: #FBF9F2;
+    border: 0.5px solid rgba(14,14,14,0.18);
+    box-shadow:
+      0 14px 40px rgba(0,0,0,0.45),
+      0 4px 10px rgba(0,0,0,0.35);
+    padding: 56px 56px 48px;
+    position: relative;
+  }
+  .letter-corner {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--orange);
+  }
+  .letter-corner.tl { top: 14px;    left: 14px;    border-right: 0; border-bottom: 0; }
+  .letter-corner.tr { top: 14px;    right: 14px;   border-left:  0; border-bottom: 0; }
+  .letter-corner.bl { bottom: 14px; left: 14px;    border-right: 0; border-top:    0; }
+  .letter-corner.br { bottom: 14px; right: 14px;   border-left:  0; border-top:    0; }
+  .letter-stamp {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 3.5px;
+    color: var(--orange);
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .letter-rule {
+    width: 38px;
+    height: 1.5px;
+    background: var(--orange);
+    margin: 4px auto 22px;
+  }
+  .letter-title {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 26px;
+    letter-spacing: 1px;
+    line-height: 1.1;
+    color: var(--black);
+    text-align: center;
+    margin-bottom: 26px;
+  }
+  .letter-body p {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.7;
+    color: var(--black);
+    margin-bottom: 13px;
+  }
+  .letter-sig {
+    margin-top: 26px;
+    padding-top: 14px;
+    border-top: 0.5px solid rgba(14,14,14,0.18);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--black);
+    text-align: right;
+  }
+  .letter-sig .sig-meta {
+    display: block;
+    font-weight: 400;
+    font-size: 8px;
+    letter-spacing: 2.2px;
+    color: rgba(14,14,14,0.55);
+    margin-top: 4px;
+  }
+
+  @media print {
+    body { background: var(--black); padding: 0; }
+    .format-label { display: none; }
+    .page-wrapper {
+      box-shadow: none;
+      border: none;
+      width: 8.5in;
+      height: 11in;
+      margin-top: 0;
+      page-break-after: always;
+    }
+  }
+  /* ===== BINDER CALLOUT — FROM THE BINDER ===== */
+  .binder-callout { margin: 4px 0 3px; padding: 10px 14px 10px; background: rgba(212,100,30,0.06); border: 1px solid var(--orange); color: var(--black); }
+  .binder-callout .bc-title-dark { font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 16px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--black); margin-bottom: 6px; line-height: 1.15; }
+  .binder-callout p.bc-text-dark { font-family: 'Inter', sans-serif; font-size: 11px; line-height: 1.55; color: var(--black); margin: 0; }
+  .binder-callout p.bc-text-dark strong { font-weight: 700; }
+  .kit-title-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 6px; }
+  .kit-title-row > .bc-title-dark { margin-bottom: 0; flex: 1; min-width: 0; }
+  .kit-eyebrow { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .kit-mark { flex-shrink: 0; width: 22px; height: 22px; display: inline-block; order: 2; }
+  .kit-mark svg { display: block; width: 100%; height: 100%; }
+  .kit-eyebrow .kit-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 2.5px; color: var(--orange); line-height: 1; }
+</style>
+</head>
+<body>
+
+<div class="format-label">MODULE ONE — THE BIG PICTURE · DOC-101 · BACKSTAGE BLUEPRINT · LETTER 8.5×11</div>
+
+<!-- ============================================ -->
+<!-- PAGE 1 — COVER                                -->
+<!-- ============================================ -->
+<div class="page-wrapper">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-101</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        MODULE ONE — THE BIG PICTURE<br>
+        COURSE OVERVIEW
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-101 / REV.01</div>
+      <div class="doc-rev">BACKSTAGEBLUEPRINT.CO</div>
+      <div class="pg-num">PG 01<span class="pg-of">/ 12</span></div>
+    </div>
+  </div>
+
+  <div class="cover-area">
+    <div class="cover-corners">
+      <span class="corner tl"></span>
+      <span class="corner tr"></span>
+      <span class="corner bl"></span>
+      <span class="corner br"></span>
+    </div>
+
+    <div class="cover-tag">— MODULE 01 / 08 —</div>
+    <div class="cover-main">THE BIG<br>PICTURE</div>
+    <div class="cover-sub">HOW A TOUR ACTUALLY WORKS</div>
+
+    <div class="cover-rule"></div>
+
+    <div class="cover-meta">
+      A FLY-BY OF THE EIGHT-MODULE COURSE<br>
+      FROM THE DEAL TO THE DAY OF SHOW TO THE FINAL SETTLEMENT
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 2 — PREFACE                              -->
+<!-- ============================================ -->
+<div class="page-wrapper">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-101</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        MODULE ONE — THE BIG PICTURE<br>
+        PREFACE
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-101 / REV.01</div>
+      <div class="pg-num">PG 02<span class="pg-of">/ 12</span></div>
+    </div>
+  </div>
+
+  <div class="preface-stage">
+    <div class="letter">
+      <span class="letter-corner tl"></span>
+      <span class="letter-corner tr"></span>
+      <span class="letter-corner bl"></span>
+      <span class="letter-corner br"></span>
+
+      <div class="letter-stamp">— PREFACE —</div>
+      <div class="letter-rule"></div>
+      <div class="letter-title">Before we<br>get started.</div>
+
+      <div class="letter-body">
+        <p>A massive thank you for making it here, and for believing in this system enough to take the time. Sitting down and spelling this out was a cause for reflection — a chance to step back from a fast-paced industry that rarely lets you do exactly that.</p>
+
+        <p>In writing these modules, I've found my own approach shifting, opening up, leaning further into the collaboration this work is built on. That's the real goal of Backstage Blueprint: that we can all understand and learn what truly causes an experience to happen — the moments and movements that transcend what any one of us could pull off alone.</p>
+
+        <p>Whether you're a seasoned veteran of the road or these are your first steps into touring and production, I'm honored you're here. My hope is that this becomes a moment we can all use to inspect, refine, and collaborate on the larger-than-life projects we get to be a part of in this industry.</p>
+
+        <p>I know that sounds like a tall order. But I've had moments where I've been amazed at the impact a small, focused crew can pull off in creating a show. With that outlook — let's get started.</p>
+      </div>
+
+      <div class="letter-sig">
+        — FROM THE BINDER
+        <span class="sig-meta">BACKSTAGE BLUEPRINT · DOC-101 / REV.01</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 3 — WHERE TO START                       -->
+<!-- ============================================ -->
+<div class="page-wrapper page2">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-101</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        MODULE ONE — THE BIG PICTURE<br>
+        WHERE TO START
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-101 / REV.01</div>
+      <div class="pg-num">PG 03<span class="pg-of">/ 12</span></div>
+    </div>
+  </div>
+
+  <div class="body-area">
+    <div class="module-tag">— 01 / WHERE TO START —</div>
+    <div class="page-title">WHERE TO<br>START</div>
+    <div class="page-sub">The fly-by before we go in for the close-up.</div>
+
+    <p class="para">Before any of the work makes sense, you need the shape of the thing in your head. A tour is a logistics machine wrapped around a creative product. The show is the reason it exists. Everything else — the contracts, the riders, the day sheets, the settlement statements — exists to make sure the show happens, makes money, and keeps happening tomorrow in a different city.</p>
+
+    <p class="para">This module is the wide shot. Eight stops, one per page, each previewing a full module that comes later. <strong>Veterans</strong>, you'll recognize the terrain — treat this as the framework you can hand to someone you're bringing up. <strong>Newcomers</strong>, you'll meet every word on the road eventually. <strong>Artists and artist representation</strong>, this is a detailed look under the hood of the systems and roles that support a show — pick up tips at any scale, whether you're figuring things out as a small operation or holding a growing team to a standard as you scale. The goal here is that none of these terms feel foreign when they show up.</p>
+
+    <div class="pull-quote">
+      <p>You don't need to memorize this module. You need to feel the shape of it — so when the next seven modules drop you into the deep end, you already know which pool you're in.</p>
+    </div>
+
+    <p class="para">A useful frame — one most production offices live by, even if nobody writes it on the wall. Every document, every meeting, every conversation on the road is answering one of three questions:</p>
+
+    <div class="three-q">
+      <div class="q">
+        <div class="q-num">— 01 —</div>
+        <div class="q-text">What do<br>we need?</div>
+      </div>
+      <div class="q">
+        <div class="q-num">— 02 —</div>
+        <div class="q-text">What are we doing<br>right now?</div>
+      </div>
+      <div class="q">
+        <div class="q-num">— 03 —</div>
+        <div class="q-text">What just<br>happened?</div>
+      </div>
+    </div>
+
+    <p class="para">The advance answers question one. The day sheet answers question two. Settlement answers question three. Hold on to that triangle. Most of what follows is just learning which document answers which question, and how to fill it out so the next person doesn't have to ask.</p>
+
+    <div class="sec-head">A note on tools</div>
+    <p class="para">Many big tours run on a dedicated tour management platform — Master Tour, Day Sheets, or similar apps purpose-built for the road. Mid-size and indie tours often run on a shared drive, a group chat, and a stack of spreadsheets that someone smart built three tours ago. None of these tools are the system — the system is the work. Pick the one that disappears into the background.</p>
+
+    <div class="binder-callout">
+      <div class="kit-title-row">
+        <div class="bc-title-dark">The Production Dictionary</div>
+        <div class="kit-eyebrow">
+          <span class="kit-label">— FROM THE BINDER —</span>
+          <span class="kit-mark">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#D4641E" stroke-width="1.5" stroke-linejoin="round">
+              <rect x="6" y="3" width="13" height="16"/>
+              <rect x="4" y="5" width="13" height="16"/>
+              <line x1="7" y1="9" x2="14" y2="9"/>
+              <line x1="7" y1="12" x2="14" y2="12"/>
+              <line x1="7" y1="15" x2="12" y2="15"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+      <p class="bc-text-dark">The <strong>Production Dictionary</strong> is the A-to-Z companion to this course — every touring term, defined in plain working language. Hit a word you don&rsquo;t know on any page, in any module: that&rsquo;s where it lives. Pinned to DOC-300.</p>
+    </div>
+
+    <div class="next-up">
+      <span>UP NEXT</span>
+      <span class="arrow">— THE EIGHT MODULES →</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 3 — MODULE 02 PREVIEW: DEAL & DESIGN     -->
+<!-- ============================================ -->
+<div class="page-wrapper page2">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-101</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        MODULE ONE — THE BIG PICTURE<br>
+        PREVIEW · MODULE 02
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-101 / REV.01</div>
+      <div class="pg-num">PG 04<span class="pg-of">/ 12</span></div>
+    </div>
+  </div>
+
+  <div class="body-area">
+    <span class="preview-stamp">— MODULE 02 / PREVIEW —</span>
+    <div class="page-title">THE DEAL &amp;<br>THE DESIGN</div>
+    <div class="page-sub">The contract sets the terms. The vision sets the show.</div>
+
+    <p class="para">Before there is a tour, there is a deal. An agent takes the artist's calendar and routes the run — calling promoters in each market, fielding offers, lining up dates. The promoter offers a guarantee, a door deal, or some hybrid. Representation signs off. A contract gets issued, and attached to it is the rider.</p>
+
+    <p class="para">That contract plus rider is the founding document of every show. Everything downstream — the advance, the day of show, the settlement — is just executing what those pages already said.</p>
+
+    <div class="pull-quote">
+      <p>When the venue says "we're not providing that," you don't argue from feelings. You argue from the contract. The rider is the source of truth.</p>
+    </div>
+
+    <div class="sec-head">Start with the artist's vision</div>
+    <p class="para">The deal sets the route. The <strong>artist is the origin of what the show should feel like</strong> — and that comes first. Before a rig gets spec'd or a truck pack gets priced, take a moment to make sure the systems being built to carry the tour are supporting an overall vision that starts at the artist's intent. The brief from that origin is tangible — the emotional intent, the reference moments, the non-negotiables not to compromise on, and the flex points where the design can scale up or down with budget, venue, or routing.</p>
+
+    <p class="para">Clear and careful details around the artist's intent are the design's North Star. Every tactical decision after it gets measured against the same question — <em>does it serve what the artist is trying to build, or does it dilute it?</em></p>
+
+    <div class="sec-head">Then scale it to the route</div>
+    <p class="para">Once the vision is locked, the design has to fit the road. A theater run, an amphitheater run, a festival-scale package — each one calls for a different rig, a different truck count, a different crew size. Designing the tour means scaling the package to the average venue across the route, not the largest and not the smallest. Get this right and the tour breathes. Get it wrong and the result is either over-building for rooms that can't hold it, or under-building and lighting the show with whatever the venue has on the floor.</p>
+
+    <div class="sec-head">What the full module covers</div>
+    <ul class="topics">
+      <li>Pulling the artist's vision — emotional intent, references, non-negotiables, flex points</li>
+      <li>How offers get made and what's actually in a deal</li>
+      <li>Reading a contract and rider like a working document, not a legal one</li>
+      <li>Designing the production package to fit the route — sizing rig, truck count, and crew</li>
+      <li>How venue size, market, and production load all talk to each other</li>
+    </ul>
+
+    <div class="next-up">
+      <span>MODULE 02 OF 08</span>
+      <span class="arrow">— THE DEAL &amp; THE DESIGN →</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 4 — MODULE 03 PREVIEW: TOUR BUDGET       -->
+<!-- ============================================ -->
+<div class="page-wrapper page2">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-101</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        MODULE ONE — THE BIG PICTURE<br>
+        PREVIEW · MODULE 03
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-101 / REV.01</div>
+      <div class="pg-num">PG 05<span class="pg-of">/ 12</span></div>
+    </div>
+  </div>
+
+  <div class="body-area">
+    <span class="preview-stamp">— MODULE 03 / PREVIEW —</span>
+    <div class="page-title">BUILDING<br>YOUR BUDGET</div>
+    <div class="page-sub">The number that decides whether the tour is real.</div>
+
+    <p class="para">Every tour has two budgets. The one you put on paper before the run, and the one that actually plays out across sixty cities. The job is to make those two numbers look as much alike as possible.</p>
+
+    <p class="para">A working tour budget starts with the route, the design, and the deal — and turns them into a stack of line items. Trucks. Buses. Hotels. Crew. Backline. Production. Per diems. Insurance. Visas, if you're crossing borders. Catering buyouts on the days you can't feed people in-house. Then you compare that stack against the income side — guarantees, splits, sponsor money if it exists, merch — and you find out whether the tour is a tour or a hobby.</p>
+
+    <div class="pull-quote">
+      <p>A budget isn't a prediction. It's a position. It tells you where you can absorb a hit and where you can't.</p>
+    </div>
+
+    <div class="sec-head">The line items first-timers miss</div>
+    <p class="para">There's a production fee floor at every scale of touring. A real number, from someone who's done it — not an estimate. Day-off costs (bus, hotels, per diems on non-show days) often run a quarter to a third of the total tour cost, and they get under-counted by anyone budgeting only against show days. Insurance and bonding sneak up — most venues won't release the contract without a current Certificate of Insurance, and they want to be named on it. Local labor multipliers vary by market and union jurisdiction, and they can swing a budget by tens of thousands across a run.</p>
+
+    <div class="sec-head">What moves and what doesn't</div>
+    <p class="para">Some line items lock the day you sign. Others swing weekly — fuel, freight, hotel rates by city, crew availability. Knowing which numbers are fixed and which can move is the difference between a budget you can defend and one that gets eaten alive on the road. The work in this module is the unglamorous part: gauging the market, gathering quotes, stress-testing assumptions, building cushion.</p>
+
+    <div class="sec-head">What the full module covers</div>
+    <ul class="topics">
+      <li>Gauging market rates and getting honest quotes</li>
+      <li>Production fee floor, day-off costs, insurance and COI requirements</li>
+      <li>Local labor multipliers and how to model them across a route</li>
+      <li>Income vs. expense — how the tour P&amp;L actually works</li>
+      <li>The difference between a paper budget and a road budget</li>
+    </ul>
+
+    <div class="next-up">
+      <span>MODULE 03 OF 08</span>
+      <span class="arrow">— BUILDING YOUR BUDGET →</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 5 — MODULE 04 PREVIEW: THE ADVANCE       -->
+<!-- ============================================ -->
+<div class="page-wrapper page2">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-101</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        MODULE ONE — THE BIG PICTURE<br>
+        PREVIEW · MODULE 04
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-101 / REV.01</div>
+      <div class="pg-num">PG 06<span class="pg-of">/ 12</span></div>
+    </div>
+  </div>
+
+  <div class="body-area">
+    <span class="preview-stamp">— MODULE 04 / PREVIEW —</span>
+    <div class="page-title">THE<br>ADVANCE</div>
+    <div class="page-sub">The four to eight weeks where the show actually gets built.</div>
+
+    <p class="para">If the deal is the contract and the design is the package, the advance is where they meet the building. Four to eight weeks before show day, the production manager works each city one by one — phone, email, shared docs — reconciling three things: what the rider asks for, what the venue can provide, and what the show actually needs that night.</p>
+
+    <p class="para">This is where surprises die. Done well, an advance means nothing on show day catches you off guard. The venue knows your power, your stage dimensions, your rigging points, your bus parking, your dressing room count, and your meal times. You know their house specs, their crew call, their settlement contact, and the door at the back of the building you're loading through.</p>
+
+    <div class="pull-quote">
+      <p>Anything you don't advance, the venue gets to decide for you. And they will decide based on what's easiest for them, not what's right for the show.</p>
+    </div>
+
+    <div class="sec-head">The six buckets of an advance call</div>
+    <ul class="topics">
+      <li><strong>Schedule</strong> — load-in, sound check, doors, set times, curfew, load-out</li>
+      <li><strong>Tech</strong> — PA, console, lighting, power, stage, rigging, dressing rooms</li>
+      <li><strong>Hospitality</strong> — catering counts, dietary, dressing room riders, green room</li>
+      <li><strong>Crew &amp; Labor</strong> — local hands, stagehands, loaders, runners, security</li>
+      <li><strong>Logistics</strong> — bus parking, truck loading, shore power, nearest hotel and hospital</li>
+      <li><strong>Settlement</strong> — time, contact, deductions, format</li>
+    </ul>
+
+    <p class="para">Every advance ends with one document: a show advance packet for that specific city, distilled to a few pages so the day reads at a glance.</p>
+
+    <div class="next-up">
+      <span>MODULE 04 OF 08</span>
+      <span class="arrow">— THE ADVANCE →</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 6 — MODULE 05 PREVIEW: DAY OF SHOW       -->
+<!-- ============================================ -->
+<div class="page-wrapper page2">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-101</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        MODULE ONE — THE BIG PICTURE<br>
+        PREVIEW · MODULE 05
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-101 / REV.01</div>
+      <div class="pg-num">PG 07<span class="pg-of">/ 12</span></div>
+    </div>
+  </div>
+
+  <div class="body-area">
+    <span class="preview-stamp">— MODULE 05 / PREVIEW —</span>
+    <div class="page-title">THE DAY<br>OF SHOW</div>
+    <div class="page-sub">One page tells everyone what's happening. That page runs the day.</div>
+
+    <p class="para">Show day is a sequence. Bus arrival, load-in, set up, line check, sound check, catering, doors, opener, headliner, encore, merch, load-out, settlement, bus call. The order rarely changes. The times change every day, and that's why the day sheet exists.</p>
+
+    <p class="para">The day sheet is the single most important piece of paper on the road. One page, given to everyone on the tour, that says when you arrive, when you eat, when you load in, when you check, when doors open, when you go on, and when the bus rolls. If the day sheet is wrong, the day is wrong.</p>
+
+    <div class="pull-quote">
+      <p>You can advance perfectly, design beautifully, and budget tight — and still lose the day if the day sheet has yesterday's load-in time on it.</p>
+    </div>
+
+    <div class="sec-head">The rhythm of a show day</div>
+    <ul class="topics">
+      <li><strong>Pre-load</strong> — personal time, parking, schedule, hotel rooms for the driver</li>
+      <li><strong>Arrival</strong> — runner connect, walkthrough with venue and crew</li>
+      <li><strong>Setup</strong> — load in, production office, signage, look-ahead on tomorrow</li>
+      <li><strong>Pre-doors</strong> — sound check, VIP, guest list, dinner</li>
+      <li><strong>Doors &amp; Show</strong> — pre-show routine, doors, set, settlement</li>
+      <li><strong>Out</strong> — load-out, road report, bus call</li>
+    </ul>
+
+    <p class="para">The full module walks the day end to end — what each block needs from you, what hands off to the next block, and what falls apart when one of them slips.</p>
+
+    <div class="next-up">
+      <span>MODULE 05 OF 08</span>
+      <span class="arrow">— THE DAY OF SHOW →</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 7 — MODULE 06 PREVIEW: SECURITY          -->
+<!-- ============================================ -->
+<div class="page-wrapper page2">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-101</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        MODULE ONE — THE BIG PICTURE<br>
+        PREVIEW · MODULE 06
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-101 / REV.01</div>
+      <div class="pg-num">PG 08<span class="pg-of">/ 12</span></div>
+    </div>
+  </div>
+
+  <div class="body-area">
+    <span class="preview-stamp">— MODULE 06 / PREVIEW —</span>
+    <div class="page-title">OPERATIONS, ACCESS<br>&amp; SECURITY</div>
+    <div class="page-sub">The systems and flows that move people safely through your show.</div>
+
+    <p class="para">Show day is a choreography of <strong>people moving through space</strong>. The audience flowing in and out. The crew moving load-in to load-out. The artist moving from bus to dressing room to stage to encore. VIPs cycling through pre-show experiences. Security holding the lines that keep everything separate but coordinated. This module is about all of it — the operational layer that makes a venue work.</p>
+
+    <p class="para">Security is one part of that layer, and an important one. <em>The local team are the security experts.</em> Often the best approach is to give them the picture, lead with their expertise, and leave the meeting with their cell number on hand. But the module covers more than the security conversation — it covers credentials, routing, infrastructure, and what happens when something goes sideways.</p>
+
+    <div class="pull-quote">
+      <p>The day&apos;s timing lives in Module 05. Module 06 is the <em>spatial and access layer</em> — who can be where, how they got there, and what protects them on the way.</p>
+    </div>
+
+    <div class="sec-head">What the full module covers</div>
+    <ul class="topics">
+      <li><strong>Credentials</strong> — pass types, tier systems, sources, RFID vs printed, photo passes, design</li>
+      <li><strong>People flow &amp; routing</strong> — audience ingress/egress, artist and crew paths, VIP routing</li>
+      <li><strong>Security as partnership</strong> — the 20-minute meeting with the security lead</li>
+      <li><strong>VIP &amp; meet-and-greet logistics</strong> — moving select people through to the artist safely</li>
+      <li><strong>Infrastructure</strong> — barricade, photo pit, dressing rooms, runner routes</li>
+      <li><strong>Emergency protocols</strong> — fire, medical, active threat, evacuation paths</li>
+    </ul>
+
+    <div class="next-up">
+      <span>MODULE 06 OF 08</span>
+      <span class="arrow">— OPERATIONS, ACCESS &amp; SECURITY →</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 8 — MODULE 07 PREVIEW: TALKING MONEY     -->
+<!-- ============================================ -->
+<div class="page-wrapper page2">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-101</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        MODULE ONE — THE BIG PICTURE<br>
+        PREVIEW · MODULE 07
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-101 / REV.01</div>
+      <div class="pg-num">PG 09<span class="pg-of">/ 12</span></div>
+    </div>
+  </div>
+
+  <div class="body-area">
+    <span class="preview-stamp">— MODULE 07 / PREVIEW —</span>
+    <div class="page-title">TALKING<br>MONEY</div>
+    <div class="page-sub">Set up the financial relationship before a single dollar moves.</div>
+
+    <p class="para">Every working tour has a financial chain — artist, business management, tour manager, the road. The first conversation with a new business manager is the most important one of the run, because it sets the rules for every transaction that follows.</p>
+
+    <p class="para">Templates. Per diems. Reimbursements. Deposits. Wire instructions. Bank account details. Credit card authorization. None of it is interesting. All of it is the difference between a clean tour close and a three-month back-and-forth chasing receipts.</p>
+
+    <div class="pull-quote">
+      <p>The road report is not a chore. It's the document that proves you did your job — and the document that protects you when someone forgets that you did.</p>
+    </div>
+
+    <div class="sec-head">Setting up the relationship</div>
+    <ul class="topics">
+      <li>Sharing your processes — your templates, your road report format</li>
+      <li>Learning theirs — preferred templates, per diem methods, reimbursement rules</li>
+      <li>Deposit cadence — how often, where, attention to whom</li>
+      <li>Requesting financial items — bank account, wire details, W9, band card</li>
+    </ul>
+
+    <div class="sec-head">Building the road report</div>
+    <ul class="topics">
+      <li>Recording income — show, merch, sponsor, day of</li>
+      <li>Cash, check, wire — the process for each</li>
+      <li>Sharing the report on a cadence the office can rely on</li>
+    </ul>
+
+    <div class="next-up">
+      <span>MODULE 07 OF 08</span>
+      <span class="arrow">— TALKING MONEY →</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 9 — MODULE 08 PREVIEW: SPEND & SETTLE    -->
+<!-- ============================================ -->
+<div class="page-wrapper page2">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-101</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        MODULE ONE — THE BIG PICTURE<br>
+        PREVIEW · MODULE 08
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-101 / REV.01</div>
+      <div class="pg-num">PG 10<span class="pg-of">/ 12</span></div>
+    </div>
+  </div>
+
+  <div class="body-area">
+    <span class="preview-stamp">— MODULE 08 / PREVIEW —</span>
+    <div class="page-title">SETTLEMENT</div>
+    <div class="page-sub">Where the work meets the math — closing the show, every show.</div>
+
+    <p class="para">Settlement closes the show. After the doors are shut and the encore is over, the tour manager and the promoter sit down with the contract, the manifests, and the deal terms. Tickets sold. Comps. Deductions. Splits. Bonuses. The math gets done, the document gets signed, payment moves, and the show is officially over.</p>
+
+    <p class="para">The full module walks a 10-step sequence — from understanding the deal memo, to advancing the settlement, to sitting down with the promoter, to sending the nightly report. It covers the vocabulary that lives on a settlement sheet, and it shows three real annotated example documents: a deposit report, a promoter settlement, and a TM settlement.</p>
+
+    <div class="pull-quote">
+      <p>Settlement is the moment people are trusting you on. Every detail planned, every dollar tracked, every conversation had — it all meets in the math at the end of the night.</p>
+    </div>
+
+    <div class="sec-head">The 10-step sequence</div>
+    <ul class="topics">
+      <li>Deal Memo · Deposit Report · Settlement Template Setup</li>
+      <li>Advance Your Settlement · Pre-Settlement · Budget Expenses</li>
+      <li>When To Settle · Final Settlement</li>
+      <li>Settle With Promoter · Update + Report</li>
+    </ul>
+
+    <div class="sec-head">What the full module covers</div>
+    <ul class="topics">
+      <li>The 10-step sequence end to end</li>
+      <li>Settlement vocabulary — variable expenses, fixed expenses, splits, deductions, money movement</li>
+      <li>Three annotated example documents — deposit report, promoter settlement, TM settlement</li>
+      <li>Field notes — habits that pay off and surprises that catch people the first few times</li>
+    </ul>
+
+    <div class="next-up">
+      <span>MODULE 08 OF 08</span>
+      <span class="arrow">— SETTLEMENT →</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 10 — THINGS THAT SURPRISE PEOPLE         -->
+<!-- ============================================ -->
+<div class="page-wrapper page2">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-101</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        MODULE ONE — THE BIG PICTURE<br>
+        FIELD NOTES
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-101 / REV.01</div>
+      <div class="pg-num">PG 11<span class="pg-of">/ 12</span></div>
+    </div>
+  </div>
+
+  <div class="body-area">
+    <div class="module-tag">— FIELD NOTES —</div>
+    <div class="page-title">THINGS THAT<br>SURPRISE PEOPLE</div>
+    <div class="page-sub">A few things nobody tells you on day one.</div>
+
+    <p class="para">Some of this lands harder once you've actually done it. But knowing it ahead of time means you'll catch yourself when it shows up.</p>
+
+    <div class="sec-head">The rider is a negotiation document, not a wish list</div>
+    <p class="para">What's printed in the rider is the opening position. What actually shows up in the dressing room is the result of the advance. Don't be surprised when the venue can't deliver every line — be ready to triage what matters and let go of what doesn't.</p>
+
+    <div class="sec-head">Festival days run on the festival's clock</div>
+    <p class="para">A headline date is your show. A festival date is somebody else's. You get a stage manager, a thirty-to-forty-five-minute changeover, a fixed set length, and a whole different document set. You fit into their system, not the other way around.</p>
+
+    <div class="sec-head">Fly dates are their own animal</div>
+    <p class="para">When the band flies in instead of busing, half the tour stack changes. Backline gets rented in market. Local crew gets called. Hotels move closer to the airport. Schedules tighten. The deal doesn't change but the operation does — and the planning happens in a different rhythm.</p>
+
+    <div class="sec-head">PM and TM are two jobs</div>
+    <p class="para">At club and theater scale, one person often wears both hats. At the upper end, they split. The production manager owns the show — the rig, the stage, the load-in, the technical day. The tour manager owns the people and the money. When they're the same person, the day is twice as long.</p>
+
+    <div class="next-up">
+      <span>FIELD NOTES</span>
+      <span class="arrow">— ONE MORE PAGE →</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 11 — CLOSING FRAME                        -->
+<!-- ============================================ -->
+<div class="page-wrapper page2">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-101</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        MODULE ONE — THE BIG PICTURE<br>
+        CLOSING FRAME
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-101 / REV.01</div>
+      <div class="pg-num">PG 12<span class="pg-of">/ 12</span></div>
+    </div>
+  </div>
+
+  <div class="body-area">
+    <div class="module-tag">— THE BIG PICTURE / CLOSING —</div>
+    <div class="page-title">WHAT IT IS,<br>WHY IT IS,<br>HOW IT WORKS</div>
+
+    <div class="trio">
+      <div class="block">
+        <div class="b-tag">— WHAT IT IS —</div>
+        <div class="b-text">A contract-driven logistics system that produces a live show in a different city every day, repeatably and profitably.</div>
+      </div>
+      <div class="block">
+        <div class="b-tag">— WHY IT IS —</div>
+        <div class="b-text">Live performance is one-shot. The cost of a missed cue, a missing case, a wrong meal, or a botched settlement is real money or a damaged relationship. The documentation exists because human memory and verbal coordination break down across sixty cities and forty crew.</div>
+      </div>
+      <div class="block">
+        <div class="b-tag">— HOW IT WORKS —</div>
+        <div class="b-text">Contract → rider → advance → day-of-show packet → execution → settlement → repeat. Every document hands off to the next. The advance is the brain. The day sheet is the heartbeat. Settlement is the receipt.</div>
+      </div>
+    </div>
+
+    <div class="sec-head">What's next — the eight modules</div>
+    <div class="mod-index">
+      <div class="mi"><div class="mi-num">— MODULE 02 —</div><div class="mi-name">The Deal &amp;<br>The Design</div></div>
+      <div class="mi"><div class="mi-num">— MODULE 03 —</div><div class="mi-name">Building<br>Your Budget</div></div>
+      <div class="mi"><div class="mi-num">— MODULE 04 —</div><div class="mi-name">The Advance</div></div>
+      <div class="mi"><div class="mi-num">— MODULE 05 —</div><div class="mi-name">The Day<br>Of Show</div></div>
+      <div class="mi"><div class="mi-num">— MODULE 06 —</div><div class="mi-name">Operations, Access<br>&amp; Security</div></div>
+      <div class="mi"><div class="mi-num">— MODULE 07 —</div><div class="mi-name">Talking Money &amp; The Road Report</div></div>
+      <div class="mi"><div class="mi-num">— MODULE 08 —</div><div class="mi-name">Settlement</div></div>
+      <div class="mi"><div class="mi-num">— END —</div><div class="mi-name">The Course<br>Closes</div></div>
+    </div>
+
+    <div class="next-up">
+      <span>END MODULE ONE</span>
+      <span class="arrow">— THE BIG PICTURE / DOC-101 / REV.01 —</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
+
+</script>
+
+<script>
+(function(){
+  "use strict";
+
+  /* manifest injected by build script */
+  var MODULES = [{"id": "m100", "num": "100", "title": "Before We Begin", "label": "PREFACE", "available": true}, {"id": "m1", "num": "101", "title": "The Big Picture", "label": "MODULE 01", "available": true}, {"id": "m2", "num": "m2", "title": "Module Two", "label": "MODULE 02", "available": false}, {"id": "m3", "num": "m3", "title": "Module Three", "label": "MODULE 03", "available": false}, {"id": "m4", "num": "m4", "title": "Module Four", "label": "MODULE 04", "available": false}, {"id": "m5", "num": "m5", "title": "Module Five", "label": "MODULE 05", "available": false}, {"id": "m6", "num": "m6", "title": "Module Six", "label": "MODULE 06", "available": false}, {"id": "m7", "num": "m7", "title": "Module Seven", "label": "MODULE 07", "available": false}, {"id": "m8", "num": "m8", "title": "Module Eight", "label": "MODULE 08", "available": false}];
+
+  var RESET = '<style>html,body{background:transparent!important;margin:0!important;'
+            + 'padding:0!important;display:block!important;min-height:0!important;'
+            + 'overflow:hidden!important;}.format-label{display:none!important;}'
+            + '.page-wrapper{margin:0!important;box-shadow:none!important;}</style>';
+
+  /* ---- elements ---- */
+  var gate=document.getElementById('gate');
+  var app=document.getElementById('app');
+  var sel=document.getElementById('moduleSelect');
+  var ifr1=document.getElementById('ifr1'), ifr2=document.getElementById('ifr2');
+  var leaf1=document.getElementById('leaf1'), leaf2=document.getElementById('leaf2');
+  var stage=document.getElementById('stage'), stageWrap=document.getElementById('stageWrap');
+  var spine=document.getElementById('spine'), locked=document.getElementById('locked');
+  var lkTitle=document.getElementById('lkTitle');
+  var notesArea=document.getElementById('notesArea');
+  var notesMod=document.getElementById('notesMod');
+  var saveState=document.getElementById('saveState');
+  var prevBtn=document.getElementById('prevBtn'), nextBtn=document.getElementById('nextBtn');
+  var counter=document.getElementById('counter');
+
+  /* ---- state ---- */
+  var frontLeaf=leaf1, backLeaf=leaf2, frontIfr=ifr1, backIfr=ifr2;
+  var currentModule=null, currentPage=0, pageCount=1, busy=false;
+
+  /* ---- login ---- */
+  document.getElementById('gateForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    gate.classList.add('hidden');
+    app.classList.add('live');
+    setTimeout(init,150);
+  });
+  document.getElementById('signout').addEventListener('click',function(){
+    app.classList.remove('live');
+    gate.classList.remove('hidden');
+  });
+
+  /* ---- init ---- */
+  function init(){
+    sel.innerHTML='';
+    var firstAvail=null;
+    MODULES.forEach(function(m){
+      var o=document.createElement('option');
+      o.value=m.id;
+      o.textContent=m.label+'  ·  '+m.title+(m.available?'':'  (coming soon)');
+      if(!m.available) o.disabled=true;
+      sel.appendChild(o);
+      if(m.available && !firstAvail) firstAvail=m;
+    });
+    sel.addEventListener('change',function(){ loadModule(sel.value); });
+    if(firstAvail){ sel.value=firstAvail.id; loadModule(firstAvail.id); }
+    window.addEventListener('resize',fit);
+    fit();
+  }
+
+  /* ---- scaling ---- */
+  function fit(){
+    var availH=window.innerHeight-60-70-52;
+    var availW=window.innerWidth-64-34-414-34-72;
+    var s=Math.min(availH/1056, availW/816);
+    s=Math.max(Math.min(s,1),0.22);
+    document.documentElement.style.setProperty('--scale',s);
+    var sw=Math.round(816*s), sh=Math.round(1056*s);
+    stageWrap.style.width=sw+'px'; stageWrap.style.height=sh+'px';
+    spine.style.height=sh+'px';
+    document.querySelector('.notes').style.height=sh+'px';
+  }
+
+  /* ---- module loading ---- */
+  function loadModule(id){
+    var m=null;
+    for(var i=0;i<MODULES.length;i++){ if(MODULES[i].id===id) m=MODULES[i]; }
+    if(!m) return;
+    currentModule=m;
+    notesMod.textContent=m.title;
+    loadNotes(m.id);
+
+    if(!m.available){
+      stage.style.display='none';
+      locked.style.display='flex';
+      lkTitle.textContent=m.title.toUpperCase();
+      pageCount=0; currentPage=0;
+      updateNav();
+      return;
+    }
+    locked.style.display='none';
+    stage.style.display='';
+
+    var src=document.getElementById('mod-'+m.num);
+    var html=src ? src.textContent : '';
+    html=html.replace('</head>',RESET+'</head>');
+
+    var loaded=0;
+    function done(){
+      loaded++;
+      if(loaded<2) return;
+      pageCount=countPages(frontIfr);
+      currentPage=0;
+      leaf1.style.transition='none'; leaf2.style.transition='none';
+      leaf1.style.transform='rotateY(0deg)'; leaf2.style.transform='rotateY(0deg)';
+      frontLeaf=leaf1; backLeaf=leaf2; frontIfr=ifr1; backIfr=ifr2;
+      showPage(frontIfr,0); showPage(backIfr,0);
+      applyStack();
+      void leaf1.offsetWidth;
+      leaf1.style.transition=''; leaf2.style.transition='';
+      updateNav();
+    }
+    ifr1.onload=done; ifr2.onload=done;
+    ifr1.srcdoc=html; ifr2.srcdoc=html;
+  }
+
+  function countPages(ifr){
+    try{ return ifr.contentDocument.querySelectorAll('.page-wrapper').length; }
+    catch(e){ return 1; }
+  }
+  function showPage(ifr,idx){
+    try{
+      var pages=ifr.contentDocument.querySelectorAll('.page-wrapper');
+      for(var i=0;i<pages.length;i++){
+        pages[i].style.display=(i===idx)?'':'none';
+      }
+    }catch(e){}
+  }
+  function applyStack(){
+    frontLeaf.style.zIndex=2; backLeaf.style.zIndex=1;
+  }
+
+  /* ---- page flip ---- */
+  function flipNext(){
+    if(busy||!currentModule||!currentModule.available) return;
+    if(currentPage>=pageCount-1) return;
+    busy=true;
+    showPage(backIfr,currentPage+1);
+    backLeaf.style.transition='none';
+    backLeaf.style.transform='rotateY(0deg)';
+    backLeaf.style.zIndex=1;
+    frontLeaf.style.zIndex=2;
+    void frontLeaf.offsetWidth;
+    frontLeaf.classList.add('flipping');
+    frontLeaf.style.transition='';
+    frontLeaf.style.transform='rotateY(-180deg)';
+    var moved=frontLeaf;
+    setTimeout(function(){
+      moved.classList.remove('flipping');
+      var t=frontLeaf; frontLeaf=backLeaf; backLeaf=t;
+      var ti=frontIfr; frontIfr=backIfr; backIfr=ti;
+      backLeaf.style.transition='none';
+      backLeaf.style.transform='rotateY(0deg)';
+      applyStack();
+      currentPage++;
+      busy=false;
+      updateNav();
+    },730);
+  }
+  function flipPrev(){
+    if(busy||!currentModule||!currentModule.available) return;
+    if(currentPage<=0) return;
+    busy=true;
+    showPage(backIfr,currentPage-1);
+    backLeaf.style.transition='none';
+    backLeaf.style.transform='rotateY(-180deg)';
+    backLeaf.style.zIndex=3;
+    void backLeaf.offsetWidth;
+    backLeaf.classList.add('flipping');
+    backLeaf.style.transition='';
+    backLeaf.style.transform='rotateY(0deg)';
+    var moved=backLeaf;
+    setTimeout(function(){
+      moved.classList.remove('flipping');
+      var t=frontLeaf; frontLeaf=backLeaf; backLeaf=t;
+      var ti=frontIfr; frontIfr=backIfr; backIfr=ti;
+      backLeaf.style.transition='none';
+      backLeaf.style.transform='rotateY(0deg)';
+      applyStack();
+      currentPage--;
+      busy=false;
+      updateNav();
+    },730);
+  }
+
+  /* ---- nav ---- */
+  function updateNav(){
+    var avail=currentModule&&currentModule.available;
+    var pc=avail?pageCount:0;
+    var human=avail?(currentPage+1):0;
+    counter.innerHTML='PG <b>'+pad(human)+'</b> / '+pad(pc);
+    prevBtn.disabled=!avail||currentPage<=0;
+    nextBtn.disabled=!avail||currentPage>=pageCount-1;
+  }
+  function pad(n){ return (n<10?'0':'')+n; }
+
+  prevBtn.addEventListener('click',flipPrev);
+  nextBtn.addEventListener('click',flipNext);
+  document.addEventListener('keydown',function(e){
+    if(gate.classList.contains('hidden')==

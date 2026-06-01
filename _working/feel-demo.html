@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backstage Blueprint // Hover Feel Demo</title>
+<style>
+/* =========================================================
+   TUNABLE VALUES — these are the dials we'll adjust together.
+   Tell me "more lift" / "softer shadow" / "slower" and I just
+   change one of these numbers.
+   ========================================================= */
+:root {
+  /* Lift behavior */
+  --lift-height: 22px;          /* how high items pop up on hover */
+  --lift-scale: 1.04;           /* how much they grow on hover (1 = no grow) */
+  --lift-duration: 0.45s;       /* how long the lift takes */
+  --lift-easing: cubic-bezier(0.22, 1.2, 0.36, 1); /* the "bounce" feel */
+
+  /* Resting shadow (the baked-in look — subtle, close to object) */
+  --shadow-rest:
+    0 1px 1px rgba(0,0,0,0.25),
+    0 4px 10px rgba(0,0,0,0.35);
+
+  /* Hover shadow (the "I'm floating off the desk" look — big, soft) */
+  --shadow-lift:
+    0 1px 1px rgba(0,0,0,0.15),
+    0 4px 12px rgba(0,0,0,0.25),
+    0 30px 50px rgba(0,0,0,0.45);
+
+  /* Note label timing */
+  --label-delay: 0.05s;
+
+  /* Color palette (matches your blueprint screenshot) */
+  --bp-blue: #1d3963;
+  --bp-blue-grid-minor: rgba(140, 175, 230, 0.10);
+  --bp-blue-grid-major: rgba(140, 175, 230, 0.18);
+  --paper: #ece8db;
+  --paper-edge: #d4cfb8;
+  --ink: #1d3963;
+  --accent: #d97a3a;          /* the orange from your keyboard / "B" mark */
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Courier New', monospace;
+  background: var(--bp-blue);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* =========================================================
+   THE BLUEPRINT SURFACE
+   Stand-in grid background so the demo has the right vibe.
+   When real assets arrive, this gets replaced by the backdrop image.
+   ========================================================= */
+.desk {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 820px;
+  background-color: var(--bp-blue);
+  background-image:
+    linear-gradient(var(--bp-blue-grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bp-blue-grid-minor) 1px, transparent 1px),
+    linear-gradient(var(--bp-blue-grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bp-blue-grid-major) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px, 200px 200px, 200px 200px;
+  overflow: hidden;
+}
+
+/* =========================================================
+   HEADER + FOOTER STRIPS — just for the demo
+   ========================================================= */
+.title-strip,
+.hint-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  padding: 18px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: rgba(236, 232, 219, 0.65);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  z-index: 20;
+  pointer-events: none;
+}
+.title-strip { top: 0; }
+.hint-strip {
+  bottom: 0;
+  justify-content: center;
+  color: rgba(236, 232, 219, 0.4);
+  font-size: 10px;
+}
+.title-strip .accent { color: var(--accent); }
+
+/* =========================================================
+   ITEM CARD — the placeholder for each PNG
+   ========================================================= */
+.spot {
+  position: absolute;
+  cursor: pointer;
+}
+
+.card {
+  position: relative;
+  background: var(--paper);
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 3px;
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-shadow: var(--shadow-rest);
+  transition:
+    transform var(--lift-duration) var(--lift-easing),
+    box-shadow var(--lift-duration) ease;
+  will-change: transform;
+}
+
+.spot:hover .card {
+  transform: translateY(calc(var(--lift-height) * -1)) scale(var(--lift-scale));
+  box-shadow: var(--shadow-lift);
+}
+
+/* The "note that slides out from below" */
+.label-tag {
+  position: absolute;
+  top: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  background: rgba(236, 232, 219, 0.97);
+  color: var(--ink);
+  padding: 9px 14px;
+  border-radius: 2px;
+  border-left: 3px solid var(--accent);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  transition:
+    opacity var(--lift-duration) ease var(--label-delay),
+    transform var(--lift-duration) var(--lift-easing) var(--label-delay);
+}
+
+.spot:hover .label-tag {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* =========================================================
+   PER-ITEM POSITIONING + SIZING
+   Roughly matches the layout of your blueprint screenshot.
+   ========================================================= */
+
+/* KEYBOARD — top center, wider than tall */
+.spot-keyboard {
+  top: 9%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.spot-keyboard .card { width: 280px; height: 100px; font-size: 12px; }
+
+/* TEMPLATES — middle-left, smaller folder */
+.spot-templates {
+  top: 28%;
+  left: 9%;
+}
+.spot-templates .card { width: 140px; height: 150px; font-size: 11px; }
+
+/* THE BLUEPRINT — middle-left, just right of templates, taller stack */
+.spot-blueprint {
+  top: 34%;
+  left: 19%;
+}
+.spot-blueprint .card { width: 170px; height: 210px; font-size: 11px; }
+
+/* THE COURSE — middle-right, tall stack */
+.spot-course {
+  top: 28%;
+  right: 11%;
+}
+.spot-course .card { width: 180px; height: 220px; font-size: 12px; }
+
+/* CHECKLIST — bottom-left */
+.spot-checklist {
+  bottom: 14%;
+  left: 11%;
+}
+.spot-checklist .card { width: 160px; height: 195px; font-size: 11px; }
+
+/* =========================================================
+   AUDIT & CONSULTATION — the slide-aside variant
+   Documents pile slides to the right + tilts, revealing
+   a magnifying glass "etched" into the surface beneath.
+   ========================================================= */
+.spot-audit {
+  bottom: 14%;
+  right: 11%;
+  width: 220px;
+  height: 195px;
+}
+
+/* The magnifier "etched" into the surface — sits under the docs */
+.audit-magnifier {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  transition: opacity var(--lift-duration) ease;
+}
+.audit-magnifier::before {
+  content: '';
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border: 2.5px solid var(--accent);
+  border-radius: 50%;
+  top: 14px;
+  left: 22px;
+}
+.audit-magnifier::after {
+  content: '';
+  position: absolute;
+  width: 68px;
+  height: 5px;
+  background: var(--accent);
+  border-radius: 2px;
+  top: 142px;
+  left: 130px;
+  transform: rotate(45deg);
+  transform-origin: left center;
+}
+
+.spot-audit:hover .audit-magnifier { opacity: 1; }
+
+/* The documents pile that slides aside on hover */
+.audit-docs {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 3px;
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: var(--shadow-rest);
+  transition:
+    transform 0.6s cubic-bezier(0.34, 1.15, 0.4, 1),
+    box-shadow 0.6s ease;
+}
+
+.spot-audit:hover .audit-docs {
+  transform: translate(78%, 6%) rotate(11deg);
+  box-shadow: var(--shadow-lift);
+}
+
+.spot-audit .label-tag {
+  top: auto;
+  bottom: -38px;
+  font-size: 10px;
+}
+
+/* =========================================================
+   RESPONSIVE — keep it usable on narrower viewports
+   ========================================================= */
+@media (max-width: 1100px) {
+  .spot-keyboard .card { width: 220px; height: 80px; }
+  .card { padding: 14px; font-size: 10px !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="desk">
+
+  <div class="title-strip">
+    <span>BACKSTAGE BLUEPRINT // PRODUCT WORKSHOP — FEEL DEMO</span>
+    <span class="accent">REV.01 — TUNING</span>
+  </div>
+
+  <!-- TOOLKIT / KEYBOARD -->
+  <div class="spot spot-keyboard">
+    <div class="card">[ KEYBOARD ]<br>TOOLKIT</div>
+    <div class="label-tag">TECH RIDER &amp; STAGE PLOT BUILDER</div>
+  </div>
+
+  <!-- TEMPLATES -->
+  <div class="spot spot-templates">
+    <div class="card">TEMPLATE</div>
+    <div class="label-tag">INDIVIDUAL TEMPLATES — &Agrave; LA CARTE</div>
+  </div>
+
+  <!-- THE BLUEPRINT (the bundle) -->
+  <div class="spot spot-blueprint">
+    <div class="card">THE<br>BLUEPRINT</div>
+    <div class="label-tag">THE COMPLETE TEMPLATE BUNDLE</div>
+  </div>
+
+  <!-- THE COURSE -->
+  <div class="spot spot-course">
+    <div class="card">THE<br>COURSE</div>
+    <div class="label-tag">FULL LIVE PRODUCTION TRAINING</div>
+  </div>
+
+  <!-- CHECKLIST -->
+  <div class="spot spot-checklist">
+    <div class="card">CHECKLIST</div>
+    <div class="label-tag">FREE PRODUCTION CHECKLIST</div>
+  </div>
+
+  <!-- AUDIT &amp; CONSULTATION (slide-aside variant) -->
+  <div class="spot spot-audit">
+    <div class="audit-magnifier"></div>
+    <div class="audit-docs">DOCUMENTS</div>
+    <div class="label-tag">THE AUDIT &amp; CONSULTATION</div>
+  </div>
+
+  <div class="hint-strip">
+    <span>HOVER ANY ITEM // TUNE THE FEEL // SEND NOTES</span>
+  </div>
+
+</div>
+
+</body>
+</html>

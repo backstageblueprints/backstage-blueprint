@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1B3D6E">
+<title>Backstage Blueprint — Production · Live · Touring Systems</title>
+
+<!-- Google Fonts (Inter for body, Teko for display marks — matches the live site) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Teko:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   PALETTE — lifted directly from backstageblueprint.co
+   ========================================================= */
+:root {
+  --navy:        #1B3D6E;
+  --navy-deep:   #142C4F;
+  --orange:      #D85A1F;
+  --cream:       #F2EBDD;
+  --ink:         #0D0D0D;
+
+  /* Aliases used by the interactive system */
+  --bp-blue: var(--navy);
+  --paper: var(--cream);
+  --note-paper: #f4ecd5;
+  --accent: var(--orange);
+  --glow-color: 255, 245, 215;
+  --dim-strength: 0.62;
+
+  /* Connector glow size */
+  --glow-width: 20%;
+  --glow-height: 30%;
+
+  /* Sticky note */
+  --note-width: 13%;
+  --note-height: 11.5%;
+  --note-vertical-center: 36%;   /* upper-middle on the homepage (above the cable) */
+  --note-up-duration: 0.55s;
+  --note-down-duration: 0.40s;
+  --note-swap-gap: 280ms;
+  --note-tilt: -1.5deg;
+
+  /* Establishing zoom */
+  --establish-zoom: 1.06;
+  --establish-duration: 1.4s;
+  --establish-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* Breathing */
+  --breathe-duration: 2.7s;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--navy);
+  color: var(--cream);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* =========================================================
+   HEADER (top-left wordmark, top-right EST marker)
+   ========================================================= */
+header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28px 48px;
+  pointer-events: none;
+}
+
+.header-mark {
+  font-family: 'Teko', 'Oswald', 'Impact', 'Arial Narrow', sans-serif;
+  font-size: 18px;
+  letter-spacing: 1.5px;
+  color: var(--cream);
+  pointer-events: auto;
+}
+
+.header-mark .reg {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--cream);
+  border-radius: 50%;
+  font-size: 9px;
+  line-height: 12px;
+  text-align: center;
+  vertical-align: 4px;
+  margin-left: 6px;
+  letter-spacing: 0;
+}
+
+.header-meta {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 500;
+  opacity: 0.85;
+  pointer-events: auto;
+}
+
+/* =========================================================
+   HERO — fills the viewport, hosts the image stage,
+   provides the top/bottom navy gradients for legibility.
+   ========================================================= */
+.hero {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Soft top + bottom navy gradients so header & footer stay legible over the image */
+.hero::before,
+.hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+.hero::before {
+  top: 0;
+  height: 140px;
+  background: linear-gradient(180deg, rgba(20, 44, 79, 0.55) 0%, rgba(20, 44, 79, 0) 100%);
+}
+.hero::after {
+  bottom: 0;
+  height: 140px;
+  background: linear-gradient(0deg, rgba(20, 44, 79, 0.55) 0%, rgba(20, 44, 79, 0) 100%);
+}
+
+/* =========================================================
+   THE DESK — 5504×3072 stage that gracefully fits viewport.
+   Wider than 16:9 viewport → width:100vw, letterboxed.
+   Narrower → height:100vh-ish, pillarboxed.
+   ========================================================= */
+.desk {
+  position: relative;
+  aspect-ratio: 5504 / 3072;
+  width: min(100vw, calc(100vh * 5504 / 3072));
+  overflow: hidden;
+}
+
+.desk-inner {
+  position: absolute;
+  inset: 0;
+  transform: scale(1.0);
+  transform-origin: center center;
+  opacity: 0;
+  transition:
+    transform var(--establish-duration) var(--establish-ease),
+    opacity calc(var(--establish-duration) * 0.7) ease-out;
+}
+
+.desk-inner.loaded {
+  transform: scale(var(--establish-zoom));
+  opacity: 1;
+}
+
+.bg-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  z-index: 1;
+}
+
+/* =========================================================
+   CONNECTOR GLOWS — radial halos that fade in on hover,
+   breathe + rise above the dim overlay when latched.
+   ========================================================= */
+.connector-glow {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  width: var(--glow-width);
+  height: var(--glow-height);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(var(--glow-color), 0.85) 0%,
+    rgba(var(--glow-color), 0.45) 22%,
+    rgba(var(--glow-color), 0.15) 45%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  mix-blend-mode: screen;
+}
+.connector-glow.lit { opacity: 1; }
+.connector-glow.latched {
+  z-index: 23;
+  opacity: 1;
+  animation: connector-breathe var(--breathe-duration) ease-in-out infinite;
+}
+
+@keyframes connector-breathe {
+  0%, 100% { opacity: 0.65; transform: scale(0.96); }
+  50%      { opacity: 1.00; transform: scale(1.06); }
+}
+
+/* =========================================================
+   DIM OVERLAY (activates on latch)
+   ========================================================= */
+.dim-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  background-color: rgba(0, 0, 0, 0);
+  pointer-events: none;
+  cursor: pointer;
+  transition: background-color 0.45s ease;
+}
+.dim-overlay.active {
+  background-color: rgba(0, 0, 0, var(--dim-strength));
+  pointer-events: auto;
+}
+
+/* =========================================================
+   HOT ZONES — click/hover targets over each connector
+   ========================================================= */
+.hot {
+  position: absolute;
+  z-index: 20;
+  cursor: pointer;
+}
+.hot.latched { z-index: 26; }
+
+/* Debug toggle — uncomment to visualize hot-zone positions:
+.hot { background: rgba(255, 122, 58, 0.18); outline: 1px dashed rgba(255,255,255,0.5); }
+*/
+
+/* =========================================================
+   STICKY NOTE
+   ========================================================= */
+.sticky-note {
+  position: absolute;
+  z-index: 32;
+  top: var(--note-vertical-center);
+  left: 50%;
+  width: var(--note-width);
+  height: var(--note-height);
+  background: var(--note-paper);
+  color: var(--navy);
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Courier New', monospace;
+  pointer-events: none;
+  border-radius: 2px;
+  box-shadow:
+    0 18px 30px rgba(0, 0, 0, 0.55),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  transform: translate(-50%, -300%) rotate(var(--note-tilt));
+  transition: transform var(--note-down-duration) cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+.sticky-note.visible {
+  transform: translate(-50%, -50%) rotate(var(--note-tilt));
+  transition: transform var(--note-up-duration) cubic-bezier(0.22, 1.15, 0.36, 1);
+}
+
+.sticky-note.latched {
+  pointer-events: auto;
+  cursor: pointer;
+  box-shadow:
+    0 0 28px rgba(var(--glow-color), 0.8),
+    0 0 70px rgba(var(--glow-color), 0.35),
+    0 18px 30px rgba(0, 0, 0, 0.55),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  transition:
+    transform var(--note-up-duration) cubic-bezier(0.22, 1.15, 0.36, 1),
+    box-shadow 0.5s ease;
+}
+
+.sticky-note-inner {
+  position: absolute;
+  inset: 0;
+  padding: 7% 9%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 0.7em;
+}
+
+.sticky-note-header {
+  font-size: clamp(8px, 0.7vw, 11px);
+  letter-spacing: 0.3em;
+  color: var(--orange);
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.sticky-note-text {
+  font-size: clamp(13px, 1.3vw, 19px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  color: var(--navy);
+}
+
+/* =========================================================
+   FOOTER (matches live site)
+   ========================================================= */
+footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 24px 48px 28px;
+}
+
+.tagline {
+  font-family: 'Teko', 'Oswald', 'Impact', 'Arial Narrow', sans-serif;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--cream);
+  opacity: 0.95;
+}
+.tagline .dot {
+  color: var(--orange);
+  margin: 0 8px;
+}
+
+.contact {
+  font-size: 12px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--cream);
+  text-decoration: none;
+  border-bottom: 1.5px solid var(--orange);
+  padding-bottom: 4px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.contact:hover { color: var(--orange); }
+
+/* =========================================================
+   MOBILE BREAKPOINT (matches live site)
+   ========================================================= */
+@media (max-width: 720px) {
+  header { padding: 20px 24px; }
+  footer {
+    padding: 20px 24px 24px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .header-meta { font-size: 9px;  letter-spacing: 1.5px; }
+  .header-mark { font-size: 13px; letter-spacing: 1px;   }
+  .tagline     { font-size: 11px; letter-spacing: 2.5px; }
+  .contact     { font-size: 11px; letter-spacing: 2px;   }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-mark">BCKSTG &middot; BLPRNT<span class="reg">M</span></div>
+  <div class="header-meta">EST. 2026</div>
+</header>
+
+<main class="hero">
+  <div class="desk" id="desk">
+   <div class="desk-inner" id="desk-inner">
+
+    <!-- BACKDROP (XLR cable on blueprint grid) -->
+    <img class="bg-layer" src="HOME_PAGE/HOME_PAGE_BG.png" alt="Backstage Blueprint — XLR cable on blueprint grid">
+
+    <!-- CONNECTOR GLOWS -->
+    <div class="connector-glow" id="glow-products"
+         style="left: 26%; top: 63%; width: 20%; height: 30%;"></div>
+    <div class="connector-glow" id="glow-members"
+         style="left: 58%; top: 63%; width: 20%; height: 30%;"></div>
+
+    <!-- DIM OVERLAY -->
+    <div class="dim-overlay" id="dim-overlay"></div>
+
+    <!-- HOT ZONES (positioned over each connector body) -->
+    <div class="hot"
+         data-target="glow-products"
+         data-label="THE PRODUCTS"
+         data-cta="Enter the Products?"
+         data-url="blueprint-page.html"
+         style="left: 30%; top: 70%; width: 12%; height: 18%;"></div>
+
+    <div class="hot"
+         data-target="glow-members"
+         data-label="THE MEMBERS AREA"
+         data-cta="Enter the Members Area?"
+         data-url="members.html"
+         style="left: 62%; top: 70%; width: 12%; height: 18%;"></div>
+
+    <!-- STICKY NOTE -->
+    <div class="sticky-note" id="sticky-note">
+      <div class="sticky-note-inner">
+        <div class="sticky-note-header">// REF</div>
+        <div class="sticky-note-text" id="sticky-note-text"></div>
+      </div>
+    </div>
+
+   </div><!-- /.desk-inner -->
+  </div><!-- /.desk -->
+</main>
+
+<footer>
+  <div class="tagline">Backstage Blueprint <span class="dot">&middot;</span> Every Show Needs A Blueprint</div>
+  <a class="contact" href="mailto:hello@backstageblueprint.com">Get In Touch</a>
+</footer>
+
+<script>
+  // ====== ESTABLISHING ZOOM ======
+  const deskInner = document.getElementById('desk-inner');
+  window.addEventListener('load', () => {
+    setTimeout(() => deskInner.classList.add('loaded'), 60);
+  });
+  setTimeout(() => deskInner.classList.add('loaded'), 2500);
+
+  // ====== DOM REFERENCES ======
+  const note       = document.getElementById('sticky-note');
+  const noteText   = document.getElementById('sticky-note-text');
+  const noteHeader = document.querySelector('.sticky-note-header');
+  const dimOverlay = document.getElementById('dim-overlay');
+
+  const noteSwapGap = parseInt(
+    getComputedStyle(document.documentElement).getPropertyValue('--note-swap-gap')
+  ) || 280;
+
+  // ====== STATE ======
+  let activeHot  = null;
+  let latchedHot = null;
+  let swapTimer  = null;
+
+  // ====== HELPERS ======
+  function showNote(text, asLatched) {
+    noteHeader.textContent = asLatched ? '// CONFIRM' : '// REF';
+    noteText.innerHTML = text;
+    requestAnimationFrame(() => note.classList.add('visible'));
+  }
+
+  function hideNote() {
+    note.classList.remove('visible');
+  }
+
+  function enterLatch(hot) {
+    latchedHot = hot;
+    clearTimeout(swapTimer);
+
+    const target = document.getElementById(hot.dataset.target);
+    target.classList.add('lit', 'latched');
+    hot.classList.add('latched');
+    dimOverlay.classList.add('active');
+
+    noteHeader.textContent = '// CONFIRM';
+    noteText.innerHTML = hot.dataset.cta;
+    note.classList.add('latched', 'visible');
+  }
+
+  function exitLatch() {
+    if (!latchedHot) return;
+    const target = document.getElementById(latchedHot.dataset.target);
+    target.classList.remove('lit', 'latched');
+    latchedHot.classList.remove('latched');
+    note.classList.remove('latched', 'visible');
+    noteHeader.textContent = '// REF';
+    dimOverlay.classList.remove('active');
+    latchedHot = null;
+    activeHot  = null;
+  }
+
+  function navigate(hot) {
+    window.location.href = hot.dataset.url;
+  }
+
+  // ====== WIRE UP HOT ZONES ======
+  document.querySelectorAll('.hot').forEach(hot => {
+    const target = document.getElementById(hot.dataset.target);
+    const label  = hot.dataset.label;
+
+    hot.addEventListener('mouseenter', () => {
+      if (latchedHot) return;
+
+      const prevHot = activeHot;
+      activeHot = hot;
+      target.classList.add('lit');
+
+      clearTimeout(swapTimer);
+
+      if (prevHot && prevHot !== hot && note.classList.contains('visible')) {
+        hideNote();
+        swapTimer = setTimeout(() => {
+          if (activeHot === hot) showNote(label, false);
+        }, noteSwapGap);
+      } else {
+        showNote(label, false);
+      }
+    });
+
+    hot.addEventListener('mouseleave', () => {
+      if (latchedHot) return;
+
+      target.classList.remove('lit');
+      setTimeout(() => {
+        if (activeHot === hot) {
+          activeHot = null;
+          clearTimeout(swapTimer);
+          hideNote();
+        }
+      }, 30);
+    });
+
+    hot.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (latchedHot === hot) {
+        navigate(hot);
+      } else if (!latchedHot) {
+        enterLatch(hot);
+      }
+    });
+  });
+
+  note.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (latchedHot) navigate(latchedHot);
+  });
+
+  dimOverlay.addEventListener('click', () => exitLatch());
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && latchedHot) exitLatch();
+  });
+</script>
+
+</body>
+</html>

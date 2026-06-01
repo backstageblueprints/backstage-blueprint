@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backstage Blueprint // Products</title>
+<style>
+/* =========================================================
+   TUNABLE VALUES — change these to retune the feel.
+   Lift heights are % of the desk height so they scale at every viewport size.
+   ========================================================= */
+:root {
+  /* Lift behavior */
+  --lift-height: 2.1%;          /* how high items pop up on hover (was 1.8%, +15%) */
+  --lift-drift: 0.8%;            /* how far items ease toward center on lift */
+  --lift-scale: 1.035;            /* how much they grow on hover (1 = no grow) */
+  --lift-duration: 0.5s;          /* how long the lift takes */
+  --lift-easing: cubic-bezier(0.22, 1.2, 0.36, 1); /* the "spring" feel */
+
+  /* Audit slide-aside behavior */
+  --slide-distance-x: 13%;
+  --slide-distance-y: 1.5%;
+  --slide-rotation: 11deg;
+  --slide-duration: 0.7s;
+
+  /* Shadows — kept as 3-drop-shadow filters in every state (with the warm-glow
+     shadows at alpha 0 when no glow is wanted) so the structure matches the
+     breathing animation. Same structure = smooth interpolation = no flash. */
+  --shadow-rest:
+    drop-shadow(0 0 0 rgba(var(--glow-color, 255, 245, 215), 0))
+    drop-shadow(0 0 0 rgba(var(--glow-color, 255, 245, 215), 0))
+    drop-shadow(0 4px 6px rgba(0, 0, 0, 0.30));
+  --shadow-lift:
+    drop-shadow(0 0 0 rgba(var(--glow-color, 255, 245, 215), 0))
+    drop-shadow(0 0 0 rgba(var(--glow-color, 255, 245, 215), 0))
+    drop-shadow(0 30px 40px rgba(0, 0, 0, 0.55));
+
+  /* Sticky note */
+  --note-width: 13%;              /* of desk width (was 16%) */
+  --note-height: 11.5%;           /* of desk height (was 14%) */
+  --note-vertical-center: 56.5%;  /* where the note settles vertically */
+  --glow-color: 255, 245, 215;    /* RGB triplet for the latched outer glow */
+  --dim-strength: 0.62;           /* darkness of the dim overlay when latched */
+  --note-up-duration: 0.55s;
+  --note-down-duration: 0.40s;
+  --note-swap-gap: 280ms;         /* pause between down and up when switching items */
+  --note-tilt: -1.5deg;
+
+  /* Establishing shot — page-load zoom-in */
+  --establish-zoom: 1.10;         /* final scale of the desk after page load */
+  --establish-duration: 1.4s;     /* how long the zoom takes */
+  --establish-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* Breathing glow on latched items */
+  --breathe-duration: 2.7s;       /* one full breath cycle (~15% faster than 3.2s) */
+
+  /* Audit gear */
+  --gear-spin-duration: 6s;       /* one full rotation at full speed */
+  --gear-ramp-delay: 50ms;        /* brief pause before the gear starts moving */
+  --gear-ramp-up-time: 400ms;     /* time to accelerate from 0 to full speed */
+  --gear-origin-x: 79.125%;       /* gear center, measured from your spec */
+  --gear-origin-y: 67.733%;
+
+  /* Brand palette */
+  --bp-blue: #1d3963;
+  --paper: #ece8db;
+  --note-paper: #f4ecd5;          /* slightly warmer for the sticky note */
+  --ink: #1d3963;
+  --accent: #d97a3a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  background: var(--bp-blue);
+  min-height: 100vh;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Courier New', monospace;
+  overflow-x: hidden;
+}
+
+/* =========================================================
+   THE DESK — the 4000x2250 stage, scaled to viewport width.
+   aspect-ratio keeps the canvas shape locked.
+   ========================================================= */
+.desk {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4000 / 2250;
+  max-width: 100vw;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--bp-blue);
+}
+
+/* The inner wrapper holds all desk contents and gets scaled on load.
+   Starts at scale(1.0) opacity 0 — JS adds .loaded after window load,
+   which animates to the zoomed-in resting state. */
+.desk-inner {
+  position: absolute;
+  inset: 0;
+  transform: scale(1.0);
+  transform-origin: center center;
+  opacity: 0;
+  transition:
+    transform var(--establish-duration) var(--establish-ease),
+    opacity calc(var(--establish-duration) * 0.7) ease-out;
+}
+
+.desk-inner.loaded {
+  transform: scale(var(--establish-zoom));
+  opacity: 1;
+}
+
+/* All image layers fill the desk identically — same-canvas stacking. */
+.desk img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;  /* mouse passes through to hot zones */
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.bg-layer { z-index: 1; }
+
+.item-layer {
+  z-index: 5;
+  filter: var(--shadow-rest);
+  transition:
+    transform var(--lift-duration) var(--lift-easing),
+    filter var(--lift-duration) ease;
+  will-change: transform, filter;
+}
+
+.item-layer.lifted {
+  transform:
+    translateX(calc(var(--lift-drift) * var(--drift-dir, 0)))
+    translateY(calc(var(--lift-height) * -1))
+    scale(var(--lift-scale));
+  filter: var(--shadow-lift);
+  z-index: 10;
+}
+
+/* The audit docs slide aside instead of lifting up */
+.item-layer.slide-aside {
+  transition:
+    transform var(--slide-duration) cubic-bezier(0.34, 1.15, 0.4, 1),
+    filter var(--slide-duration) ease;
+}
+.item-layer.slide-aside.lifted {
+  transform:
+    translate(var(--slide-distance-x), var(--slide-distance-y))
+    rotate(var(--slide-rotation));
+  /* 3-drop-shadow structure so the latch animation can interpolate cleanly */
+  filter:
+    drop-shadow(0 0 0 rgba(var(--glow-color), 0))
+    drop-shadow(0 0 0 rgba(var(--glow-color), 0))
+    drop-shadow(0 20px 30px rgba(0, 0, 0, 0.55));
+}
+
+/* =========================================================
+   LATCHED STATE — added after a click. Item stays lifted,
+   gets a warm outer glow that BREATHES, and rises above
+   the dim overlay.
+   ========================================================= */
+.item-layer.latched {
+  z-index: 25;
+  animation: glow-breathe var(--breathe-duration) ease-in-out infinite;
+}
+
+@keyframes glow-breathe {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 18px rgba(var(--glow-color), 0.50))
+      drop-shadow(0 0 50px rgba(var(--glow-color), 0.18))
+      drop-shadow(0 30px 40px rgba(0, 0, 0, 0.55));  /* matches --shadow-lift's dark shadow */
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 38px rgba(var(--glow-color), 1.00))
+      drop-shadow(0 0 100px rgba(var(--glow-color), 0.60))
+      drop-shadow(0 30px 40px rgba(0, 0, 0, 0.55));
+  }
+}
+
+/* =========================================================
+   GEAR LAYER — sits behind the sliding docs at the magnifier
+   spot. Spins clockwise while the docs are slid aside.
+   transform-origin is set to the gear's center (per Gibby's spec).
+   ========================================================= */
+.gear-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4;                      /* above BG, below regular items — docs cover it at rest */
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  transform-origin: var(--gear-origin-x) var(--gear-origin-y);
+  /* Rotation handled by JS for ramp-up control — see gearTick() in the script */
+}
+
+/* When the audit docs are latched, the gear picks up a subtle breathing glow
+   that matches the same tempo as the docs' glow. We also raise the gear above
+   the dim overlay so the glow is actually visible. */
+#layer-sliding.latched ~ .gear-layer {
+  z-index: 23;     /* above dim-overlay (18), below the latched docs (25) */
+  animation: gear-glow-breathe var(--breathe-duration) ease-in-out infinite;
+}
+
+@keyframes gear-glow-breathe {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 8px  rgba(var(--glow-color), 0.22))
+      drop-shadow(0 0 22px rgba(var(--glow-color), 0.08));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 18px rgba(var(--glow-color), 0.55))
+      drop-shadow(0 0 45px rgba(var(--glow-color), 0.25));
+  }
+}
+
+/* =========================================================
+   DIM OVERLAY — covers the desk to dim everything except
+   the latched item and the sticky note.
+   ========================================================= */
+.dim-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  background-color: rgba(0, 0, 0, 0);
+  pointer-events: none;
+  cursor: pointer;
+  transition: background-color 0.45s ease;
+}
+.dim-overlay.active {
+  background-color: rgba(0, 0, 0, var(--dim-strength));
+  pointer-events: auto;
+}
+
+/* =========================================================
+   HOT ZONES — invisible rectangles drawn precisely over each
+   item's visible footprint (measured from the PNG bounding boxes).
+   ========================================================= */
+.hot {
+  position: absolute;
+  z-index: 20;
+  cursor: pointer;
+}
+.hot.latched { z-index: 26; }   /* raise the latched hot zone above the dim overlay */
+
+/* Uncomment to visualize hot zones while tuning: */
+/*
+.hot { background: rgba(255, 122, 58, 0.20); outline: 1px dashed rgba(255,255,255,0.5); }
+*/
+
+/* =========================================================
+   STICKY NOTE — single shared note that slides up from below
+   the desk and lands in the center on hover. Slides back down
+   on leave. On item-switching: slides down, then up with new text.
+   ========================================================= */
+.sticky-note {
+  position: absolute;
+  z-index: 30;
+  top: var(--note-vertical-center);
+  left: 50%;
+  width: var(--note-width);
+  height: var(--note-height);
+  background: var(--note-paper);
+  color: var(--ink);
+  pointer-events: none;
+  border-radius: 2px;
+  /* Sticky note shadow — softer underneath, slightly offset to suggest a slight tilt */
+  box-shadow:
+    0 18px 30px rgba(0, 0, 0, 0.55),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  /* Hidden: parked well below the desk */
+  transform: translate(-50%, 500%) rotate(var(--note-tilt));
+  transition: transform var(--note-down-duration) cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+.sticky-note.visible {
+  transform: translate(-50%, -50%) rotate(var(--note-tilt));
+  transition: transform var(--note-up-duration) cubic-bezier(0.22, 1.15, 0.36, 1);
+}
+
+/* When latched, the note picks up the warm glow and becomes clickable */
+.sticky-note.latched {
+  pointer-events: auto;
+  cursor: pointer;
+  box-shadow:
+    0 0 28px rgba(var(--glow-color), 0.8),
+    0 0 70px rgba(var(--glow-color), 0.35),
+    0 18px 30px rgba(0, 0, 0, 0.55),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  transition:
+    transform var(--note-up-duration) cubic-bezier(0.22, 1.15, 0.36, 1),
+    box-shadow 0.5s ease;
+}
+
+.sticky-note-inner {
+  position: absolute;
+  inset: 0;
+  padding: 7% 9%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 0.7em;
+}
+
+.sticky-note-header {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: clamp(8px, 0.7vw, 11px);
+  letter-spacing: 0.3em;
+  color: var(--accent);
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.sticky-note-text {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: clamp(13px, 1.3vw, 19px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  color: var(--ink);
+}
+</style>
+</head>
+<body>
+
+<div class="desk" id="desk">
+ <div class="desk-inner" id="desk-inner">
+
+  <!-- BACKDROP (everything that never moves) -->
+  <img class="bg-layer" src="BLUEPRINT_BG_ITEMS/BP_PAGE_BG.png" alt="">
+
+  <!-- ITEM LAYERS (same 4000x2250 canvas; transparent except for the item)
+       --drift-dir: 1 = drift right toward center, -1 = drift left toward center, 0 = no drift -->
+  <img class="item-layer" id="layer-templates"  style="--drift-dir: 1;"  src="BLUEPRINT_BG_ITEMS/BP_PAGE_TEMPLATES.png"          alt="">
+  <img class="item-layer" id="layer-blueprint"  style="--drift-dir: 1;"  src="BLUEPRINT_BG_ITEMS/BP_PAGE_BLUEPRINT_DOCS.png"     alt="">
+  <img class="item-layer" id="layer-keyboard"   style="--drift-dir: 0;"  src="BLUEPRINT_BG_ITEMS/BP_PAGE_KEYBOARD.png"           alt="">
+  <img class="item-layer" id="layer-course"     style="--drift-dir: -1;" src="BLUEPRINT_BG_ITEMS/BP_PAGE_THE_COURSE.png"         alt="">
+  <img class="item-layer" id="layer-checklist"  style="--drift-dir: 1;"  src="BLUEPRINT_BG_ITEMS/BP_PAGE_THE_FREE_CHECKLIST.png" alt="">
+  <img class="item-layer slide-aside" id="layer-sliding" src="BLUEPRINT_BG_ITEMS/BP_PAGE_SLIDING_DOCS.png" alt="">
+
+  <!-- Gear layer — spins clockwise when the sliding docs are slid aside -->
+  <img class="gear-layer" id="layer-gear" src="BLUEPRINT_BG_ITEMS/BP_PAGE_GEAR.png" alt="">
+
+  <!-- HOT ZONES — bounding boxes measured from PNGs, then trimmed 15% per Gibby's notes:
+       - templates: bottom & right cropped
+       - blueprint: bottom & left cropped
+       - checklist: top cropped
+       - course: bottom cropped
+       - audit/sliding: top cropped
+       - keyboard: unchanged -->
+  <div class="hot"
+       data-target="layer-templates"
+       data-label="INDIVIDUAL TEMPLATES &mdash; &Agrave; LA CARTE"
+       data-cta="View the Templates?"
+       data-url="templates.html"
+       style="left: 11.5%; top: 21.3%; width: 13.18%; height: 23.46%;"></div>
+
+  <div class="hot"
+       data-target="layer-blueprint"
+       data-label="THE COMPLETE TEMPLATE BUNDLE"
+       data-cta="View the Blueprint?"
+       data-url="blueprint.html"
+       style="left: 25.68%; top: 29.6%; width: 12.92%; height: 25.08%;"></div>
+
+  <div class="hot"
+       data-target="layer-keyboard"
+       data-label="TECH RIDER &amp; STAGE PLOT BUILDER"
+       data-cta="Enter the Toolkit?"
+       data-url="toolkit.html"
+       style="left: 42.4%; top: 27.9%; width: 14.7%; height: 10.4%;"></div>
+
+  <div class="hot"
+       data-target="layer-course"
+       data-label="FULL LIVE PRODUCTION TRAINING"
+       data-cta="View the Course?"
+       data-url="course.html"
+       style="left: 63.1%; top: 24.2%; width: 16.5%; height: 26.01%;"></div>
+
+  <div class="hot"
+       data-target="layer-checklist"
+       data-label="FREE PRODUCTION CHECKLIST"
+       data-cta="View the Checklist?"
+       data-url="checklist.html"
+       style="left: 13.3%; top: 61.58%; width: 14.5%; height: 23.12%;"></div>
+
+  <div class="hot"
+       data-target="layer-sliding"
+       data-label="THE AUDIT &amp; CONSULTATION"
+       data-cta="Arrange a Systems Audit?"
+       data-url="audit.html"
+       style="left: 72.5%; top: 58.41%; width: 15.6%; height: 26.69%;"></div>
+
+  <!-- Dim overlay — covers everything below z-index 18 when latched -->
+  <div class="dim-overlay" id="dim-overlay"></div>
+
+  <!-- Sticky note — slides up from below the desk into the center on hover -->
+  <div class="sticky-note" id="sticky-note">
+    <div class="sticky-note-inner">
+      <div class="sticky-note-header">// REF</div>
+      <div class="sticky-note-text" id="sticky-note-text"></div>
+    </div>
+  </div>
+
+ </div><!-- /.desk-inner -->
+</div>
+
+<script>
+  // ====== ESTABLISHING-SHOT ZOOM ======
+  // Fades in + zooms to resting state after the page loads.
+  const deskInner = document.getElementById('desk-inner');
+  window.addEventListener('load', () => {
+    setTimeout(() => deskInner.classList.add('loaded'), 60);
+  });
+  // Fallback in case 'load' takes too long (very large images)
+  setTimeout(() => deskInner.classList.add('loaded'), 2500);
+
+  // ====== GEAR ROTATION (JS-driven, so we can ramp the speed up smoothly) ======
+  const gearLayer    = document.getElementById('layer-gear');
+  const slidingLayer = document.getElementById('layer-sliding');
+
+  const rootStyles      = getComputedStyle(document.documentElement);
+  const spinDurationSec = parseFloat(rootStyles.getPropertyValue('--gear-spin-duration')) || 6;
+  const TARGET_DPS      = 360 / spinDurationSec;  // degrees per second at full speed
+  const GEAR_DELAY_MS   = parseInt(rootStyles.getPropertyValue('--gear-ramp-delay')) || 120;
+  const GEAR_RAMP_MS    = parseInt(rootStyles.getPropertyValue('--gear-ramp-up-time')) || 750;
+
+  let gearAngle   = 0;
+  let gearSpeed   = 0;
+  let activatedAt = 0;
+  let wasGearActive = false;
+  let lastFrame   = performance.now();
+
+  function gearTick(now) {
+    const dt = Math.min((now - lastFrame) / 1000, 0.1); // clamp to 100ms to avoid jumps after tab-switching
+    lastFrame = now;
+
+    const isActive = slidingLayer.classList.contains('lifted');
+
+    if (isActive && !wasGearActive) {
+      activatedAt = now;  // capture the moment the gear activates
+    }
+    wasGearActive = isActive;
+
+    if (isActive) {
+      const elapsedMs = now - activatedAt;
+      if (elapsedMs >= GEAR_DELAY_MS) {
+        const rampMs   = elapsedMs - GEAR_DELAY_MS;
+        const progress = Math.min(rampMs / GEAR_RAMP_MS, 1);
+        // Ease-out cubic: starts slow, accelerates, then settles at full speed
+        const eased    = 1 - Math.pow(1 - progress, 3);
+        gearSpeed      = TARGET_DPS * eased;
+      } else {
+        gearSpeed = 0;  // still in the pre-spin delay
+      }
+    } else {
+      gearSpeed = 0;    // hard pause on deactivation
+    }
+
+    if (gearSpeed > 0) {
+      gearAngle = (gearAngle + gearSpeed * dt) % 360;
+      gearLayer.style.transform = `rotate(${gearAngle}deg)`;
+    }
+
+    requestAnimationFrame(gearTick);
+  }
+
+  requestAnimationFrame(gearTick);
+
+  // ====== DOM REFERENCES ======
+  const note       = document.getElementById('sticky-note');
+  const noteText   = document.getElementById('sticky-note-text');
+  const noteHeader = document.querySelector('.sticky-note-header');
+  const dimOverlay = document.getElementById('dim-overlay');
+
+  // Read the swap gap from CSS so it stays a single source of truth
+  const noteSwapGap = parseInt(
+    getComputedStyle(document.documentElement).getPropertyValue('--note-swap-gap')
+  ) || 280;
+
+  // ====== STATE ======
+  let activeHot  = null;   // currently hovered hot zone
+  let latchedHot = null;   // currently latched (clicked once) hot zone
+  let swapTimer  = null;
+
+  // ====== HELPERS ======
+  function showNote(text, asLatched) {
+    noteHeader.textContent = asLatched ? '// CONFIRM' : '// REF';
+    noteText.innerHTML = text;
+    requestAnimationFrame(() => note.classList.add('visible'));
+  }
+
+  function hideNote() {
+    note.classList.remove('visible');
+  }
+
+  function enterLatch(hot) {
+    latchedHot = hot;
+    clearTimeout(swapTimer);
+
+    const target = document.getElementById(hot.dataset.target);
+    target.classList.add('lifted', 'latched');
+    hot.classList.add('latched');
+    dimOverlay.classList.add('active');
+
+    // Note stays in place — just swap to the CTA and add the glow
+    noteHeader.textContent = '// CONFIRM';
+    noteText.innerHTML = hot.dataset.cta;
+    note.classList.add('latched', 'visible');
+  }
+
+  function exitLatch() {
+    if (!latchedHot) return;
+    const target = document.getElementById(latchedHot.dataset.target);
+    target.classList.remove('lifted', 'latched');
+    latchedHot.classList.remove('latched');
+    note.classList.remove('latched', 'visible');
+    noteHeader.textContent = '// REF';
+    dimOverlay.classList.remove('active');
+    latchedHot = null;
+    activeHot  = null;
+  }
+
+  function navigate(hot) {
+    window.location.href = hot.dataset.url;
+  }
+
+  // ====== WIRE UP HOT ZONES ======
+  document.querySelectorAll('.hot').forEach(hot => {
+    const target = document.getElementById(hot.dataset.target);
+    const label  = hot.dataset.label;
+
+    hot.addEventListener('mouseenter', () => {
+      if (latchedHot) return; // hovers are ignored while latched
+
+      const prevHot = activeHot;
+      activeHot = hot;
+      target.classList.add('lifted');
+
+      clearTimeout(swapTimer);
+
+      if (prevHot && prevHot !== hot && note.classList.contains('visible')) {
+        // Switching between items: drop the current note, then rise with new text
+        hideNote();
+        swapTimer = setTimeout(() => {
+          if (activeHot === hot) showNote(label, false);
+        }, noteSwapGap);
+      } else {
+        showNote(label, false);
+      }
+    });
+
+    hot.addEventListener('mouseleave', () => {
+      if (latchedHot) return; // hover-out is ignored while latched
+
+      target.classList.remove('lifted');
+      setTimeout(() => {
+        if (activeHot === hot) {
+          activeHot = null;
+          clearTimeout(swapTimer);
+          hideNote();
+        }
+      }, 30);
+    });
+
+    hot.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (latchedHot === hot) {
+        // Second click on the same latched item — navigate
+        navigate(hot);
+      } else if (!latchedHot) {
+        // First click — enter latch
+        enterLatch(hot);
+      }
+    });
+  });
+
+  // Clicking the sticky note while latched also navigates
+  note.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (latchedHot) navigate(latchedHot);
+  });
+
+  // Clicking the dim overlay exits the latch
+  dimOverlay.addEventListener('click', () => exitLatch());
+
+  // Pressing Escape exits the latch
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && latchedHot) exitLatch();
+  });
+</script>
+
+</body>
+</html>

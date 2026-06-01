@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1B3D6E">
+<title>Pulled From The Binder — Free Checklist | Backstage Blueprint</title>
+<meta name="description" content="The free checklist of everything a tour can't afford to forget. Documents, contacts, show-day essentials — pulled from the binder. Free.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   PULLED FROM THE BINDER — Free Checklist
+   Scene-carousel build: 4 tables fly in toward the viewer,
+   static blueprint background, loops forward forever.
+   ========================================================= */
+:root {
+  --navy:        #1B3D6E;
+  --navy-deep:   #142C4F;
+  --navy-glass:  rgba(20, 44, 79, 0.78);
+  --orange:      #D85A1F;
+  --cream:       #F2EBDD;
+  --ink:         #0D0D0D;
+  --grid-line:   rgba(242, 235, 221, 0.08);
+  --grid-major:  rgba(242, 235, 221, 0.14);
+  --line:        rgba(242, 235, 221, 0.18);
+  --line-strong: rgba(242, 235, 221, 0.32);
+  --dim:         rgba(242, 235, 221, 0.60);
+  --display-font: 'Archivo', sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;  /* tour container handles scroll */
+}
+body {
+  background-color: var(--navy);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px, 200px 200px, 200px 200px;
+  background-attachment: fixed;  /* the grid stays put */
+  color: var(--cream);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* =========================================================
+   HEADER — fixed at top, sits above the tour
+   ========================================================= */
+.site-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 32px;
+  background: linear-gradient(180deg, rgba(20,44,79,0.78) 0%, rgba(20,44,79,0) 100%);
+  pointer-events: none;
+}
+.site-header > * { pointer-events: auto; }
+.brand-mark {
+  font-family: var(--display-font);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  color: var(--cream);
+  text-decoration: none;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  transition: color 200ms ease;
+}
+.brand-mark:hover { color: var(--orange); }
+.brand-mark .reg {
+  display: inline-block;
+  width: 13px; height: 13px;
+  border: 1.25px solid currentColor;
+  border-radius: 50%;
+  font-family: 'SF Mono', monospace;
+  font-size: 8.5px; font-weight: 700;
+  line-height: 11px;
+  text-align: center;
+  vertical-align: 4px;
+  margin-left: 6px;
+}
+.header-back {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--cream);
+  text-decoration: none;
+  text-transform: uppercase;
+  padding: 9px 16px;
+  border: 1px solid var(--line-strong);
+  background: rgba(20,44,79,0.5);
+  backdrop-filter: blur(6px);
+  transition: border-color 200ms ease, color 200ms ease;
+}
+.header-back:hover { border-color: var(--orange); color: var(--orange); }
+
+/* =========================================================
+   TOUR CONTAINER — the scrollable surface
+   ========================================================= */
+.tour {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  perspective: 1500px;
+  perspective-origin: 50% 50%;
+}
+.tour::-webkit-scrollbar { width: 0; }
+.tour { scrollbar-width: none; }
+
+/* =========================================================
+   SCREEN — one section, fills viewport, snap point
+   ========================================================= */
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 28px 80px;
+  transform-style: preserve-3d;
+}
+/* 003-A — tighten the hero so the table reads compact + lets the next screen feel closer */
+#screen-1, #screen-1-clone { padding: 64px 28px 52px; }
+#screen-1 .table, #screen-1-clone .table { padding: 30px 44px; }
+
+/* =========================================================
+   TABLE — the floating card that flies in
+   .table-anchor handles the entry animation (CSS keyframes)
+   .table handles the cursor parallax (JS-set transform)
+   Two-layer transform so they don't fight.
+   ========================================================= */
+.table-anchor {
+  width: min(880px, 92vw);
+  max-height: calc(100vh - 180px);
+  position: relative;
+  transform-style: preserve-3d;
+  transform: translateZ(-700px) translateY(60px) rotateX(10deg);
+  opacity: 0;
+  transition: transform 1100ms cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 600ms ease-out;
+  pointer-events: none;
+}
+.screen.in-view .table-anchor {
+  transform: translateZ(0) translateY(0) rotateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.table {
+  position: relative;
+  background: var(--navy-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--orange);
+  padding: 44px 52px;
+  transform-style: preserve-3d;
+  transform: rotateX(0) rotateY(0);
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.45),
+    0 8px 22px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 0.5px rgba(242, 235, 221, 0.08);
+}
+/* Corner ID stamp on every table */
+.table-id {
+  position: absolute;
+  top: 14px; right: 18px;
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--dim);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+/* =========================================================
+   SHARED TYPE
+   ========================================================= */
+.mono-label {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.3em;
+  color: var(--orange);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.table-title {
+  font-family: var(--display-font);
+  font-size: clamp(34px, 4.4vw, 64px);
+  font-weight: 900;
+  letter-spacing: -0.012em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+.table-title .accent { color: var(--orange); }
+.table-rule {
+  width: 48px; height: 2px;
+  background: var(--orange);
+  margin: 14px 0 22px;
+}
+.body-p {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: rgba(242, 235, 221, 0.88);
+  margin-bottom: 12px;
+}
+.body-p:last-child { margin-bottom: 0; }
+.body-p strong { color: var(--cream); font-weight: 600; }
+
+/* =========================================================
+   SCREEN 1 — HERO + FORM
+   ========================================================= */
+.hero-table-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 44px;
+  align-items: center;
+}
+.hero-title {
+  font-family: var(--display-font);
+  font-size: clamp(40px, 5.6vw, 84px);
+  font-weight: 900;
+  letter-spacing: -0.014em;
+  line-height: 0.9;
+  text-transform: uppercase;
+  color: var(--cream);
+}
+.hero-title .accent { color: var(--orange); }
+.hero-sub {
+  margin-top: 18px;
+  font-size: clamp(15px, 1.4vw, 18px);
+  line-height: 1.45;
+  color: var(--cream);
+}
+
+/* Signup form */
+.signup-form {
+  margin-top: 26px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.signup-input {
+  flex: 1 1 220px;
+  min-width: 200px;
+  padding: 14px 16px;
+  background: rgba(13, 13, 13, 0.5);
+  border: 1px solid var(--line-strong);
+  color: var(--cream);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.signup-input:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 1px var(--orange);
+}
+.signup-input::placeholder {
+  color: var(--dim);
+  font-family: 'SF Mono', monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.cta-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 22px;
+  font-family: var(--display-font);
+  font-size: 12.5px; font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: var(--orange);
+  color: var(--cream);
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 200ms cubic-bezier(0.22, 1.2, 0.36, 1),
+              filter 200ms ease,
+              box-shadow 200ms ease;
+}
+.cta-primary:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+  box-shadow: 0 8px 22px rgba(216, 90, 31, 0.45);
+}
+.cta-primary .arrow { transition: transform 220ms cubic-bezier(0.22, 1.2, 0.36, 1); }
+.cta-primary:hover .arrow { transform: translateX(4px); }
+
+.privacy-note {
+  margin-top: 12px;
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.usage-note {
+  margin-top: 18px;
+  padding-left: 14px;
+  border-left: 2px solid var(--orange);
+  font-size: 12.5px;
+  font-style: italic;
+  color: rgba(242, 235, 221, 0.82);
+  line-height: 1.5;
+}
+
+.hero-cover {
+  position: relative;
+  display: block;
+  width: 100%;
+  filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.55))
+          drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.hero-cover-frame {
+  position: relative;
+  transform: rotate(2deg);
+}
+.cover-spec {
+  position: absolute;
+  bottom: -10px;
+  right: 6px;
+  padding: 4px 10px;
+  font-family: 'SF Mono', monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--cream);
+  background: var(--navy-deep);
+  border-left: 2px solid var(--orange);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* =========================================================
+   CONFIRMATION STATE (replaces hero table content)
+   ========================================================= */
+.confirmation { text-align: center; padding: 18px 0; }
+.icon-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px; height: 64px;
+  border: 2px solid var(--orange);
+  border-radius: 50%;
+  margin-bottom: 20px;
+  font-size: 30px;
+  color: var(--orange);
+  animation: confirmation-pop 600ms cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+@keyframes confirmation-pop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.confirmation-title {
+  font-family: var(--display-font);
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 900;
+  letter-spacing: -0.012em;
+  line-height: 0.98;
+  text-transform: uppercase;
+}
+.confirmation-title .accent { color: var(--orange); }
+.confirmation-body {
+  margin-top: 18px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(242, 235, 221, 0.92);
+  max-width: 520px;
+  margin-left: auto; margin-right: auto;
+}
+.confirmation-body strong { color: var(--cream); }
+.dl-fallback {
+  margin-top: 22px;
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.dl-fallback a {
+  color: var(--orange);
+  text-decoration: none;
+  border-bottom: 1px solid var(--orange);
+  padding-bottom: 1px;
+}
+.dl-fallback a:hover { color: var(--cream); border-color: var(--cream); }
+
+/* =========================================================
+   SCREEN 2 — WHAT'S INSIDE — 6 callouts
+   ========================================================= */
+.callouts {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 8px;
+}
+.callout {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  background: rgba(13, 13, 13, 0.3);
+  border: 0.5px solid var(--line-strong);
+  border-left: 2px solid var(--orange);
+  transition: background 240ms ease, border-color 240ms ease, transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.callout:hover {
+  transform: translateY(-2px);
+  background: rgba(13, 13, 13, 0.5);
+  border-left-color: var(--cream);
+}
+.callout-num {
+  font-family: 'SF Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--orange);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding-top: 4px;
+}
+.callout-title {
+  font-family: var(--display-font);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+  color: var(--cream);
+  line-height: 1.1;
+}
+.callout-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(242, 235, 221, 0.82);
+}
+.callouts-meta {
+  margin-top: 22px;
+  font-family: 'SF Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-align: center;
+}
+.callouts-meta strong { color: var(--orange); font-weight: 700; }
+
+/* =========================================================
+   SCREEN 4 — CROSS-SELL
+   ========================================================= */
+.cross-sell-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 32px;
+  align-items: center;
+}
+.cta-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--cream);
+  background: transparent;
+  border: 1px solid var(--cream);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 200ms ease, color 200ms ease, transform 200ms cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+.cta-secondary:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+  transform: translateY(-2px);
+}
+
+/* =========================================================
+   PROGRESS INDICATOR — bottom-center dots (cue list)
+   ========================================================= */
+.cue-list {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 150;
+  display: flex;
+  gap: 14px;
+  pointer-events: auto;
+}
+.cue-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(242, 235, 221, 0.45);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: background 240ms ease, border-color 240ms ease, transform 240ms ease;
+}
+.cue-dot.active {
+  background: var(--orange);
+  border-color: var(--orange);
+  transform: scale(1.25);
+}
+.cue-dot:hover { border-color: var(--cream); }
+
+/* =========================================================
+   FOOTER STATUS LINE — fixed bottom-left, like experience.html
+   ========================================================= */
+.footer-status {
+  position: fixed;
+  bottom: 22px;
+  left: 32px;
+  z-index: 150;
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(242, 235, 221, 0.85);
+  display: inline-flex;
+  align-items: center;
+}
+.footer-status .live-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--orange);
+  border-radius: 50%;
+  margin-right: 10px;
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+.footer-meta {
+  position: fixed;
+  bottom: 22px;
+  right: 32px;
+  z-index: 150;
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+@media (max-width: 880px) {
+  .table-anchor { max-height: calc(100vh - 160px); }
+  .table { padding: 36px 36px; }
+  .hero-table-grid {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .hero-cover-frame { max-width: 240px; margin: 0 auto; }
+  .signup-form { flex-direction: column; }
+  .signup-input, .cta-primary { width: 100%; }
+  .callouts { grid-template-columns: 1fr; gap: 10px; }
+  .cross-sell-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .cta-secondary { justify-content: center; }
+  .footer-meta { display: none; }
+}
+@media (max-width: 560px) {
+  .site-header { padding: 14px 18px; }
+  .brand-mark { font-size: 17px; }
+  .header-back {
+    font-size: 9.5px;
+    letter-spacing: 0.22em;
+    padding: 7px 12px;
+  }
+  .table { padding: 28px 24px; }
+  .footer-status { font-size: 10px; bottom: 18px; left: 18px; }
+  .cue-list { bottom: 18px; }
+}
+@media (max-height: 700px) {
+  .table-anchor { max-height: calc(100vh - 140px); }
+  .table { padding: 30px 36px; }
+  .hero-title { font-size: clamp(36px, 4.6vw, 60px); }
+  .table-title { font-size: clamp(28px, 3.6vw, 48px); }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================
+     FIXED HEADER
+     ============================ -->
+<header class="site-header">
+  <a class="brand-mark" href="experience.html" aria-label="Backstage Blueprint — back to the tour">BCKSTG &middot; BLPRNT<span class="reg">M</span></a>
+  <a class="header-back" href="experience.html#scene-production-office">&larr; FRONT OF HOUSE</a>
+</header>
+
+
+<!-- ============================
+     TOUR — scroll-snap carousel
+     ============================ -->
+<div class="tour" id="tour">
+
+
+  <!-- =========================
+       SCREEN 1 — HERO + FORM
+       ========================= -->
+  <section class="screen" id="screen-1" data-cue="1">
+    <div class="table-anchor">
+      <div class="table" data-table="hero">
+        <div class="table-id">// TBL 01/4</div>
+
+        <!-- Hero default content -->
+        <div id="hero-content">
+          <div class="hero-table-grid">
+            <div>
+              <div class="mono-label">// FREE CHECKLIST</div>
+              <h1 class="hero-title">Pulled From<br>The Binder<span class="accent">.</span></h1>
+              <p class="hero-sub">The free checklist of everything a tour can&rsquo;t afford to forget.</p>
+              <form class="signup-form" id="signup-form" novalidate>
+                <label class="sr-only" for="email">Your email address</label>
+                <input
+                  class="signup-input"
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="// YOUR EMAIL ADDRESS"
+                  autocomplete="email"
+                  required>
+                <button type="submit" class="cta-primary">
+                  GET IT
+                  <span class="arrow">&rarr;</span>
+                </button>
+              </form>
+              <p class="privacy-note">// WE EMAIL ABOUT BB &middot; NO SPAM &middot; UNSUBSCRIBE ANYTIME</p>
+              <p class="usage-note">Free to use on your tours and pass to anyone on your crew &mdash; a checklist this useful is meant to travel.</p>
+            </div>
+            <div class="hero-cover-frame">
+              <img class="hero-cover" src="checklist/cover_checklist.png" alt="Pulled From The Binder cover" loading="eager">
+              <span class="cover-spec">DOC BB-01 &middot; FIELD-TESTED</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Confirmation content (hidden until form submit) -->
+        <div id="confirmation-content" class="confirmation" hidden>
+          <div class="icon-check">&check;</div>
+          <h2 class="confirmation-title">Check your email<span class="accent">.</span></h2>
+          <p class="confirmation-body">We just sent <strong id="confirm-email"></strong> a link to your PDF. <strong>Pulled From The Binder</strong> is yours to keep &mdash; run it before every show.</p>
+          <p class="dl-fallback">Didn&rsquo;t auto-download? &nbsp; <a href="checklist/pulled_from_the_binder.pdf" download>Grab the PDF</a></p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- =========================
+       SCREEN 2 — WHAT'S INSIDE
+       ========================= -->
+  <section class="screen" id="screen-2" data-cue="2">
+    <div class="table-anchor">
+      <div class="table" data-table="inside">
+        <div class="table-id">// TBL 02/4</div>
+        <div class="mono-label">// WHAT&rsquo;S INSIDE</div>
+        <h2 class="table-title">What&rsquo;s inside<span class="accent">.</span></h2>
+        <div class="table-rule"></div>
+        <p class="body-p" style="margin-bottom: 16px;">Ten checklists covering the full lifecycle of a tour. Here are six of them.</p>
+
+        <ul class="callouts">
+          <li class="callout">
+            <div class="callout-num">01</div>
+            <div>
+              <div class="callout-title">The Artist&rsquo;s Blueprint</div>
+              <div class="callout-hint">Vision, intent, and the show they&rsquo;re trying to build.</div>
+            </div>
+          </li>
+          <li class="callout">
+            <div class="callout-num">02</div>
+            <div>
+              <div class="callout-title">The Advance Call</div>
+              <div class="callout-hint">What gets confirmed before you ever roll a truck.</div>
+            </div>
+          </li>
+          <li class="callout">
+            <div class="callout-num">04</div>
+            <div>
+              <div class="callout-title">The Budget Dry-Run</div>
+              <div class="callout-hint">Line items first-timers miss.</div>
+            </div>
+          </li>
+          <li class="callout">
+            <div class="callout-num">05</div>
+            <div>
+              <div class="callout-title">Technical Rider Pre-Check</div>
+              <div class="callout-hint">What gets approved versus ignored.</div>
+            </div>
+          </li>
+          <li class="callout">
+            <div class="callout-num">08</div>
+            <div>
+              <div class="callout-title">Hospitality That Doesn&rsquo;t Backfire</div>
+              <div class="callout-hint">The rider section that breaks most riders.</div>
+            </div>
+          </li>
+          <li class="callout">
+            <div class="callout-num">10</div>
+            <div>
+              <div class="callout-title">Post-Show Settlement</div>
+              <div class="callout-hint">What to verify before you leave the venue.</div>
+            </div>
+          </li>
+        </ul>
+
+        <div class="callouts-meta">&mdash; <strong>10 CHECKLISTS</strong> &middot; 13 PAGES &middot; FIELD-TESTED &mdash;</div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- =========================
+       SCREEN 3 — WHY THESE TEN
+       ========================= -->
+  <section class="screen" id="screen-3" data-cue="3">
+    <div class="table-anchor">
+      <div class="table" data-table="why">
+        <div class="table-id">// TBL 03/4</div>
+        <div class="mono-label">// WHY THESE TEN</div>
+        <h2 class="table-title">Why these ten<span class="accent">.</span></h2>
+        <div class="table-rule"></div>
+        <p class="body-p">These ten are the ones that &mdash; when they fail &mdash; take the show down with them. They cover the full lifecycle of a tour, from the first conversation about what the artist wants to build, to the last verification before the truck pulls away from the dock.</p>
+        <p class="body-p">Use them as a working reference. Print them and stick them in your binder. Run a show through them on paper before the truck rolls. Hand them to a new crew lead so they understand what gets confirmed at every stage.</p>
+        <p class="body-p"><strong>Skip the mistakes we already made.</strong> What&rsquo;s here is what we wish someone had handed us before our first festival run.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- =========================
+       SCREEN 4 — THE BLUEPRINT (cross-sell)
+       ========================= -->
+  <section class="screen" id="screen-4" data-cue="4">
+    <div class="table-anchor">
+      <div class="table" data-table="blueprint">
+        <div class="table-id">// TBL 04/4</div>
+        <div class="cross-sell-grid">
+          <div>
+            <div class="mono-label">// WHEN YOU&rsquo;RE READY</div>
+            <h2 class="table-title">The Blueprint<span class="accent">.</span></h2>
+            <div class="table-rule"></div>
+            <p class="body-p">If this checklist is your warm-up, The Blueprint is the full kit &mdash; 14 templates a tour actually runs on. Riders, budgets, run-of-show docs, advance forms, settlement sheets &mdash; pulled out of private binders and put in your hands.</p>
+          </div>
+          <a class="cta-secondary" href="blueprint.html">
+            EXPLORE
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- =========================
+       SCREEN 1 CLONE — for seamless forward loop
+       Identical to screen 1; JS jumps scrollTop=0 once it settles here.
+       ========================= -->
+  <section class="screen" id="screen-1-clone" data-cue="1" aria-hidden="true">
+    <div class="table-anchor">
+      <div class="table" data-table="hero-clone">
+        <div class="table-id">// TBL 01/4</div>
+        <div class="hero-table-grid">
+          <div>
+            <div class="mono-label">// FREE CHECKLIST</div>
+            <h1 class="hero-title">Pulled From<br>The Binder<span class="accent">.</span></h1>
+            <p class="hero-sub">The free checklist of everything a tour can&rsquo;t afford to forget.</p>
+            <form class="signup-form" novalidate onsubmit="event.preventDefault(); document.getElementById('tour').scrollTo({top:0,behavior:'smooth'}); setTimeout(()=>document.getElementById('email').focus(), 600);">
+              <input
+                class="signup-input"
+                type="email"
+                placeholder="// YOUR EMAIL ADDRESS"
+                autocomplete="email">
+              <button type="submit" class="cta-primary">
+                GET IT
+                <span class="arrow">&rarr;</span>
+              </button>
+            </form>
+            <p class="privacy-note">// WE EMAIL ABOUT BB &middot; NO SPAM &middot; UNSUBSCRIBE ANYTIME</p>
+            <p class="usage-note">Free to use on your tours and pass to anyone on your crew.</p>
+          </div>
+          <div class="hero-cover-frame">
+            <img class="hero-cover" src="checklist/cover_checklist.png" alt="" loading="lazy">
+            <span class="cover-spec">DOC BB-01 &middot; FIELD-TESTED</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+
+<!-- ============================
+     PROGRESS DOTS + FIXED STATUS
+     ============================ -->
+<nav class="cue-list" id="cue-list" aria-label="Section navigation">
+  <button class="cue-dot active" data-go="1" aria-label="Section 1"></button>
+  <button class="cue-dot" data-go="2" aria-label="Section 2"></button>
+  <button class="cue-dot" data-go="3" aria-label="Section 3"></button>
+  <button class="cue-dot" data-go="4" aria-label="Section 4"></button>
+</nav>
+
+<div class="footer-status"><span class="live-dot"></span>BCKSTG &middot; BLPRNT &middot; FRONT OF HOUSE</div>
+<div class="footer-meta" style="text-align:right;">
+  <div style="margin-bottom:4px;"><a href="experience.html" style="color:inherit;text-decoration:none;">THE TOUR</a> &middot; <a href="experience.html#scene-console" style="color:inherit;text-decoration:none;">CONTACT</a> &middot; <a href="experience.html#scene-production-office" style="color:inherit;text-decoration:none;">FRONT OF HOUSE</a> &middot; <a href="privacy.html" style="color:inherit;text-decoration:none;">PRIVACY</a> &middot; <a href="terms.html" style="color:inherit;text-decoration:none;">TERMS</a></div>
+  <div>EST. 2026 &middot; BACKSTAGEBLUEPRINT.CO</div>
+</div>
+
+
+<script>
+// =========================================================
+// CHECKLIST PAGE — scene carousel controller
+//   - IntersectionObserver tracks which screen is active
+//   - .in-view class fires the fly-in animation
+//   - Cursor parallax tilts each .table while in view
+//   - Loop: when clone is fully settled, snap scrollTop=0
+// =========================================================
+(function() {
+  const tour = document.getElementById('tour');
+  const screens = Array.from(tour.querySelectorAll('.screen'));
+  const cueDots = Array.from(document.querySelectorAll('.cue-dot'));
+  const cloneScreen = document.getElementById('screen-1-clone');
+
+  // ---------- ENTRY ANIMATIONS ----------
+  // .in-view triggers the table fly-in (CSS keyframe).
+  // Once a screen is mostly in view, it gets the class.
+  const inViewObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.intersectionRatio >= 0.55) {
+        e.target.classList.add('in-view');
+      }
+    });
+  }, { threshold: [0, 0.25, 0.55, 0.75, 1] });
+  screens.forEach(s => inViewObs.observe(s));
+
+  // First screen kicks in immediately
+  requestAnimationFrame(() => {
+    screens[0].classList.add('in-view');
+  });
+
+  // ---------- ACTIVE CUE TRACKING ----------
+  function updateActiveCue() {
+    const scrollTop = tour.scrollTop;
+    const h = tour.clientHeight;
+    let idx = Math.round(scrollTop / h);
+    // Map clone (index 4) back to screen 1
+    if (idx >= 4) idx = 0;
+    cueDots.forEach((d, i) => d.classList.toggle('active', i === idx));
+  }
+
+  // ---------- LOOP LOGIC ----------
+  // When user lands on the clone, after scroll settles, jump to top.
+  let scrollTimer = null;
+  let isJumping = false;
+
+  function maybeLoop() {
+    if (isJumping) return;
+    const h = tour.clientHeight;
+    const cloneTop = cloneScreen.offsetTop;
+    const scrollTop = tour.scrollTop;
+    // Tolerance for snap rounding
+    if (Math.abs(scrollTop - cloneTop) < 4) {
+      isJumping = true;
+      // Temporarily kill smooth scroll for instant snap
+      tour.style.scrollBehavior = 'auto';
+      tour.scrollTop = 0;
+      // Re-arm
+      requestAnimationFrame(() => {
+        tour.style.scrollBehavior = 'smooth';
+        isJumping = false;
+        // Make sure screen 1 keeps in-view + cue dot is right
+        screens[0].classList.add('in-view');
+        updateActiveCue();
+      });
+    }
+  }
+
+  tour.addEventListener('scroll', () => {
+    updateActiveCue();
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(maybeLoop, 220);
+  });
+
+  // Cue dots → jump to that screen
+  cueDots.forEach((d, i) => {
+    d.addEventListener('click', () => {
+      const target = screens[i];
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // ---------- CURSOR PARALLAX ----------
+  // Each screen tilts its inner .table based on cursor offset
+  // from the screen center. Subtle. Returns to neutral on leave.
+  const PARALLAX_TILT_X = 8;   // deg (vertical cursor → rotateX)
+  const PARALLAX_TILT_Y = 10;  // deg (horizontal cursor → rotateY)
+  const PARALLAX_LIFT   = 18;  // px translateZ on cursor approach
+
+  screens.forEach(screen => {
+    const table = screen.querySelector('.table');
+    if (!table) return;
+
+    let raf = null;
+    let pending = null;
+
+    function applyTilt(rx, ry, tz) {
+      table.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) translateZ(${tz}px)`;
+    }
+
+    screen.addEventListener('mousemove', (e) => {
+      const rect = screen.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = (e.clientX - cx) / (rect.width / 2);   // -1..1
+      const dy = (e.clientY - cy) / (rect.height / 2);  // -1..1
+      const clamp = (v) => Math.max(-1, Math.min(1, v));
+      pending = {
+        rx: -clamp(dy) * PARALLAX_TILT_X,
+        ry:  clamp(dx) * PARALLAX_TILT_Y,
+        tz:  (1 - Math.min(1, Math.hypot(dx, dy))) * PARALLAX_LIFT
+      };
+      if (!raf) {
+        raf = requestAnimationFrame(() => {
+          if (pending) applyTilt(pending.rx, pending.ry, pending.tz);
+          raf = null;
+        });
+      }
+    });
+
+    screen.addEventListener('mouseleave', () => {
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      applyTilt(0, 0, 0);
+    });
+  });
+
+  // ---------- FORM HANDLER ----------
+  // Placeholder for Kit integration — see Order 003 notes.
+  const form = document.getElementById('signup-form');
+  const heroContent = document.getElementById('hero-content');
+  const confirmationContent = document.getElementById('confirmation-content');
+  const confirmEmail = document.getElementById('confirm-email');
+
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const emailInput = form.querySelector('#email');
+      const email = (emailInput.value || '').trim();
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        emailInput.focus();
+        emailInput.style.borderColor = 'var(--orange)';
+        return;
+      }
+
+      confirmEmail.textContent = email;
+      heroContent.hidden = true;
+      confirmationContent.hidden = false;
+
+      // Auto-trigger PDF download
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = 'checklist/pulled_from_the_binder.pdf';
+        a.download = 'pulled_from_the_binder.pdf';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }, 700);
+    });
+  }
+
+  // ---------- KEYBOARD NAV ----------
+  document.addEventListener('keydown', (e) => {
+    if (['ArrowDown', 'PageDown', 'Space'].includes(e.key) || e.code === 'Space') {
+      e.preventDefault();
+      const h = tour.clientHeight;
+      const next = Math.min(screens.length - 1, Math.round(tour.scrollTop / h) + 1);
+      screens[next].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (['ArrowUp', 'PageUp'].includes(e.key)) {
+      e.preventDefault();
+      const h = tour.clientHeight;
+      const prev = Math.max(0, Math.round(tour.scrollTop / h) - 1);
+      screens[prev].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+
+  // Initial cue state
+  updateActiveCue();
+})();
+</script>
+
+</body>
+</html>

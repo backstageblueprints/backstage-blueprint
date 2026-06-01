@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BACKSTAGE BLUEPRINT // LEXICON</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;700;900&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   LEXICON — tunnel of gear.
+   Pure CSS 3D scene + one rAF loop driving a camera state.
+   No libraries. Same architectural style as the rest of BB.
+   ========================================================= */
+:root {
+  --orange: #D85A1F;
+  --orange-deep: #B7491A;
+  --orange-edge: #6B2A0E;
+  --cream: #F2EBDD;
+  --navy: #0B1731;
+  --navy-deep: #050D1F;
+}
+*  { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  background: var(--orange);
+  color: var(--cream);
+  font-family: 'Inter', system-ui, sans-serif;
+  cursor: crosshair;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* ===== Atmospheric stage backdrop ===== */
+.lex-stage {
+  position: fixed; inset: 0;
+  perspective: 1300px;            /* gives items room to fly past the camera before perspective horizon */
+  perspective-origin: 50% 50%;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 50%,
+      var(--orange) 0%,
+      var(--orange-deep) 55%,
+      var(--orange-edge) 100%);
+  overflow: hidden;
+}
+/* Navy blueprint grid receding into depth (faked via SVG bg) */
+.lex-stage::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle at center, transparent 28%, rgba(11, 23, 49, 0.18) 100%),
+    repeating-radial-gradient(circle at center,
+      transparent 0px, transparent 90px,
+      rgba(11, 23, 49, 0.10) 91px, rgba(11, 23, 49, 0.10) 92px);
+  pointer-events: none;
+}
+/* Subtle perspective lines vanishing to center */
+.lex-stage::after {
+  content: "";
+  position: absolute; inset: 0;
+  background-image:
+    conic-gradient(from 0deg at 50% 50%,
+      transparent 0deg, rgba(11, 23, 49, 0.08) 0.4deg, transparent 0.8deg,
+      transparent 30deg, rgba(11, 23, 49, 0.08) 30.4deg, transparent 30.8deg,
+      transparent 60deg, rgba(11, 23, 49, 0.08) 60.4deg, transparent 60.8deg,
+      transparent 90deg, rgba(11, 23, 49, 0.08) 90.4deg, transparent 90.8deg,
+      transparent 120deg, rgba(11, 23, 49, 0.08) 120.4deg, transparent 120.8deg,
+      transparent 150deg, rgba(11, 23, 49, 0.08) 150.4deg, transparent 150.8deg,
+      transparent 180deg, rgba(11, 23, 49, 0.08) 180.4deg, transparent 180.8deg,
+      transparent 210deg, rgba(11, 23, 49, 0.08) 210.4deg, transparent 210.8deg,
+      transparent 240deg, rgba(11, 23, 49, 0.08) 240.4deg, transparent 240.8deg,
+      transparent 270deg, rgba(11, 23, 49, 0.08) 270.4deg, transparent 270.8deg,
+      transparent 300deg, rgba(11, 23, 49, 0.08) 300.4deg, transparent 300.8deg,
+      transparent 330deg, rgba(11, 23, 49, 0.08) 330.4deg, transparent 330.8deg);
+  pointer-events: none;
+}
+.lex-camera {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* ===== Destination beacon — BB mark floating at the back of the tunnel =====
+   Sits inside the camera so the camera transform applies (it parallaxes
+   gently with cursor like any deep-field object would).
+   Intro animation: slams from +400 (in your face) back to -3500 over ~1.8s,
+   creating the "you've been launched into the tunnel" entry beat. */
+.lex-destination {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform-style: preserve-3d;
+  transform: translate(-50%, -50%) translateZ(-3500px);
+  pointer-events: none;
+  text-align: center;
+  animation: dest-arrive 1850ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes dest-arrive {
+  0%   { transform: translate(-50%, -50%) translateZ(400px);  opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) translateZ(-3500px); opacity: 1; }
+}
+.dest-floater {
+  /* Subtle continuous bob so the mark feels alive, not static art.
+     Starts after the intro animation completes. */
+  animation: dest-float 11s ease-in-out 2000ms infinite;
+}
+@keyframes dest-float {
+  0%, 100% { transform: translateY(-12px); }
+  50%      { transform: translateY( 12px); }
+}
+.dest-mark {
+  display: inline-block;
+  border: 4px solid var(--cream);
+  background: rgba(11, 23, 49, 0.55);
+  padding: 22px 38px 18px;
+  font-family: 'Archivo', sans-serif;
+  letter-spacing: 0.26em;
+  line-height: 1;
+  color: var(--cream);
+  filter: drop-shadow(0 0 38px rgba(255, 248, 230, 0.45));
+}
+.dest-top {
+  font-weight: 900;
+  font-size: 76px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 2.5px solid var(--cream);
+}
+.dest-top .reg { vertical-align: super; font-size: 22px; opacity: 0.8; margin-left: 6px; }
+.dest-bot {
+  font-weight: 300;
+  font-size: 56px;
+  letter-spacing: 0.34em;
+}
+.dest-tag {
+  margin-top: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  letter-spacing: 0.46em;
+  color: var(--cream);
+  opacity: 0.82;
+  text-shadow: 0 0 12px rgba(11, 23, 49, 0.6);
+}
+
+/* ===== Intro: gear + HUD fade in after the mark begins its journey ===== */
+.lex-item {
+  opacity: 0;
+  animation: gear-fade-in 900ms ease-out 800ms both;
+}
+@keyframes gear-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.lex-header, .lex-controls, .lex-back, .lex-runway {
+  opacity: 0;
+  animation: hud-fade-in 700ms ease-out 1500ms both;
+}
+@keyframes hud-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* lex-back resets its own transform on hover, so reset state cleanly */
+.lex-back { will-change: transform; }
+.lex-runway { will-change: transform; }
+
+/* ===== Items in the tunnel ===== */
+.lex-item {
+  position: absolute; left: 50%; top: 50%;
+  transform-style: preserve-3d;
+  will-change: transform;
+  pointer-events: none;            /* hover handled by smaller hit zone inside */
+}
+.lex-item-inner {
+  position: relative;
+  transform: translate(-50%, -50%);
+  transition: filter 240ms ease-out;
+  pointer-events: none;
+}
+.lex-item img,
+.lex-item svg.svg-icon {
+  display: block;
+  max-width: 340px;
+  max-height: 340px;
+  width: auto; height: auto;
+  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.35));
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+  image-rendering: high-quality;    /* keep upscaling sharp */
+  -ms-interpolation-mode: bicubic;
+  transition: filter 260ms ease-out, transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Tight hit zone — sits in the center 50% of the item, the only thing that
+   actually catches the cursor. Lets you weave past items grazing the edges. */
+.lex-item-hit {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 50%; height: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+}
+.lex-item.is-focus {
+  z-index: 100;
+}
+.lex-item.is-focus img,
+.lex-item.is-focus svg.svg-icon {
+  filter: drop-shadow(0 22px 40px rgba(0, 0, 0, 0.55))
+          drop-shadow(0 0 32px rgba(255, 248, 230, 0.55));
+}
+.lex-item.is-focus .lex-item-inner {
+  transform: translate(-50%, -50%) scale(1.18);
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ===== HUD ===== */
+.lex-header {
+  position: fixed; top: 22px; left: 26px; z-index: 200;
+  pointer-events: none;
+}
+.lex-mark {
+  display: inline-block;
+  border: 1px solid var(--cream);
+  font-family: 'Archivo', sans-serif;
+  letter-spacing: 0.28em;
+  line-height: 1;
+  background: rgba(11, 23, 49, 0.18);
+}
+.lex-mark .top, .lex-mark .bot { padding: 5px 12px; }
+.lex-mark .top { font-weight: 900; font-size: 12px; }
+.lex-mark .bot {
+  font-weight: 300; font-size: 10px;
+  border-top: 0.5px solid var(--cream);
+  letter-spacing: 0.32em;
+}
+.lex-mark .reg { vertical-align: super; font-size: 6px; margin-left: 3px; opacity: 0.8; }
+.lex-tag {
+  margin-top: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--cream);
+  opacity: 0.85;
+}
+
+.lex-controls {
+  position: fixed; top: 26px; right: 26px; z-index: 200;
+  display: flex; gap: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: 0.22em;
+  color: var(--cream);
+  pointer-events: none;
+}
+.lex-controls span {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(11, 23, 49, 0.4);
+  padding: 4px 10px;
+}
+.lex-controls span b {
+  color: var(--orange); background: var(--cream);
+  padding: 2px 5px; font-weight: 700;
+  font-size: 8px; letter-spacing: 0.2em;
+}
+
+.lex-back {
+  position: fixed; bottom: 22px; left: 26px; z-index: 200;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 0.28em;
+  color: var(--cream);
+  text-decoration: none;
+  border: 1px solid var(--cream);
+  background: rgba(11, 23, 49, 0.3);
+  padding: 9px 14px;
+  transition: background 0.2s, color 0.2s;
+}
+.lex-back:hover { background: var(--cream); color: var(--orange); }
+
+.lex-runway {
+  position: fixed; bottom: 28px; right: 26px; z-index: 200;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 0.22em;
+  color: var(--cream);
+  opacity: 0.75;
+  pointer-events: none;
+}
+.lex-runway b { color: var(--orange); font-weight: 700; }
+
+/* ===== Spec card ===== */
+.lex-spec {
+  position: fixed; bottom: 80px; left: 26px; z-index: 180;
+  width: min(380px, 38vw);
+  background: rgba(11, 23, 49, 0.94);
+  border: 1px solid rgba(242, 235, 221, 0.28);
+  padding: 18px 20px 16px;
+  color: var(--cream);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 240ms ease, transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.lex-spec.live { opacity: 1; transform: translateY(0); }
+.lex-spec::before, .lex-spec::after {
+  content: ""; position: absolute; width: 10px; height: 10px;
+  border: 1.5px solid var(--orange);
+}
+.lex-spec::before { top: 6px; left: 6px; border-right: 0; border-bottom: 0; }
+.lex-spec::after  { bottom: 6px; right: 6px; border-left: 0; border-top: 0; }
+.lex-spec .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: 0.32em;
+  color: var(--orange); margin-bottom: 6px;
+}
+.lex-spec .name {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 900; font-size: 22px;
+  letter-spacing: 0.01em; line-height: 1.1;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+.lex-spec .detail {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 0.16em;
+  line-height: 1.7; opacity: 0.85;
+}
+.lex-spec .tagline {
+  margin-top: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: 0.28em;
+  color: var(--orange);
+  border-top: 1px solid rgba(242, 235, 221, 0.16);
+  padding-top: 10px;
+}
+
+/* ===== Scroll hint — fades after first interaction ===== */
+.lex-hint {
+  position: fixed; left: 50%; bottom: 26px;
+  transform: translateX(-50%);
+  z-index: 190;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 0.32em;
+  color: var(--cream);
+  text-shadow: 0 2px 8px rgba(11, 23, 49, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  animation: lex-hint-pulse 2.4s ease-in-out 2200ms infinite;
+  transition: opacity 700ms ease;
+}
+.lex-hint.gone { opacity: 0; }
+@keyframes lex-hint-pulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.85; }
+}
+
+/* ===== Vignette — darkens edges, deepens the tunnel ===== */
+.lex-vignette {
+  position: fixed; inset: 0; z-index: 150;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 50%,
+      transparent 30%,
+      rgba(15, 5, 0, 0.18) 70%,
+      rgba(8, 2, 0, 0.42) 100%);
+}
+
+/* ===== Yellow viewfinder border (echoes the reference) ===== */
+.lex-frame {
+  position: fixed; inset: 0; z-index: 220;
+  pointer-events: none;
+  border: 14px solid var(--cream);
+  outline: 2px solid var(--navy);
+  outline-offset: -16px;
+  mix-blend-mode: normal;
+}
+/* Corner crop-marks for blueprint flavor */
+.lex-frame::before, .lex-frame::after {
+  content: ""; position: absolute;
+  width: 24px; height: 24px;
+  border: 2px solid var(--orange);
+}
+.lex-frame::before { top: 22px; left: 22px; border-right: 0; border-bottom: 0; }
+.lex-frame::after  { bottom: 22px; right: 22px; border-left: 0; border-top: 0; }
+</style>
+</head>
+<body>
+
+<!-- Vignette + HUD layers (cream viewfinder border removed per user) -->
+<div class="lex-vignette"></div>
+
+<div class="lex-header">
+  <div class="lex-mark">
+    <div class="top">BCKSTG <span class="reg">M</span></div>
+    <div class="bot">BLPRNT</div>
+  </div>
+  <div class="lex-tag">// LEXICON &middot; GEAR OF THE TRADE</div>
+</div>
+
+<div class="lex-controls">
+  <span><b>SCROLL</b> ADVANCE</span>
+  <span><b>HOVER</b> INSPECT</span>
+  <span><b>ESC</b> STAGE</span>
+</div>
+
+<a class="lex-back" href="experience.html#scene-console">&larr; BACK TO STAGE</a>
+<div class="lex-runway"><b>RUNWAY</b> <span id="lex-runway-num">0000</span></div>
+
+<div class="lex-spec" id="lex-spec">
+  <div class="num" id="spec-num">// 00</div>
+  <div class="name" id="spec-name">—</div>
+  <div class="detail" id="spec-detail">—</div>
+  <div class="tagline" id="spec-tag">LEXICON ENTRY</div>
+</div>
+
+<div class="lex-hint" id="lex-hint">// SCROLL TO ENTER THE TUNNEL &middot; HOVER GEAR TO INSPECT</div>
+
+<!-- The 3D scene itself -->
+<div class="lex-stage" id="lex-stage">
+  <div class="lex-camera" id="lex-camera">
+    <!-- Destination beacon — BB mark fixed deep in the tunnel as a north star.
+         Intro animation: slams from camera plane back to its resting depth. -->
+    <div class="lex-destination" id="lex-destination">
+      <div class="dest-floater">
+        <div class="dest-mark">
+          <div class="dest-top">BCKSTG <span class="reg">M</span></div>
+          <div class="dest-bot">BLPRNT</div>
+        </div>
+        <div class="dest-tag">// GEAR OF THE TRADE</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SVG silhouette library — drawn-icon gear items used alongside the PNGs -->
+<svg width="0" height="0" style="position:absolute; overflow:hidden;" aria-hidden="true">
+  <defs>
+    <!-- COMS BELTPACK -->
+    <symbol id="ico-beltpack" viewBox="0 0 200 280">
+      <rect x="40" y="30" width="120" height="200" rx="10" fill="#F2EBDD" stroke="#0B1731" stroke-width="3"/>
+      <rect x="50" y="40" width="100" height="38" fill="#0B1731"/>
+      <text x="100" y="65" text-anchor="middle" font-family="JetBrains Mono" font-size="14" font-weight="700" fill="#F2EBDD">CH 4</text>
+      <circle cx="100" cy="110" r="22" fill="none" stroke="#0B1731" stroke-width="3"/>
+      <circle cx="100" cy="110" r="14" fill="#0B1731"/>
+      <rect x="60" y="155" width="32" height="14" rx="2" fill="#0B1731"/>
+      <rect x="108" y="155" width="32" height="14" rx="2" fill="#D85A1F"/>
+      <rect x="60" y="180" width="80" height="10" fill="#0B1731" opacity="0.6"/>
+      <rect x="60" y="200" width="80" height="10" fill="#0B1731" opacity="0.4"/>
+      <rect x="90" y="0" width="20" height="34" fill="#0B1731"/>
+      <rect x="86" y="0" width="28" height="8" fill="#0B1731"/>
+    </symbol>
+
+    <!-- GAFF TAPE -->
+    <symbol id="ico-gaff" viewBox="0 0 220 220">
+      <circle cx="110" cy="110" r="100" fill="#0B1731"/>
+      <circle cx="110" cy="110" r="100" fill="none" stroke="#F2EBDD" stroke-width="2.5"/>
+      <circle cx="110" cy="110" r="66" fill="#F2EBDD"/>
+      <circle cx="110" cy="110" r="44" fill="#0B1731"/>
+      <circle cx="110" cy="110" r="22" fill="#D85A1F"/>
+      <text x="110" y="98" text-anchor="middle" font-family="Archivo" font-weight="900" font-size="14" fill="#0B1731">GAFF</text>
+      <text x="110" y="118" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="9" fill="#0B1731">2"</text>
+    </symbol>
+
+    <!-- ROAD CASE -->
+    <symbol id="ico-roadcase" viewBox="0 0 260 200">
+      <rect x="12" y="30" width="236" height="140" rx="5" fill="#1a1a1a"/>
+      <rect x="12" y="30" width="236" height="140" rx="5" fill="none" stroke="#F2EBDD" stroke-width="3"/>
+      <rect x="24" y="42" width="212" height="116" fill="none" stroke="#F2EBDD" stroke-width="1.4"/>
+      <circle cx="24" cy="42" r="5" fill="#D85A1F"/>
+      <circle cx="236" cy="42" r="5" fill="#D85A1F"/>
+      <circle cx="24" cy="158" r="5" fill="#D85A1F"/>
+      <circle cx="236" cy="158" r="5" fill="#D85A1F"/>
+      <rect x="100" y="80" width="60" height="32" fill="#F2EBDD"/>
+      <text x="130" y="101" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="11" fill="#0B1731">FOH-A</text>
+      <line x1="22" y1="170" x2="60" y2="184" stroke="#1a1a1a" stroke-width="5"/>
+      <line x1="200" y1="184" x2="238" y2="170" stroke="#1a1a1a" stroke-width="5"/>
+      <circle cx="60" cy="184" r="9" fill="#1a1a1a" stroke="#F2EBDD" stroke-width="2"/>
+      <circle cx="200" cy="184" r="9" fill="#1a1a1a" stroke="#F2EBDD" stroke-width="2"/>
+      <rect x="120" y="0" width="20" height="34" fill="#1a1a1a" stroke="#F2EBDD" stroke-width="2"/>
+    </symbol>
+
+    <!-- MULTITOOL -->
+    <symbol id="ico-multitool" viewBox="0 0 280 120">
+      <rect x="20" y="38" width="240" height="44" rx="8" fill="#F2EBDD" stroke="#0B1731" stroke-width="3"/>
+      <line x1="78" y1="40" x2="78" y2="80" stroke="#0B1731" stroke-width="1.5"/>
+      <line x1="136" y1="40" x2="136" y2="80" stroke="#0B1731" stroke-width="1.5"/>
+      <line x1="194" y1="40" x2="194" y2="80" stroke="#0B1731" stroke-width="1.5"/>
+      <rect x="28" y="48" width="40" height="24" fill="#0B1731" opacity="0.12"/>
+      <rect x="86" y="48" width="40" height="24" fill="#0B1731" opacity="0.12"/>
+      <rect x="144" y="48" width="40" height="24" fill="#0B1731" opacity="0.12"/>
+      <rect x="202" y="48" width="50" height="24" fill="#0B1731" opacity="0.12"/>
+      <circle cx="248" cy="60" r="6" fill="#D85A1F"/>
+      <rect x="222" y="44" width="8" height="32" fill="#0B1731"/>
+    </symbol>
+
+    <!-- WALKIE -->
+    <symbol id="ico-walkie" viewBox="0 0 120 260">
+      <rect x="20" y="60" width="80" height="190" rx="8" fill="#1a1a1a" stroke="#F2EBDD" stroke-width="3"/>
+      <rect x="50" y="0" width="20" height="74" fill="#1a1a1a"/>
+      <rect x="46" y="0" width="28" height="10" fill="#0B1731"/>
+      <rect x="32" y="76" width="56" height="42" fill="#F2EBDD"/>
+      <text x="60" y="100" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="14" fill="#0B1731">CH4</text>
+      <text x="60" y="113" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#0B1731">PROD</text>
+      <circle cx="60" cy="138" r="12" fill="#F2EBDD" stroke="#D85A1F" stroke-width="2"/>
+      <rect x="32" y="160" width="20" height="8" rx="1" fill="#F2EBDD"/>
+      <rect x="68" y="160" width="20" height="8" rx="1" fill="#F2EBDD"/>
+      <rect x="32" y="174" width="20" height="8" rx="1" fill="#F2EBDD" opacity="0.7"/>
+      <rect x="68" y="174" width="20" height="8" rx="1" fill="#F2EBDD" opacity="0.7"/>
+      <rect x="32" y="188" width="20" height="8" rx="1" fill="#F2EBDD" opacity="0.5"/>
+      <rect x="68" y="188" width="20" height="8" rx="1" fill="#F2EBDD" opacity="0.5"/>
+      <circle cx="60" cy="220" r="10" fill="#D85A1F"/>
+      <text x="60" y="224" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="9" fill="#F2EBDD">PTT</text>
+    </symbol>
+
+    <!-- HEADLAMP -->
+    <symbol id="ico-headlamp" viewBox="0 0 240 140">
+      <ellipse cx="120" cy="70" rx="110" ry="16" fill="none" stroke="#F2EBDD" stroke-width="5"/>
+      <ellipse cx="120" cy="70" rx="110" ry="16" fill="none" stroke="#0B1731" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <rect x="84" y="48" width="72" height="50" rx="8" fill="#1a1a1a" stroke="#F2EBDD" stroke-width="3"/>
+      <circle cx="120" cy="73" r="16" fill="#F2EBDD"/>
+      <circle cx="120" cy="73" r="9" fill="#D85A1F"/>
+      <rect x="90" y="54" width="8" height="8" fill="#D85A1F"/>
+      <rect x="142" y="54" width="8" height="8" fill="#0B1731" opacity="0.7"/>
+    </symbol>
+
+    <!-- GEL FRAME -->
+    <symbol id="ico-gel" viewBox="0 0 180 180">
+      <rect x="20" y="20" width="140" height="140" fill="none" stroke="#F2EBDD" stroke-width="5"/>
+      <rect x="30" y="30" width="120" height="120" fill="#D85A1F" opacity="0.55"/>
+      <rect x="30" y="30" width="120" height="120" fill="none" stroke="#0B1731" stroke-width="1.5" stroke-dasharray="5 3"/>
+      <text x="90" y="100" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="20" fill="#0B1731">R26</text>
+      <text x="90" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#0B1731">LIGHT RED</text>
+    </symbol>
+
+    <!-- MIC + CLIP -->
+    <symbol id="ico-mic" viewBox="0 0 100 260">
+      <rect x="32" y="0" width="36" height="86" rx="10" fill="#1a1a1a" stroke="#F2EBDD" stroke-width="2.5"/>
+      <rect x="36" y="10" width="28" height="58" rx="3" fill="#0B1731" opacity="0.35"/>
+      <line x1="36" y1="20" x2="64" y2="20" stroke="#F2EBDD" stroke-width="1" opacity="0.4"/>
+      <line x1="36" y1="32" x2="64" y2="32" stroke="#F2EBDD" stroke-width="1" opacity="0.4"/>
+      <line x1="36" y1="44" x2="64" y2="44" stroke="#F2EBDD" stroke-width="1" opacity="0.4"/>
+      <line x1="36" y1="56" x2="64" y2="56" stroke="#F2EBDD" stroke-width="1" opacity="0.4"/>
+      <line x1="50" y1="86" x2="50" y2="180" stroke="#F2EBDD" stroke-width="8"/>
+      <line x1="50" y1="86" x2="50" y2="180" stroke="#0B1731" stroke-width="2"/>
+      <rect x="22" y="180" width="56" height="70" rx="5" fill="#1a1a1a" stroke="#F2EBDD" stroke-width="2.5"/>
+      <circle cx="50" cy="215" r="6" fill="#D85A1F"/>
+      <rect x="32" y="232" width="36" height="8" fill="#F2EBDD" opacity="0.5"/>
+    </symbol>
+
+    <!-- TRUSS SEGMENT -->
+    <symbol id="ico-truss" viewBox="0 0 320 130">
+      <rect x="0" y="22" width="320" height="7" fill="#F2EBDD"/>
+      <rect x="0" y="101" width="320" height="7" fill="#F2EBDD"/>
+      <line x1="16" y1="29" x2="56" y2="101" stroke="#F2EBDD" stroke-width="5"/>
+      <line x1="96" y1="29" x2="56" y2="101" stroke="#F2EBDD" stroke-width="5"/>
+      <line x1="96" y1="29" x2="136" y2="101" stroke="#F2EBDD" stroke-width="5"/>
+      <line x1="176" y1="29" x2="136" y2="101" stroke="#F2EBDD" stroke-width="5"/>
+      <line x1="176" y1="29" x2="216" y2="101" stroke="#F2EBDD" stroke-width="5"/>
+      <line x1="256" y1="29" x2="216" y2="101" stroke="#F2EBDD" stroke-width="5"/>
+      <line x1="256" y1="29" x2="296" y2="101" stroke="#F2EBDD" stroke-width="5"/>
+      <circle cx="16" cy="29" r="7" fill="#0B1731"/>
+      <circle cx="56" cy="101" r="7" fill="#0B1731"/>
+      <circle cx="96" cy="29" r="7" fill="#0B1731"/>
+      <circle cx="136" cy="101" r="7" fill="#0B1731"/>
+      <circle cx="176" cy="29" r="7" fill="#0B1731"/>
+      <circle cx="216" cy="101" r="7" fill="#0B1731"/>
+      <circle cx="256" cy="29" r="7" fill="#0B1731"/>
+      <circle cx="296" cy="101" r="7" fill="#0B1731"/>
+    </symbol>
+
+    <!-- DI BOX -->
+    <symbol id="ico-dibox" viewBox="0 0 180 220">
+      <rect x="20" y="40" width="140" height="170" rx="5" fill="#F2EBDD" stroke="#0B1731" stroke-width="3"/>
+      <rect x="20" y="40" width="140" height="28" fill="#0B1731"/>
+      <text x="90" y="59" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="12" fill="#F2EBDD">DI · ACTIVE</text>
+      <circle cx="55" cy="105" r="16" fill="none" stroke="#0B1731" stroke-width="2"/>
+      <line x1="55" y1="91" x2="55" y2="100" stroke="#0B1731" stroke-width="2"/>
+      <circle cx="125" cy="105" r="16" fill="none" stroke="#0B1731" stroke-width="2"/>
+      <line x1="125" y1="91" x2="135" y2="100" stroke="#0B1731" stroke-width="2"/>
+      <rect x="44" y="142" width="92" height="14" fill="#D85A1F"/>
+      <text x="90" y="153" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="8" fill="#F2EBDD">GROUND LIFT</text>
+      <circle cx="55" cy="180" r="7" fill="none" stroke="#0B1731" stroke-width="2"/>
+      <line x1="55" y1="173" x2="55" y2="180" stroke="#0B1731" stroke-width="2"/>
+      <circle cx="90" cy="180" r="7" fill="none" stroke="#0B1731" stroke-width="2"/>
+      <line x1="90" y1="180" x2="97" y2="174" stroke="#0B1731" stroke-width="2"/>
+      <circle cx="125" cy="180" r="7" fill="none" stroke="#0B1731" stroke-width="2"/>
+      <line x1="125" y1="180" x2="118" y2="174" stroke="#0B1731" stroke-width="2"/>
+      <rect x="80" y="0" width="20" height="44" fill="#1a1a1a"/>
+      <rect x="76" y="0" width="28" height="8" fill="#1a1a1a"/>
+    </symbol>
+  </defs>
+</svg>
+
+<script>
+/* ============================================================
+   LEXICON ENGINE — 3D tunnel + camera physics.
+   ============================================================ */
+(function lexicon() {
+  'use strict';
+
+  /* ---- ASSET REGISTRY ----
+     One row per gear/product type. Tunnel picks randomly from this
+     list when spawning + recycling items so the pool feels endless. */
+  const REGISTRY = [
+    // PNG photoreal gear
+    { type:'img', src:'lexicon/items/xlr-cable.png',    name:'XLR CABLE',        spec:'3-PIN BALANCED · MIC + LINE · STANDARD STAGE LIFELINE',         tag:'GEAR',    scale:0.85 },
+    { type:'img', src:'lexicon/items/moving-light.png', name:'MOVING HEAD',      spec:'INTELLIGENT FIXTURE · PAN/TILT · GOBO · TRUSS-MOUNTED',         tag:'GEAR',    scale:1.55 },
+    { type:'img', src:'lexicon/items/gobo-wheel.png',   name:'GOBO WHEEL',       spec:'PATTERN DISC · ROTATES INSIDE FIXTURE · PROJECTS TEXTURE',      tag:'GEAR',    scale:0.85 },
+    { type:'img', src:'lexicon/items/gobo-sketch.png',  name:'GOBO PATTERN',     spec:'GLASS OR METAL DISC · LIGHT PASSES THROUGH · SHAPES BEAM',      tag:'GEAR',    scale:0.85 },
+    { type:'img', src:'lexicon/items/power-distro.png', name:'POWER DISTRO',     spec:'STAGE PD · RACK-MOUNTED · BREAKER-PROTECTED · 200A SERVICE',    tag:'GEAR',    scale:1.05 },
+    { type:'img', src:'lexicon/items/console.png',      name:'LIGHTING CONSOLE', spec:'GRAND-MA / CHAMSYS · CUES · CHASES · STACK MEMORY',             tag:'GEAR',    scale:0.95 },
+    { type:'img', src:'lexicon/items/keyboard.png',     name:'INPUT DECK',       spec:'PRODUCTION KEYBOARD · MACRO ROW · CONSOLE COMPANION',           tag:'TOOL',    scale:1.10 },
+    { type:'img', src:'lexicon/items/keyboard-alt.png', name:'KEY DECK',         spec:'INPUT SURFACE · CUE TRIGGERS · DRESSING ROOM TO BOOTH',         tag:'TOOL',    scale:1.10 },
+    { type:'img', src:'lexicon/items/credential.png',   name:'ALL-ACCESS PASS',  spec:'PRODUCTION CREDENTIAL · ROAD CASE TO BACKSTAGE',                tag:'TOOL',    scale:0.85 },
+
+    // PNG product cards — clickable, navigate to product page
+    { type:'img', src:'lexicon/items/course.png',       name:'THE COURSE',       spec:'PRODUCT // FULL LIVE PRODUCTION TRAINING · 8 MODULES',          tag:'PRODUCT', link:'course.html',     scale:1.10 },
+    { type:'img', src:'lexicon/items/templates.png',    name:'TEMPLATES',        spec:'PRODUCT // RIDER · STAGE PLOT · CALL SHEET · SETTLEMENT',       tag:'PRODUCT', link:'templates.html',  scale:1.10 },
+    { type:'img', src:'lexicon/items/blueprint.png',    name:'THE BLUEPRINT',    spec:'PRODUCT // BUNDLE OF TEMPLATES + GUIDES + WORKFLOWS',           tag:'PRODUCT', link:'blueprint.html',  scale:1.10 },
+    { type:'img', src:'lexicon/items/checklist.png',    name:'CHECKLIST',        spec:'PRODUCT // FREE TOURING CHECKLIST · DAY-OF DELIVERABLES',       tag:'PRODUCT', link:'checklist.html',  scale:1.10 },
+    { type:'img', src:'lexicon/items/sliding-docs.png', name:'DOCS BUNDLE',      spec:'PRODUCT // REFERENCE DOCS · CROSS-LINKED',                       tag:'PRODUCT', link:'audit.html',      scale:1.10 },
+
+    // SVG silhouette icons (drawn blueprint-style)
+    { type:'svg', sym:'ico-beltpack',  name:'COMS BELTPACK',   spec:'CLEAR-COM · 2-CH INTERCOM · STANDARD FOH + SM ISSUE',         tag:'GEAR',  scale:1.0 },
+    { type:'svg', sym:'ico-gaff',      name:'GAFF TAPE',       spec:'MATTE BLACK CLOTH · 2-INCH · TOUR-LIFE INSURANCE POLICY',     tag:'TOOL',  scale:0.9 },
+    { type:'svg', sym:'ico-roadcase',  name:'ROAD CASE',       spec:'ATA-SPEC · CASTERED · CUSTOM FOAM · TOUR-READY',              tag:'GEAR',  scale:1.1 },
+    { type:'svg', sym:'ico-multitool', name:'MULTITOOL',       spec:'LEATHERMAN-CLASS · PLIERS · DRIVER · BLADE · BELT-CLIP',      tag:'TOOL',  scale:1.1 },
+    { type:'svg', sym:'ico-walkie',    name:'WALKIE',          spec:'2-WAY RADIO · LEAD-LINE SHOW COMMS · CH4 PRODUCTION',         tag:'GEAR',  scale:0.95 },
+    { type:'svg', sym:'ico-headlamp',  name:'HEADLAMP',        spec:'RED-MODE NIGHT VISION · ELASTIC STRAP · LOAD-IN STAPLE',      tag:'TOOL',  scale:1.05 },
+    { type:'svg', sym:'ico-gel',       name:'GEL FRAME',       spec:'ROSCO R26 · COLOR CORRECTION · BURNS OUT AT FULL POWER',      tag:'GEAR',  scale:1.05 },
+    { type:'svg', sym:'ico-mic',       name:'MIC + CLIP',      spec:'DYNAMIC · CARDIOID · BOOM-STAND READY',                       tag:'GEAR',  scale:1.0 },
+    { type:'svg', sym:'ico-truss',     name:'TRUSS SEGMENT',   spec:'12-INCH TRI-TRUSS · BOLTED COUPLERS · 350LB POINT LOAD',      tag:'GEAR',  scale:1.25 },
+    { type:'svg', sym:'ico-dibox',     name:'DI BOX',          spec:'ACTIVE · INSTRUMENT TO MIC-LEVEL · PHANTOM OR BATTERY',       tag:'GEAR',  scale:0.95 },
+  ];
+
+  /* ---- TUNNEL TUNING ---- */
+  const TOTAL_ITEMS  = 42;        // population in tunnel
+  const TUBE_RADIUS  = 640;       // outer radial extent — widened more
+  const TUBE_INNER   = 320;       // minimum radial offset — even more clearance through the middle
+  const NEAR_Z       = 200;       // closest item-Z to camera at spawn (ahead)
+  const FAR_Z        = 4500;      // tunnel depth
+  const RECYCLE_BUF  = 1100;      // items live until they've flown well past the camera (close to perspective horizon at 1300)
+  const DRIFT_TARGET = -2.85;     // base idle forward velocity (bumped)
+  const SCROLL_PWR   = 0.048;     // each scroll px → vz delta (each click pulls harder)
+  const SCROLL_MAX_F = -18;       // cap forward velocity
+  const SCROLL_MAX_R = 9;         // cap reverse velocity
+  const DAMP_DRIFT   = 0.016;     // very gentle decay — scroll bursts coast for a long time before settling
+  const DAMP_HOVER   = 0.16;      // hover slow-down (still snappy but slightly softer than before)
+
+  /* ---- IDLE ACCELERATION ----
+     If the user doesn't move the cursor or scroll for IDLE_START ms, the
+     drift target gradually accelerates over IDLE_RAMP ms — gravity wins, you
+     start to feel like you're falling deeper into the tunnel. */
+  const IDLE_START      = 500;   // ms of inactivity before accel begins
+  const IDLE_RAMP       = 2500;  // ms to reach full idle boost
+  const IDLE_BOOST_MAX  = 1.6;   // 1+this multiplier on DRIFT_TARGET (max ~7.4 vz)
+
+  /* ---- HOVER CREEP + WRAP-UP ----
+     Hovering an item slows you to a near-stop creep, but you never fully halt.
+     Over HOVER_RAMP ms the target speed eases back to full drift, so even
+     while hovering, the item slowly drifts past and eventually leaves you. */
+  const HOVER_CREEP     = -0.32; // very slow creep when hovering (vs full stop)
+  const HOVER_RAMP      = 5000;  // ms of hover before drift is fully restored
+  const TILT_MAX     = 5.0;       // max camera rotation (deg) — slightly softer
+  const TILT_DAMP    = 0.07;
+  const NUDGE_MAX    = 55;        // max camera X/Y shift from cursor (px) — was 90, restricted
+  const NUDGE_DAMP   = 0.07;
+  const NUDGE_PULL   = 0.97;      // soft rubber-band back toward center each frame (3% pull)
+  const TILT_PULL    = 0.985;     // softer pull on tilt (1.5% — visual tilt is less of a problem)
+
+  /* ---- STATE ---- */
+  const cam = {
+    z: 0, vz: 0,
+    tiltX: 0, tiltY: 0,
+    nudgeX: 0, nudgeY: 0,
+    mouseNX: 0, mouseNY: 0,
+    hoveredEl: null,
+    hoverStartTime: 0,        // when did the current hover begin (for ramp-back)
+    lastActivity: performance.now(),  // mousemove / wheel timestamp (for idle accel)
+  };
+  const items = [];
+
+  const stage      = document.getElementById('lex-stage');
+  const camEl      = document.getElementById('lex-camera');
+  const spec       = document.getElementById('lex-spec');
+  const specNum    = document.getElementById('spec-num');
+  const specName   = document.getElementById('spec-name');
+  const specDetail = document.getElementById('spec-detail');
+  const specTag    = document.getElementById('spec-tag');
+  const runwayEl   = document.getElementById('lex-runway-num');
+  const hintEl     = document.getElementById('lex-hint');
+
+  /* ---- HELPERS ---- */
+  function pickRegistry() {
+    return REGISTRY[Math.floor(Math.random() * REGISTRY.length)];
+  }
+  function randInTube() {
+    // Point in a tube around the camera axis. INNER radius forces items off
+    // the centerline so they fly past your shoulders instead of straight at
+    // your face when they approach.
+    const angle = Math.random() * Math.PI * 2;
+    const r = TUBE_INNER + Math.random() * TUBE_RADIUS;
+    return { x: Math.cos(angle) * r, y: Math.sin(angle) * r * 0.62 };
+  }
+  function buildMedia(reg) {
+    let media;
+    if (reg.type === 'img') {
+      media = document.createElement('img');
+      media.src = reg.src;
+      media.alt = reg.name;
+      media.draggable = false;
+    } else {
+      media = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      media.setAttribute('class', 'svg-icon');
+      media.setAttribute('viewBox', '0 0 240 240');
+      media.setAttribute('width', '200');
+      media.setAttribute('height', '200');
+      media.style.overflow = 'visible';
+      const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+      use.setAttribute('href', '#' + reg.sym);
+      use.setAttribute('width', '240');
+      use.setAttribute('height', '240');
+      media.appendChild(use);
+    }
+    // Per-item random scale modifier on top of registry scale
+    const sc = (reg.scale || 1.0) * (0.78 + Math.random() * 0.55);
+    media.style.transform = `scale(${sc.toFixed(3)})`;
+    media.style.transformOrigin = 'center';
+    return media;
+  }
+
+  /* ---- SPAWN ---- */
+  function spawnItem(initialZ) {
+    const reg = pickRegistry();
+    const pos = randInTube();
+    const el = document.createElement('div');
+    el.className = 'lex-item';
+    const inner = document.createElement('div');
+    inner.className = 'lex-item-inner';
+    inner.appendChild(buildMedia(reg));
+    // Tight hit zone — sits in the center 50% of the visual item
+    const hit = document.createElement('div');
+    hit.className = 'lex-item-hit';
+    inner.appendChild(hit);
+    el.appendChild(inner);
+
+    const state = {
+      el, inner,
+      reg,
+      x: pos.x,
+      y: pos.y,
+      z: initialZ,
+      rx: (Math.random() - 0.5) * 8,
+      ry: (Math.random() - 0.5) * 12,
+      bobPhase: Math.random() * Math.PI * 2,
+      bobAmp: 5 + Math.random() * 9,
+      index: items.length + 1,
+    };
+    items.push(state);
+    camEl.appendChild(el);
+
+    // Hover handlers — bound to the tight hit zone, not the whole image bbox
+    hit.addEventListener('mouseenter', () => focusItem(state));
+    hit.addEventListener('mouseleave', () => blurItem(state));
+    hit.addEventListener('click', () => {
+      if (state.reg.link) { window.location.href = state.reg.link; }
+    });
+  }
+
+  // Initial population — distribute items across the WHOLE Z range, including
+  // some already past the camera in the "fly past" zone. That way the first
+  // frame already has gear at your shoulders, not just ahead of you.
+  const PASS_PAST_COUNT = 10;   // items pre-spawned in the passing-past zone
+  for (let i = 0; i < TOTAL_ITEMS; i++) {
+    let z;
+    if (i < PASS_PAST_COUNT) {
+      // Already past camera, flying out — z between +100 and +(RECYCLE_BUF - 100)
+      z = 100 + Math.random() * (RECYCLE_BUF - 200);
+    } else {
+      // Ahead of camera in the corridor, distributed by depth
+      const j = i - PASS_PAST_COUNT;
+      z = -NEAR_Z - (j / (TOTAL_ITEMS - PASS_PAST_COUNT)) * FAR_Z - Math.random() * 220;
+    }
+    spawnItem(z);
+  }
+
+  /* ---- RECYCLE — when an item passes the camera, repurpose it ---- */
+  function recycleItem(s) {
+    const reg = pickRegistry();
+    if (reg !== s.reg) {
+      // Swap the media if the type changed
+      const old = s.inner.firstChild;
+      s.inner.replaceChild(buildMedia(reg), old);
+      s.reg = reg;
+    } else {
+      // Re-randomize the per-item scale even if same type, so repeats vary
+      const media = s.inner.firstChild;
+      const sc = (reg.scale || 1.0) * (0.78 + Math.random() * 0.55);
+      media.style.transform = `scale(${sc.toFixed(3)})`;
+    }
+    const pos = randInTube();
+    s.x = pos.x;
+    s.y = pos.y;
+    s.z = cam.z - FAR_Z - Math.random() * 1000;
+    s.rx = (Math.random() - 0.5) * 8;
+    s.ry = (Math.random() - 0.5) * 12;
+    s.bobPhase = Math.random() * Math.PI * 2;
+    // If this item was the focused one, clear focus state
+    if (cam.hoveredEl === s.el) {
+      blurItem(s);
+    }
+  }
+
+  /* ---- FOCUS / BLUR ---- */
+  function focusItem(s) {
+    cam.hoveredEl = s.el;
+    cam.hoverStartTime = performance.now();
+    s.el.classList.add('is-focus');
+    specNum.textContent    = '// ENTRY ' + String(s.index).padStart(3, '0');
+    specName.textContent   = s.reg.name;
+    specDetail.textContent = s.reg.spec;
+    specTag.textContent    = s.reg.tag + (s.reg.link ? ' · CLICK TO OPEN' : ' · LEXICON ENTRY');
+    spec.classList.add('live');
+  }
+  function blurItem(s) {
+    s.el.classList.remove('is-focus');
+    if (cam.hoveredEl === s.el) {
+      cam.hoveredEl = null;
+      spec.classList.remove('live');
+    }
+  }
+
+  /* ---- INPUT ---- */
+  let hintGone = false;
+  function killHint() {
+    if (hintGone) return;
+    hintGone = true;
+    hintEl.classList.add('gone');
+  }
+  window.addEventListener('mousemove', (e) => {
+    cam.mouseNX = (e.clientX / window.innerWidth)  * 2 - 1;
+    cam.mouseNY = (e.clientY / window.innerHeight) * 2 - 1;
+    cam.lastActivity = performance.now();
+  });
+  window.addEventListener('wheel', (e) => {
+    // Smooth, additive — each click of the wheel adds an impulse to
+    // forward velocity. Big spin = builds momentum, small click = nudge.
+    cam.vz += -e.deltaY * SCROLL_PWR;
+    if (cam.vz < SCROLL_MAX_F) cam.vz = SCROLL_MAX_F;
+    if (cam.vz > SCROLL_MAX_R) cam.vz = SCROLL_MAX_R;
+    cam.lastActivity = performance.now();
+    killHint();
+    e.preventDefault();
+  }, { passive: false });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { window.location.href = 'experience.html#scene-console'; }
+  });
+
+  /* ---- MAIN LOOP ---- */
+  let last = performance.now();
+  let firstMove = false;
+  function frame(now) {
+    const dt = Math.min(45, now - last);
+    last = now;
+
+    // ---- Target velocity composition ----
+    // Three regimes: hovering an item (creep that ramps back), idle drift
+    // (with gravity-accel boost), or actively interacting (base drift).
+    let targetV, damp;
+    if (cam.hoveredEl) {
+      // Hover creep: starts SUPER slow, eases back toward full drift over
+      // HOVER_RAMP ms with cubic ease-in (most acceleration at the end).
+      const hoverT = Math.min(1, (now - cam.hoverStartTime) / HOVER_RAMP);
+      const eased  = hoverT * hoverT * hoverT;
+      targetV = HOVER_CREEP + eased * (DRIFT_TARGET - HOVER_CREEP);
+      damp    = DAMP_HOVER;
+    } else {
+      // Idle accel: after IDLE_START ms of no input, drift target scales up
+      // toward DRIFT_TARGET * (1 + IDLE_BOOST_MAX). Feels like gravity wins.
+      const idleT = now - cam.lastActivity;
+      let idleBoost = 0;
+      if (idleT > IDLE_START) {
+        idleBoost = Math.min(1, (idleT - IDLE_START) / IDLE_RAMP);
+      }
+      targetV = DRIFT_TARGET * (1 + idleBoost * IDLE_BOOST_MAX);
+      damp    = DAMP_DRIFT;
+    }
+    cam.vz += (targetV - cam.vz) * damp;
+
+    // Integrate Z (scale dt down so velocities feel natural at ms granularity)
+    cam.z += cam.vz * dt * 0.06;
+
+    // Camera tilt + slide from cursor — parallax with a soft pull-back toward
+    // center on every frame. The pull-back means even when the cursor sits at
+    // an edge, the camera never drifts all the way out — the equilibrium is
+    // pulled in by the rubber-band term. When the cursor returns to center,
+    // the same pull-back smoothly draws the camera back to neutral.
+    const targetTiltX =  cam.mouseNX * TILT_MAX;
+    const targetTiltY = -cam.mouseNY * TILT_MAX;
+    cam.tiltX += (targetTiltX - cam.tiltX) * TILT_DAMP;
+    cam.tiltY += (targetTiltY - cam.tiltY) * TILT_DAMP;
+    cam.tiltX *= TILT_PULL;
+    cam.tiltY *= TILT_PULL;
+    cam.nudgeX += (cam.mouseNX * NUDGE_MAX - cam.nudgeX) * NUDGE_DAMP;
+    cam.nudgeY += (cam.mouseNY * NUDGE_MAX - cam.nudgeY) * NUDGE_DAMP;
+    cam.nudgeX *= NUDGE_PULL;
+    cam.nudgeY *= NUDGE_PULL;
+
+    // Apply camera transform (inverse: moving camera = moving world opposite)
+    camEl.style.transform =
+      `translate3d(${(-cam.nudgeX).toFixed(1)}px, ${(-cam.nudgeY).toFixed(1)}px, ${(-cam.z).toFixed(1)}px)` +
+      ` rotateY(${cam.tiltX.toFixed(2)}deg)` +
+      ` rotateX(${cam.tiltY.toFixed(2)}deg)`;
+
+    // Items: recycle if past camera, gentle vertical bob, splay outward on
+    // approach (so they clear the centerline as they get close to your face),
+    // then write transform.
+    for (let i = 0; i < items.length; i++) {
+      const s = items[i];
+      const relZ = s.z - cam.z;
+      if (relZ > RECYCLE_BUF) {
+        recycleItem(s);
+        continue;
+      }
+      // Splay: items at relZ > -1200 begin to push outward from camera axis.
+      // Far items unaffected (splay=1). At the closest approach the splay
+      // reaches ~1.9x — items actively part to open a clear path through the
+      // middle of the tunnel.
+      let splay = 1;
+      if (relZ > -1200) {
+        const t = Math.min(1, (relZ + 1200) / 1500);  // 0 at -1200, 1 at +300
+        // ease-in cubic so splay ramps slowly far away, accelerates close up
+        splay = 1 + (t * t) * 0.95;
+      }
+      const bobY = Math.sin(now * 0.0008 + s.bobPhase) * s.bobAmp;
+      const fx = s.x * splay;
+      const fy = (s.y + bobY) * splay;
+      s.el.style.transform =
+        `translate3d(${fx.toFixed(1)}px, ${fy.toFixed(1)}px, ${s.z.toFixed(1)}px)` +
+        ` rotateX(${s.rx.toFixed(2)}deg) rotateY(${s.ry.toFixed(2)}deg)`;
+    }
+
+    // Runway counter (just a fun "miles flown" reading)
+    runwayEl.textContent = String(Math.floor(-cam.z / 10)).padStart(4, '0');
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // Pulse the hint until first interaction (scroll or mouse-move)
+  let hintMoveCount = 0;
+  window.addEventListener('mousemove', () => {
+    if (hintGone) return;
+    hintMoveCount++;
+    if (hintMoveCount > 6) killHint();
+  }, { once: false });
+
+})();
+</script>
+
+</body>
+</html>

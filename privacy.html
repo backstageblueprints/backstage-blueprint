@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1B3D6E">
+<title>Privacy — Backstage Blueprint</title>
+<meta name="description" content="How Backstage Blueprint handles your information.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#1B3D6E; --navy-deep:#142C4F; --orange:#D85A1F; --cream:#F2EBDD;
+  --grid-line:rgba(242,235,221,0.08); --grid-major:rgba(242,235,221,0.14);
+  --line:rgba(242,235,221,0.18); --line-strong:rgba(242,235,221,0.32);
+  --dim:rgba(242,235,221,0.60);
+  --display-font:'Archivo',sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background-color:var(--navy);
+  background-image:
+    linear-gradient(var(--grid-line) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-line) 1px,transparent 1px),
+    linear-gradient(var(--grid-major) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-major) 1px,transparent 1px);
+  background-size:40px 40px,40px 40px,200px 200px,200px 200px;
+  background-attachment:fixed;
+  color:var(--cream);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+.site-header {
+  position:sticky; top:0; z-index:100;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 32px;
+  background:rgba(20,44,79,0.86);
+  backdrop-filter:blur(10px);
+  border-bottom:0.5px solid var(--line);
+}
+.brand-mark {
+  font-family:var(--display-font); font-size:20px; font-weight:900;
+  letter-spacing:-0.005em; text-transform:uppercase; color:var(--cream);
+  text-decoration:none; line-height:1; display:inline-flex; align-items:center;
+  transition:color 200ms ease;
+}
+.brand-mark:hover { color:var(--orange); }
+.brand-mark .reg {
+  display:inline-block; width:13px; height:13px;
+  border:1.25px solid currentColor; border-radius:50%;
+  font-family:'SF Mono',monospace; font-size:8.5px; font-weight:700;
+  line-height:11px; text-align:center; vertical-align:4px; margin-left:6px;
+}
+.header-back {
+  font-family:'SF Mono',monospace; font-size:11px; font-weight:700;
+  letter-spacing:0.28em; color:var(--cream); text-decoration:none;
+  text-transform:uppercase; padding:9px 16px;
+  border:1px solid var(--line-strong);
+  transition:border-color 200ms ease, color 200ms ease;
+}
+.header-back:hover { border-color:var(--orange); color:var(--orange); }
+main { max-width:780px; margin:0 auto; padding:80px 32px 60px; }
+.mono-label {
+  font-family:'SF Mono',monospace; font-size:11px; font-weight:700;
+  letter-spacing:0.3em; color:var(--orange); text-transform:uppercase;
+  margin-bottom:16px;
+}
+h1 {
+  font-family:var(--display-font); font-size:clamp(40px,5.4vw,76px);
+  font-weight:900; letter-spacing:-0.014em; line-height:0.95;
+  text-transform:uppercase;
+}
+h1 .accent { color:var(--orange); }
+.rule { width:48px; height:2px; background:var(--orange); margin:18px 0 28px; }
+p { font-size:15px; line-height:1.75; color:rgba(242,235,221,0.92); margin-bottom:16px; max-width:680px; }
+p strong { color:var(--cream); font-weight:600; }
+a.inline { color:var(--orange); text-decoration:none; border-bottom:1px solid var(--orange); padding-bottom:1px; }
+a.inline:hover { color:var(--cream); border-color:var(--cream); }
+.stamp {
+  margin-top:36px; font-family:'SF Mono',monospace; font-size:10.5px;
+  letter-spacing:0.26em; text-transform:uppercase; color:var(--dim);
+}
+.site-footer {
+  padding:36px 32px; border-top:0.5px solid var(--line);
+  display:flex; align-items:center; justify-content:space-between;
+  gap:22px; flex-wrap:wrap;
+}
+.footer-meta, .footer-links {
+  font-family:'SF Mono',monospace; font-size:10px;
+  letter-spacing:0.28em; text-transform:uppercase; color:var(--dim);
+}
+.footer-links { display:flex; gap:22px; flex-wrap:wrap; }
+.footer-links a { color:var(--dim); text-decoration:none; transition:color 200ms ease; }
+.footer-links a:hover { color:var(--orange); }
+@media (max-width:560px) {
+  .site-header { padding:14px 18px; }
+  .brand-mark { font-size:17px; }
+  .header-back { font-size:9.5px; letter-spacing:0.22em; padding:7px 12px; }
+  main { padding:48px 18px 40px; }
+  .site-footer { padding:28px 18px; flex-direction:column; align-items:flex-start; gap:12px; }
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand-mark" href="experience.html">BCKSTG &middot; BLPRNT<span class="reg">M</span></a>
+  <a class="header-back" href="experience.html#scene-production-office">&larr; FRONT OF HOUSE</a>
+</header>
+<main>
+  <div class="mono-label">// PRIVACY</div>
+  <h1>Privacy<span class="accent">.</span></h1>
+  <div class="rule"></div>
+  <p>We collect your email when you sign up for the mailing list, and we use <strong>Stripe</strong> for payments &mdash; Stripe handles your card data, we never see it.</p>
+  <p>We email about BB. You can unsubscribe anytime from any email we send.</p>
+  <p>Full policy is in progress. Questions in the meantime? <a class="inline" href="mailto:hello@backstageblueprint.com">hello@backstageblueprint.com</a>.</p>
+  <div class="stamp">// LAST UPDATED &middot; 06.01.2026</div>
+</main>
+<footer class="site-footer">
+  <div class="brand-mark" style="font-size:16px;">BCKSTG &middot; BLPRNT<span class="reg" style="width:10px;height:10px;font-size:7px;line-height:8px;vertical-align:3px;">M</span></div>
+  <div class="footer-meta">EST. 2026 &middot; BACKSTAGEBLUEPRINT.CO</div>
+  <div class="footer-links">
+    <a href="experience.html">THE TOUR</a>
+    <a href="experience.html#scene-console">CONTACT</a>
+    <a href="experience.html#scene-production-office">FRONT OF HOUSE</a>
+    <a href="privacy.html">PRIVACY</a>
+    <a href="terms.html">TERMS</a>
+  </div>
+</footer>
+</body>
+</html>

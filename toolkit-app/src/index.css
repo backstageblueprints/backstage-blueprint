@@ -1,0 +1,135 @@
+/* Reset — let the rider builder component own its styling */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+
+/* -------------------------------------------------------------------------
+   Scrollbar theming — subtle Bone thumb on transparent track
+
+   The browser default white/gray scrollbar reads as foreign UI against the
+   dark Stage Black workspace. We restyle it to disappear visually unless
+   actively hovered — Bone (#F4F1EA) at low alpha so it sits just above the
+   panel without competing with content.
+
+   Note: WebKit and standards-track properties are both set so this applies
+   to Chrome, Safari, Firefox, and Edge. The light-mode rider-preview-doc
+   (Bone background) gets an inverted treatment — Stage Black thumb on
+   transparent track — so the scrollbar reads consistently in both modes.
+   ------------------------------------------------------------------------- */
+
+/* Default (dark workspace) */
+* { scrollbar-width: thin; scrollbar-color: rgba(244, 241, 234, 0.25) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(244, 241, 234, 0.25);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background-color: rgba(244, 241, 234, 0.45); }
+*::-webkit-scrollbar-corner { background: transparent; }
+
+/* Light-mode override for the rider preview document (Bone background) — use
+   Stage Black thumb so it reads against the cream surface. */
+.rider-preview-doc { scrollbar-color: rgba(14, 14, 14, 0.25) transparent; }
+.rider-preview-doc *::-webkit-scrollbar-thumb { background-color: rgba(14, 14, 14, 0.25); }
+.rider-preview-doc *::-webkit-scrollbar-thumb:hover { background-color: rgba(14, 14, 14, 0.45); }
+
+/* -------------------------------------------------------------------------
+   Print stylesheet — clean PDF export
+
+   Triggered by the "Print / PDF" button (window.print()). The user picks
+   "Save as PDF" in the browser dialog to get a PDF file.
+
+   Strategy:
+   - Hide every UI element except the rider preview document
+   - Pull the rider preview out of the side pane so it occupies the whole page
+   - Set @page to US Letter with no margins (the page wrappers already have padding)
+   - Force page-break-after on each .rider-page so they map 1:1 to printer pages
+   - Strip dark backgrounds and shadows so we get a clean Bone document
+   - Tell the browser to print background colors (Bone fill, etc.)
+   ------------------------------------------------------------------------- */
+
+@page {
+  size: letter;
+  margin: 0;
+}
+
+@media print {
+  /* Print backgrounds (Bone fills, schematic tiles, etc.). Without these the
+     browser would strip them by default. */
+  html, body, * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide everything by default... */
+  body * { visibility: hidden !important; }
+
+  /* ...then make the preview pane and its contents visible. */
+  .rider-preview-pane,
+  .rider-preview-pane * { visibility: visible !important; }
+
+  /* Reposition the preview pane to fill the printer page. The on-screen pane
+     is a column inside a 12-col grid with sticky chrome and scroll — none of
+     that should print. We force absolute positioning to detach it. */
+  .rider-preview-pane {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #F4F1EA !important; /* Bone */
+    border: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* The sticky "— Live Document —" header inside the preview pane is workspace
+     UI, not part of the rider. Hide it. */
+  .rider-preview-pane > .sticky { display: none !important; }
+
+  /* The preview pane has an inner padding wrapper around the document. Strip it. */
+  .rider-preview-pane > div { padding: 0 !important; }
+
+  /* The rider document itself: drop the editor's drop shadow. Apply a `zoom`
+     scaling so the entire on-screen rider (which is laid out for the narrow
+     preview pane) blows up to fill an actual 8.5×11 page. The zoom factor is
+     computed in JS at print time (see Print/PDF button) and stashed in
+     --rider-print-zoom; it defaults to 1 if nothing's been set.
+     Why `zoom` and not `transform: scale()`: `zoom` actually reflows the
+     content at the new size — page breaks, widths, and pagination all stay
+     coherent. `transform: scale()` would visually shrink/grow the box but
+     leave layout boundaries at the original size, breaking page breaks. */
+  .rider-preview-doc {
+    box-shadow: none !important;
+    margin: 0 !important;
+    zoom: var(--rider-print-zoom, 1) !important;
+  }
+
+  /* Each rider page: enforce a hard page break after, no shadow.
+     Because the parent's zoom scales the whole doc up to 8.5in width, the
+     on-screen page heights end up matching real letter heights too. */
+  .rider-page {
+    page-break-after: always !important;
+    break-after: page !important;
+    box-shadow: none !important;
+    background: #F4F1EA !important; /* Bone */
+  }
+
+  /* Don't add a trailing blank page after the last rider page. */
+  .rider-page:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  /* Page-break markers (workspace-only "PAGE 2 →" overlays) never print. */
+  .rider-page-marker { display: none !important; }
+
+  /* Empty continuation slots are placeholders for oversized blocks that
+     overflow from the previous page. They should print as blank space — fine
+     to keep visible. */
+}

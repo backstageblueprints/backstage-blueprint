@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backstage Blueprint // My Binder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;700;900&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   MY BINDER — Order 001 (PS-001)
+   Internal / member design system (per Brand_Tokens.html)
+   ========================================================= */
+:root {
+  --black: #0E0E0E;
+  --black2: #141414;
+  --blue: #1B3A5C;
+  --blue-l: #9FC5E7;
+  --bone: #F4F1EA;
+  --orange: #D4641E;
+  --orange-soft: #BF5C22;
+  --grid: rgba(27, 58, 92, 0.20);
+  --line: rgba(244, 241, 234, 0.12);
+  --line-strong: rgba(244, 241, 234, 0.28);
+  --dim: rgba(244, 241, 234, 0.55);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; min-height: 100vh; }
+body {
+  background: var(--black);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 30px 30px;
+  background-attachment: fixed;
+  color: var(--bone);
+  font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =========================================================
+   HEADER — page shell (built fresh; internal brand tokens)
+   ========================================================= */
+.shell-head {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(14, 14, 14, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line-strong);
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.shell-mark {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--bone);
+}
+.shell-mark img {
+  display: block;
+  height: 34px;
+  width: auto;
+  user-select: none;
+}
+.shell-title {
+  flex: 1;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.32em;
+  color: var(--bone);
+  opacity: 0.85;
+}
+.shell-title .slash { color: var(--orange); }
+.shell-back {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  color: var(--bone);
+  text-decoration: none;
+  border: 1px solid var(--line-strong);
+  padding: 8px 14px;
+  transition: all 0.2s;
+}
+.shell-back:hover { border-color: var(--orange); color: var(--orange); }
+
+/* =========================================================
+   PAGE WRAPPER
+   ========================================================= */
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 48px 28px 80px;
+}
+
+/* =========================================================
+   A. INTRO BAND
+   ========================================================= */
+.intro {
+  border: 1px solid var(--line-strong);
+  background: rgba(20, 20, 20, 0.55);
+  padding: 38px 42px;
+  margin-bottom: 38px;
+}
+.intro-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.4em;
+  color: var(--orange);
+  margin-bottom: 14px;
+}
+.intro-title {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 900;
+  font-size: clamp(38px, 5vw, 64px);
+  letter-spacing: 2px;
+  line-height: 0.98;
+  text-transform: uppercase;
+}
+.intro-title .accent { color: var(--orange); }
+.intro-sub {
+  font-size: 14px;
+  line-height: 1.65;
+  opacity: 0.88;
+  max-width: 720px;
+  margin-top: 16px;
+}
+.intro-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 22px;
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 0.5px solid var(--line-strong);
+}
+.intro-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  color: var(--bone);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.intro-count b {
+  color: var(--orange);
+  font-weight: 700;
+}
+.intro-count .complete-badge {
+  display: none;
+  background: var(--orange);
+  color: var(--black);
+  padding: 4px 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  margin-left: 8px;
+}
+body[data-state="C"] .intro-count .complete-badge { display: inline-block; }
+
+.filter-row {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  border: 1px solid var(--line-strong);
+}
+.filter-btn {
+  background: transparent;
+  border: none;
+  color: var(--bone);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  text-transform: uppercase;
+}
+.filter-btn:not(:last-child) {
+  border-right: 1px solid var(--line);
+}
+.filter-btn:hover { background: rgba(255, 255, 255, 0.04); }
+.filter-btn.is-active {
+  background: var(--orange);
+  color: var(--black);
+  font-weight: 700;
+}
+
+/* CTA for State A (no items owned) */
+.intro-cta {
+  display: none;
+  margin-top: 22px;
+  padding: 18px 22px;
+  border: 1px solid var(--orange);
+  background: rgba(212, 100, 30, 0.08);
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+body[data-state="A"] .intro-cta { display: flex; }
+.intro-cta-text {
+  flex: 1;
+  font-size: 13px;
+  opacity: 0.92;
+  min-width: 200px;
+}
+.intro-cta-text strong { color: var(--bone); }
+.intro-cta-btn {
+  background: var(--orange);
+  color: var(--black);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  font-weight: 700;
+  padding: 12px 18px;
+  text-decoration: none;
+  transition: filter 0.2s;
+}
+.intro-cta-btn:hover { filter: brightness(1.1); }
+
+/* When State A, also re-route intro copy */
+.intro-sub-A { display: none; }
+body[data-state="A"] .intro-sub-default { display: none; }
+body[data-state="A"] .intro-sub-A { display: block; }
+
+/* =========================================================
+   B. PHASE CLUSTERS + CARD GRID
+   ========================================================= */
+.phase {
+  margin-top: 42px;
+}
+.phase:first-of-type { margin-top: 0; }
+.phase-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.phase-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.4em;
+  color: var(--orange);
+  text-transform: uppercase;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.phase-rule {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, var(--orange) 0%, transparent 100%);
+  opacity: 0.55;
+}
+.phase-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--dim);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 22px;
+}
+
+/* =========================================================
+   CARD
+   ========================================================= */
+.card {
+  position: relative;
+  border: 1px solid var(--line-strong);
+  background: rgba(20, 20, 20, 0.65);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 220ms ease,
+              background 220ms ease;
+}
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--orange);
+  background: rgba(20, 20, 20, 0.85);
+}
+.card-visual {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  aspect-ratio: 1.6 / 1;
+  border: 0.5px solid var(--line);
+  overflow: hidden;
+}
+/* LEFT half — CSS-built "template" cover. Reads as a stylized document. */
+.card-cover {
+  position: relative;
+  background: var(--bone);
+  background-image:
+    linear-gradient(rgba(27, 58, 92, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27, 58, 92, 0.07) 1px, transparent 1px);
+  background-size: 14px 14px;
+  padding: 9% 9% 9%;
+  display: flex;
+  flex-direction: column;
+  color: var(--black);
+  border-right: 0.5px solid var(--line-strong);
+  overflow: hidden;
+}
+.card-cover-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  margin-bottom: 8%;
+}
+.cc-tag { color: var(--orange); }
+.cc-doc { color: rgba(14, 14, 14, 0.55); }
+.card-cover-title {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 900;
+  font-size: 20px;
+  line-height: 1.0;
+  color: var(--black);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+.card-cover-struct {
+  margin-top: auto;
+  margin-bottom: 16%;
+}
+.cc-header-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  margin-bottom: 10px;
+}
+.cc-header-row span {
+  height: 5px;
+  background: rgba(14, 14, 14, 0.20);
+}
+.cc-data-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.cc-data-rows > div {
+  height: 1.5px;
+  background: rgba(14, 14, 14, 0.22);
+}
+.cc-data-rows > div:nth-child(1) { width: 92%; }
+.cc-data-rows > div:nth-child(2) { width: 78%; }
+.cc-data-rows > div:nth-child(3) { width: 88%; }
+.cc-data-rows > div:nth-child(4) { width: 70%; }
+.cc-data-rows > div:nth-child(5) { width: 82%; }
+.card-cover-stamp {
+  position: absolute;
+  bottom: 7%;
+  left: 9%;
+  font-family: 'Archivo', sans-serif;
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: rgba(14, 14, 14, 0.55);
+  border: 0.5px solid rgba(14, 14, 14, 0.35);
+  padding: 3px 8px;
+}
+/* RIGHT half — existing per-template preview image. */
+.card-preview {
+  background: var(--black2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4%;
+}
+.card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45));
+}
+.card-meta-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.card-doc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--orange);
+  font-weight: 700;
+}
+.card-pair {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+  padding: 3px 8px;
+  border: 0.5px solid var(--line-strong);
+  color: var(--blue-l);
+  border-color: rgba(159, 197, 231, 0.5);
+}
+.card-pair.template-only {
+  color: var(--dim);
+  border-color: var(--line-strong);
+}
+.card-name {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 900;
+  font-size: 19px;
+  letter-spacing: 0.5px;
+  line-height: 1.1;
+  color: var(--bone);
+}
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+}
+.btn {
+  padding: 11px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.btn-primary {
+  background: var(--orange);
+  color: var(--black);
+  border-color: var(--orange);
+}
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-primary .arrow { font-weight: 700; }
+.btn-secondary {
+  background: transparent;
+  color: var(--bone);
+  border-color: var(--line-strong);
+}
+.btn-secondary:hover { border-color: var(--orange); color: var(--orange); }
+
+/* =========================================================
+   HOVER REF // OVERLAY (monitor-style data line)
+   ========================================================= */
+.card-ref {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  background: rgba(14, 14, 14, 0.92);
+  border: 1px solid var(--orange);
+  color: var(--orange);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  padding: 7px 12px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 200ms ease, transform 200ms ease;
+  z-index: 4;
+}
+.card:hover .card-ref {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* =========================================================
+   UNOWNED CARD STATE
+   ========================================================= */
+.card.is-unowned .card-visual img { filter: grayscale(1) brightness(0.55); }
+.card.is-unowned .card-name { color: var(--dim); }
+.card.is-unowned .card-pair { color: var(--dim); border-color: var(--line-strong); }
+.card.is-unowned .card-actions { display: none; }
+.card.is-unowned .card-unowned-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  color: var(--dim);
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  display: inline-block;
+  width: fit-content;
+}
+.card.is-unowned .card-getit {
+  margin-top: auto;
+  padding: 11px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  border: 1px solid var(--orange);
+  color: var(--orange);
+  background: transparent;
+  transition: all 0.2s;
+}
+.card.is-unowned .card-getit:hover {
+  background: var(--orange);
+  color: var(--black);
+}
+.card-unowned-tag,
+.card-getit { display: none; }
+.card.is-unowned .card-unowned-tag,
+.card.is-unowned .card-getit { display: inline-block; }
+.card.is-unowned .card-getit { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.card.is-unowned:hover { border-color: rgba(159, 197, 231, 0.4); }
+
+/* =========================================================
+   FILTER STATES
+   ========================================================= */
+body[data-filter="templates"] .card .btn-secondary { display: none; }
+body[data-filter="guides"] .card[data-paired="false"] { display: none; }
+body[data-filter="guides"] .card .btn-primary { display: none; }
+
+/* =========================================================
+   C. BOTTOM BAND
+   ========================================================= */
+.bottom-band {
+  margin-top: 52px;
+  border-top: 0.5px solid var(--line-strong);
+  padding-top: 28px;
+}
+.bottom-band-line {
+  font-size: 13px;
+  line-height: 1.65;
+  opacity: 0.78;
+  margin-bottom: 8px;
+}
+.bottom-band-line em { font-style: italic; }
+.bottom-band-line a {
+  color: var(--orange);
+  text-decoration: none;
+  border-bottom: 0.5px solid var(--orange-soft);
+}
+.bottom-band-line a:hover { color: var(--bone); }
+
+/* =========================================================
+   FOOTER STATUS LINE
+   ========================================================= */
+.shell-foot {
+  border-top: 1px solid var(--line-strong);
+  padding: 16px 28px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--dim);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.shell-foot .live-dot {
+  display: inline-block;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #6dbf7a;
+  margin-right: 8px;
+  vertical-align: middle;
+  box-shadow: 0 0 8px #6dbf7a;
+}
+
+/* =========================================================
+   GUIDE READER PLACEHOLDER MODAL
+   ========================================================= */
+.gr-modal {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(14, 14, 14, 0.88);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.gr-modal.is-open { display: flex; }
+.gr-card {
+  background: var(--black2);
+  border: 1px solid var(--orange);
+  padding: 36px 42px;
+  max-width: 480px;
+  text-align: center;
+}
+.gr-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--orange);
+  margin-bottom: 14px;
+}
+.gr-title {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 900;
+  font-size: 28px;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.gr-sub {
+  font-size: 13px;
+  opacity: 0.85;
+  margin-bottom: 22px;
+}
+.gr-close {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  color: var(--bone);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.gr-close:hover { border-color: var(--orange); color: var(--orange); }
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+@media (max-width: 620px) {
+  .page { padding: 28px 18px 60px; }
+  .intro { padding: 26px 22px; }
+  .shell-head { padding: 12px 18px; gap: 12px; }
+  .shell-mark img { height: 28px; }
+  .shell-title { display: none; }
+  .grid { grid-template-columns: 1fr; }
+  .filter-row { width: 100%; margin-left: 0; }
+  .filter-btn { flex: 1; }
+  .intro-row { flex-direction: column; align-items: stretch; }
+  /* Two-up stacks vertically: cover above, preview below */
+  .card-visual {
+    grid-template-columns: 1fr;
+    aspect-ratio: auto;
+  }
+  .card-cover {
+    aspect-ratio: 1.6 / 1;
+    border-right: none;
+    border-bottom: 0.5px solid var(--line-strong);
+  }
+  .card-preview { aspect-ratio: 1.6 / 1; }
+}
+</style>
+</head>
+<body data-state="C" data-filter="all">
+
+<!-- HEADER -->
+<header class="shell-head">
+  <a class="shell-mark" href="experience.html#scene-pass" aria-label="Backstage Blueprint">
+    <img src="bb-logo-internal.png" alt="Backstage Blueprint">
+  </a>
+  <div class="shell-title"><span class="slash">//</span> MY BINDER</div>
+  <a class="shell-back" href="members.html">&larr; BACK TO STAGE</a>
+</header>
+
+<main class="page">
+
+  <!-- A · INTRO BAND -->
+  <section class="intro">
+    <div class="intro-tag">// MY BINDER &middot; OWNED LIBRARY</div>
+    <h1 class="intro-title">My <span class="accent">Binder</span><span class="accent">.</span></h1>
+    <p class="intro-sub intro-sub-default">Everything you own from the binder. Open a guide to read, copy a template into your Drive, or grab the PDF.</p>
+    <p class="intro-sub intro-sub-A">You haven&rsquo;t picked anything up yet. The Blueprint is the full kit; individual templates ship &agrave; la carte from The Table.</p>
+
+    <!-- State-A CTA -->
+    <div class="intro-cta">
+      <div class="intro-cta-text"><strong>Start your binder.</strong> Grab the whole Blueprint or pick individual templates &agrave; la carte.</div>
+      <a class="intro-cta-btn" href="blueprint.html">GO TO THE TABLE &nbsp;&rarr;</a>
+    </div>
+
+    <div class="intro-row">
+      <div class="intro-count">
+        OWNED &middot; <b id="owned-count">14</b> OF 14
+        <span class="complete-badge">COMPLETE BINDER</span>
+      </div>
+      <div class="filter-row" role="tablist" aria-label="Filter binder">
+        <button class="filter-btn is-active" data-filter="all">ALL</button>
+        <button class="filter-btn" data-filter="templates">TEMPLATES</button>
+        <button class="filter-btn" data-filter="guides">GUIDES</button>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- B · CARDS GRID — 4 phase clusters -->
+  <section class="phase" data-phase="planning">
+    <div class="phase-divider">
+      <div class="phase-name">&mdash; Planning &mdash;</div>
+      <div class="phase-rule"></div>
+      <div class="phase-count">02 subjects</div>
+    </div>
+    <div class="grid">
+      <!-- DOC-201 Master Budget -->
+      <article class="card" data-doc="201" data-paired="true">
+        <div class="card-ref">REF // MAKE A COPY &middot; GOOGLE SHEET</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-201</span>
+            </div>
+            <div class="card-cover-title">Master Budget</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_201_master_budget.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-201</div>
+          <div class="card-pair">TEMPLATE + GUIDE</div>
+        </div>
+        <h3 class="card-name">Master Budget</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/spreadsheets/d/1mwxjZEF6ur6qOO0rdChFhdCt3m9SywnK40dWvBoenDU/copy" target="_blank" rel="noopener">MAKE A COPY <span class="arrow">&rarr;</span></a>
+          <button class="btn btn-secondary" data-guide="Master Budget">READ GUIDE <span class="arrow">&rarr;</span></button>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-201">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+
+      <!-- DOC-202 Show Design Worksheet -->
+      <article class="card" data-doc="202" data-paired="false">
+        <div class="card-ref">REF // MAKE A COPY &middot; GOOGLE SHEET</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-202</span>
+            </div>
+            <div class="card-cover-title">Show Design Worksheet</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_202_show_design_worksheet.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-202</div>
+          <div class="card-pair template-only">TEMPLATE ONLY</div>
+        </div>
+        <h3 class="card-name">Show Design Worksheet</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/spreadsheets/d/1xf4-tGSdvH_HqZBTQQpZBncKR82cK_hVY2UmvQzqIwI/copy" target="_blank" rel="noopener">MAKE A COPY <span class="arrow">&rarr;</span></a>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-202">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+    </div>
+  </section>
+
+  <section class="phase" data-phase="team">
+    <div class="phase-divider">
+      <div class="phase-name">&mdash; Team &amp; Advance &mdash;</div>
+      <div class="phase-rule"></div>
+      <div class="phase-count">07 subjects</div>
+    </div>
+    <div class="grid">
+      <!-- DOC-203 Crew Onboarding -->
+      <article class="card" data-doc="203" data-paired="false">
+        <div class="card-ref">REF // DOWNLOAD &middot; PDF</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-203</span>
+            </div>
+            <div class="card-cover-title">Crew Onboarding</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_203_crew_onboarding.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-203</div>
+          <div class="card-pair template-only">TEMPLATE ONLY</div>
+        </div>
+        <h3 class="card-name">Crew Onboarding</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://drive.google.com/uc?export=download&id=1rQV9VGJ4xCnQJUJd7xC0aYU9vjpL9NEd" target="_blank" rel="noopener" download>DOWNLOAD <span class="arrow">&darr;</span></a>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-203">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+
+      <!-- DOC-204 Technical Rider -->
+      <article class="card" data-doc="204" data-paired="true">
+        <div class="card-ref">REF // MAKE A COPY &middot; GOOGLE DOC</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-204</span>
+            </div>
+            <div class="card-cover-title">Technical Rider</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_204_technical_rider.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-204</div>
+          <div class="card-pair">TEMPLATE + GUIDE</div>
+        </div>
+        <h3 class="card-name">Technical Rider</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/document/d/1GxSnWdOkDKt8TvL-vNdAmbXWRCyN3y5lwWSAeues7u4/copy" target="_blank" rel="noopener">MAKE A COPY <span class="arrow">&rarr;</span></a>
+          <button class="btn btn-secondary" data-guide="Technical Rider">READ GUIDE <span class="arrow">&rarr;</span></button>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-204">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+
+      <!-- DOC-205 Input List -->
+      <article class="card" data-doc="205" data-paired="false">
+        <div class="card-ref">REF // MAKE A COPY &middot; GOOGLE SHEET</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-205</span>
+            </div>
+            <div class="card-cover-title">Input List</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_205_input_list.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-205</div>
+          <div class="card-pair template-only">TEMPLATE ONLY</div>
+        </div>
+        <h3 class="card-name">Input List</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/spreadsheets/d/1Ng2_KvL4gbz6jcvmxt9AuH-NuO1rj2may3V1s91jmZY/copy" target="_blank" rel="noopener">MAKE A COPY <span class="arrow">&rarr;</span></a>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-205">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+
+      <!-- DOC-206 Hospitality Rider -->
+      <article class="card" data-doc="206" data-paired="true">
+        <div class="card-ref">REF // MAKE A COPY &middot; GOOGLE DOC</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-206</span>
+            </div>
+            <div class="card-cover-title">Hospitality Rider</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_206_hospitality_rider.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-206</div>
+          <div class="card-pair">TEMPLATE + GUIDE</div>
+        </div>
+        <h3 class="card-name">Hospitality Rider</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/document/d/1DwSa9Ws23A_Mu6_88UNMP2GWSTMMygYLyQTNqqNEYDU/copy" target="_blank" rel="noopener">MAKE A COPY <span class="arrow">&rarr;</span></a>
+          <button class="btn btn-secondary" data-guide="Hospitality Rider">READ GUIDE <span class="arrow">&rarr;</span></button>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-206">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+
+      <!-- DOC-207 Truck Routing -->
+      <article class="card" data-doc="207" data-paired="false">
+        <div class="card-ref">REF // MAKE A COPY &middot; GOOGLE SHEET</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-207</span>
+            </div>
+            <div class="card-cover-title">Truck Routing</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_207_truck_routing.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-207</div>
+          <div class="card-pair template-only">TEMPLATE ONLY</div>
+        </div>
+        <h3 class="card-name">Truck Routing</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/spreadsheets/d/1sGxceFosTELT8CCLUS_ffcZr336_jEDSf7Xj1odVs10/copy" target="_blank" rel="noopener">MAKE A COPY <span class="arrow">&rarr;</span></a>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-207">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+
+      <!-- DOC-208 Travel Grid -->
+      <article class="card" data-doc="208" data-paired="false">
+        <div class="card-ref">REF // MAKE A COPY &middot; GOOGLE SHEET</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-208</span>
+            </div>
+            <div class="card-cover-title">Travel Grid</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_208_travel_grid.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-208</div>
+          <div class="card-pair template-only">TEMPLATE ONLY</div>
+        </div>
+        <h3 class="card-name">Travel Grid</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/spreadsheets/d/1AdBOrYa3y0XJ8Ek9Ow4O9y-IFGaD0RjqGwNsSEibJpY/copy" target="_blank" rel="noopener">MAKE A COPY <span class="arrow">&rarr;</span></a>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-208">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+
+      <!-- DOC-209 Show Advance Packet -->
+      <article class="card" data-doc="209" data-paired="true">
+        <div class="card-ref">REF // MAKE A COPY &middot; GOOGLE SHEET</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-209</span>
+            </div>
+            <div class="card-cover-title">Show Advance Packet</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_209_show_advance_packet.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-209</div>
+          <div class="card-pair">TEMPLATE + GUIDE</div>
+        </div>
+        <h3 class="card-name">Show Advance Packet</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/spreadsheets/d/1cYavN5BX6KTDGQtRezdPyviY83N6ISEFYH5TY3NtsP8/copy" target="_blank" rel="noopener">MAKE A COPY <span class="arrow">&rarr;</span></a>
+          <button class="btn btn-secondary" data-guide="Show Advance Packet">READ GUIDE <span class="arrow">&rarr;</span></button>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-209">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+    </div>
+  </section>
+
+  <section class="phase" data-phase="showday">
+    <div class="phase-divider">
+      <div class="phase-name">&mdash; Show Day &mdash;</div>
+      <div class="phase-rule"></div>
+      <div class="phase-count">03 subjects</div>
+    </div>
+    <div class="grid">
+      <!-- DOC-210 Day Sheet -->
+      <article class="card" data-doc="210" data-paired="true">
+        <div class="card-ref">REF // MAKE A COPY &middot; GOOGLE SHEET</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-210</span>
+            </div>
+            <div class="card-cover-title">Day Sheet</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_210_day_sheet.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-210</div>
+          <div class="card-pair">TEMPLATE + GUIDE</div>
+        </div>
+        <h3 class="card-name">Day Sheet</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/spreadsheets/d/1SIkXlQ-1N9Egkbk84AQ6LkNOzU_6qR1GGBYhvbZdFqs/copy" target="_blank" rel="noopener">MAKE A COPY <span class="arrow">&rarr;</span></a>
+          <button class="btn btn-secondary" data-guide="Day Sheet">READ GUIDE <span class="arrow">&rarr;</span></button>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-210">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+
+      <!-- DOC-211 Pass Sheet -->
+      <article class="card" data-doc="211" data-paired="false">
+        <div class="card-ref">REF // MAKE A COPY &middot; GOOGLE SHEET</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-211</span>
+            </div>
+            <div class="card-cover-title">Pass Sheet</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_211_pass_sheet.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-211</div>
+          <div class="card-pair template-only">TEMPLATE ONLY</div>
+        </div>
+        <h3 class="card-name">Pass Sheet</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/spreadsheets/d/1wlqRVcUAnnL6a7Cyc3O4FODy1klVBXlaDQeD2MDjUG4/copy" target="_blank" rel="noopener">MAKE A COPY <span class="arrow">&rarr;</span></a>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-211">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+
+      <!-- DOC-212 Wayfinding Pack -->
+      <article class="card" data-doc="212" data-paired="false">
+        <div class="card-ref">REF // MAKE A COPY &middot; GOOGLE DOC</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-212</span>
+            </div>
+            <div class="card-cover-title">Wayfinding Pack</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_212_wayfinding_pack.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-212</div>
+          <div class="card-pair template-only">TEMPLATE ONLY</div>
+        </div>
+        <h3 class="card-name">Wayfinding Pack</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/document/d/1B5-natoPJb5Rhw82W8fgovH56kYP7Q0QS-0Vyoz6Z9Q/copy" target="_blank" rel="noopener">MAKE A COPY <span class="arrow">&rarr;</span></a>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-212">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+    </div>
+  </section>
+
+  <section class="phase" data-phase="close">
+    <div class="phase-divider">
+      <div class="phase-name">&mdash; The Close &mdash;</div>
+      <div class="phase-rule"></div>
+      <div class="phase-count">02 subjects</div>
+    </div>
+    <div class="grid">
+      <!-- DOC-213 Road Report -->
+      <article class="card" data-doc="213" data-paired="true">
+        <div class="card-ref">REF // MAKE A COPY &middot; GOOGLE SHEET</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-213</span>
+            </div>
+            <div class="card-cover-title">Road Report</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_213_road_report.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-213</div>
+          <div class="card-pair">TEMPLATE + GUIDE</div>
+        </div>
+        <h3 class="card-name">Road Report</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/spreadsheets/d/1-333VPUCc_80HUCvkEc1v64Duw8TjUFBc1SA_G266zY/copy" target="_blank" rel="noopener">MAKE A COPY <span class="arrow">&rarr;</span></a>
+          <button class="btn btn-secondary" data-guide="Road Report">READ GUIDE <span class="arrow">&rarr;</span></button>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-213">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+
+      <!-- DOC-214 Show Settlement -->
+      <article class="card" data-doc="214" data-paired="true">
+        <div class="card-ref">REF // MAKE A COPY &middot; GOOGLE SHEET</div>
+        <div class="card-visual">
+          <div class="card-cover">
+            <div class="card-cover-top">
+              <span class="cc-tag">// TEMPLATE</span>
+              <span class="cc-doc">DOC-214</span>
+            </div>
+            <div class="card-cover-title">Show Settlement</div>
+            <div class="card-cover-struct">
+              <div class="cc-header-row"><span></span><span></span><span></span><span></span></div>
+              <div class="cc-data-rows"><div></div><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="card-cover-stamp">BB</div>
+          </div>
+          <div class="card-preview"><img src="my-binder/Template_Previews/template_preview_214_show_settlement.png" alt=""></div>
+        </div>
+        <div class="card-meta-row">
+          <div class="card-doc">DOC-214</div>
+          <div class="card-pair">TEMPLATE + GUIDE</div>
+        </div>
+        <h3 class="card-name">Show Settlement</h3>
+        <div class="card-unowned-tag">NOT YET YOURS</div>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="https://docs.google.com/spreadsheets/d/18L56833fRhCVf9jzMW0RhR-Tg-4mXbY8sJSkZCGBWaA/copy" target="_blank" rel="noopener">MAKE A COPY <span class="arrow">&rarr;</span></a>
+          <button class="btn btn-secondary" data-guide="Show Settlement">READ GUIDE <span class="arrow">&rarr;</span></button>
+        </div>
+        <a class="card-getit" href="blueprint.html#doc-214">GET IT <span class="arrow">&rarr;</span></a>
+      </article>
+    </div>
+  </section>
+
+  <!-- C · BOTTOM BAND -->
+  <div class="bottom-band">
+    <p class="bottom-band-line"><em>Looking for the Course? Open the Course from <a href="members.html">The Desk</a>. For the Rider Builder or Stage Plot Builder, open the Toolkit.</em></p>
+    <p class="bottom-band-line">Any issues opening templates? Reach us at <a href="mailto:hello@backstageblueprint.com">hello@backstageblueprint.com</a> &mdash; we&rsquo;ll sort it.</p>
+  </div>
+
+</main>
+
+<!-- FOOTER STATUS LINE -->
+<footer class="shell-foot">
+  <div><span class="live-dot"></span>// SESSION LIVE &middot; MEMBER &middot; GIBBY</div>
+  <div>BCKSTG &middot; BLPRNT &middot; MY BINDER</div>
+</footer>
+
+
+<!-- GUIDE READER PLACEHOLDER MODAL -->
+<div class="gr-modal" id="gr-modal" role="dialog" aria-modal="true">
+  <div class="gr-card">
+    <div class="gr-tag">// GUIDE READER</div>
+    <h2 class="gr-title" id="gr-title">Guide</h2>
+    <p class="gr-sub">The in-site Guide Reader is coming soon. We&rsquo;re building the page-turn reader to live right inside your binder.</p>
+    <button class="gr-close" type="button" id="gr-close">CLOSE</button>
+  </div>
+</div>
+
+
+<script>
+/* ============================================================
+   My Binder — interaction layer
+   ============================================================ */
+(function () {
+  'use strict';
+
+  // -------- ENTITLEMENTS STUB ----------
+  // Until Supabase is wired, ownership is a hand-edited array.
+  // URL ?state=A | ?state=B | ?state=C overrides for QA / preview.
+  // A = 0 owned, B = partial (random subset), C = all owned.
+  const ALL_DOCS = ['201','202','203','204','205','206','207','208','209','210','211','212','213','214'];
+
+  const ENTITLEMENTS = {
+    A: [],
+    B: ['201','203','204','210','213'],   // sample partial
+    C: ALL_DOCS.slice(),
+  };
+
+  // Read URL param if provided, otherwise default to C (full).
+  const params = new URLSearchParams(window.location.search);
+  const stateParam = (params.get('state') || 'C').toUpperCase();
+  const state = ['A','B','C'].includes(stateParam) ? stateParam : 'C';
+  const owned = ENTITLEMENTS[state];
+
+  document.body.setAttribute('data-state', state);
+
+  // Mark unowned cards
+  document.querySelectorAll('.card').forEach(card => {
+    const doc = card.getAttribute('data-doc');
+    if (!owned.includes(doc)) {
+      card.classList.add('is-unowned');
+    }
+  });
+
+  // Update count
+  document.getElementById('owned-count').textContent = owned.length;
+
+  // -------- FILTER ROW ----------
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      const f = btn.getAttribute('data-filter');
+      document.body.setAttribute('data-filter', f);
+    });
+  });
+
+  // -------- READ GUIDE PLACEHOLDER ----------
+  const modal = document.getElementById('gr-modal');
+  const modalTitle = document.getElementById('gr-title');
+  const modalClose = document.getElementById('gr-close');
+
+  document.querySelectorAll('.btn-secondary[data-guide]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      modalTitle.textContent = btn.getAttribute('data-guide') + ' — Guide';
+      modal.classList.add('is-open');
+    });
+  });
+  modalClose.addEventListener('click', () => modal.classList.remove('is-open'));
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.classList.remove('is-open');
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+      modal.classList.remove('is-open');
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

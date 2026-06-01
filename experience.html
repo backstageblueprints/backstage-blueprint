@@ -1,0 +1,3077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1B3D6E">
+<title>Backstage Blueprint — The Production</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;700;900&family=Inter:wght@400;500;600;700&family=Teko:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   PALETTE & GLOBALS — Backstage Blueprint brand
+   ========================================================= */
+:root {
+  --navy:        #1B3D6E;
+  --navy-deep:   #142C4F;
+  --orange:      #D85A1F;
+  --cream:       #F2EBDD;
+  --ink:         #0D0D0D;
+  --grid-line:   rgba(242, 235, 221, 0.08);
+  --grid-major:  rgba(242, 235, 221, 0.14);
+  --glow-rgb:    255, 245, 215;
+  /* Display font — brand-locked: Archivo (Omnibus-Type, SIL OFL).
+     Used for headlines, hero statements, covers, course titles.
+     Weights available: 300 / 700 / 900. Use 900 for display, 700 for sub. */
+  --display-font: 'Archivo', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+html, body {
+  background: var(--navy);
+  color: var(--cream);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body {
+  /* Continuous blueprint grid background across the whole site */
+  background-color: var(--navy);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px, 200px 200px, 200px 200px;
+  background-attachment: fixed;
+}
+
+/* Scroll snapping — each scene locks into view */
+.tour {
+  scroll-snap-type: y mandatory;
+  height: 100vh;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+.scene {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Top/bottom gradients for legibility over the grid */
+.scene::before,
+.scene::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 70;
+  pointer-events: none;
+}
+.scene::before {
+  top: 0;
+  height: 120px;
+  background: linear-gradient(180deg, rgba(20,44,79,0.65) 0%, rgba(20,44,79,0) 100%);
+}
+.scene::after {
+  bottom: 0;
+  height: 120px;
+  background: linear-gradient(0deg, rgba(20,44,79,0.65) 0%, rgba(20,44,79,0) 100%);
+}
+
+/* =========================================================
+   PERSISTENT HEADER + FOOTER UI (sticky over the tour)
+   ========================================================= */
+/* Brand mark — Archivo 900 (display system). When a real logo image file
+   is ready, replace the <div class="brand-mark">…</div> markup with
+   <img class="brand-mark" src="path/to/logo.png" alt="BCKSTG BLPRNT"> and
+   remove the text styles below (or add an img rule sized appropriately). */
+.brand-mark {
+  position: fixed;
+  top: 20px;
+  left: 32px;
+  z-index: 200;
+  font-family: var(--display-font);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--cream);
+  pointer-events: auto;
+}
+.brand-mark .reg {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border: 1.25px solid var(--cream);
+  border-radius: 50%;
+  font-family: 'SF Mono', monospace;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 10px;
+  text-align: center;
+  vertical-align: 4px;
+  margin-left: 6px;
+}
+
+.cue-indicator {
+  position: fixed;
+  top: 26px;
+  right: 32px;
+  z-index: 200;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(242, 235, 221, 0.7);
+  user-select: none;
+}
+.cue-indicator .cue-num {
+  color: var(--orange);
+  font-weight: 700;
+}
+.cue-indicator .cue-name {
+  margin-left: 14px;
+  color: rgba(242, 235, 221, 0.55);
+  font-size: 9px;
+}
+
+/* Stage-manager-style mini cue list / scene jumper, right side */
+.cue-list {
+  position: fixed;
+  right: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  pointer-events: auto;
+}
+.cue-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid rgba(242, 235, 221, 0.45);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: background 240ms ease, border-color 240ms ease, transform 240ms ease;
+}
+.cue-dot.active {
+  background: var(--orange);
+  border-color: var(--orange);
+  transform: scale(1.25);
+}
+.cue-dot:hover {
+  border-color: var(--cream);
+}
+
+/* Tour status line — bottom-left, like an SM console */
+.tour-status {
+  position: fixed;
+  bottom: 22px;
+  left: 32px;
+  z-index: 200;
+  font-family: 'SF Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(242, 235, 221, 0.9);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+}
+.tour-status .live-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--orange);
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: 1px;
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+/* Scroll cue (bottom center, animated) — sits ABOVE the bottom gradient so it's readable */
+.scroll-cue {
+  position: absolute;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 75;
+  font-family: 'SF Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  color: rgba(242, 235, 221, 0.92);
+  text-transform: uppercase;
+  pointer-events: none;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+  animation: scroll-cue-bob 2.4s ease-in-out infinite;
+}
+.scroll-cue::after {
+  content: "↓";
+  display: block;
+  margin-top: 10px;
+  font-size: 20px;
+  color: var(--orange);
+  text-shadow: 0 0 12px rgba(216, 90, 31, 0.5);
+}
+@keyframes scroll-cue-bob {
+  0%, 100% { transform: translate(-50%, 0);   opacity: 0.7; }
+  50%      { transform: translate(-50%, 6px); opacity: 1; }
+}
+
+/* =========================================================
+   SCENE 1 — EST. — XLR cable slam, snap to flat schematic
+   ========================================================= */
+.scene-est {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.est-stage {
+  position: relative;
+  width: min(96vw, calc(96vh * 16/9));
+  aspect-ratio: 16/9;
+  max-width: 100vw;
+  overflow: hidden;
+}
+.est-stage img {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+.est-bg-1 { z-index: 1; opacity: 1; transition: opacity 0ms; }
+.est-bg-2 { z-index: 1; opacity: 0; transition: opacity 0ms; }
+.scene-est.cue-flat .est-bg-1 { opacity: 0; }
+.scene-est.cue-flat .est-bg-2 { opacity: 1; }
+
+.est-cable {
+  position: absolute; inset: 0;
+  z-index: 5;
+  transition: opacity 0ms;
+}
+.est-cable img {
+  animation: breathe 6s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(1.000); filter: drop-shadow(0 1px 2px rgba(0,0,0,0.20)); }
+  50%      { transform: scale(1.010); filter: drop-shadow(0 9px 16px rgba(0,0,0,0.45)); }
+}
+
+.est-button {
+  position: absolute; inset: 0;
+  z-index: 8;
+  transition: opacity 0ms,
+              transform 160ms cubic-bezier(0.22, 1.2, 0.36, 1),
+              filter 160ms ease;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.22));
+}
+
+.est-hot {
+  position: absolute;
+  left: 42%; top: 40%;
+  width: 16%; height: 14%;
+  z-index: 25;
+  cursor: pointer;
+}
+.est-hot:hover ~ .est-button {
+  transform: scale(1.045);
+  filter: drop-shadow(0 13px 22px rgba(0,0,0,0.55))
+          drop-shadow(0 0 24px rgba(var(--glow-rgb), 0.65));
+}
+
+/* (CSS click-begin button removed — reverted to the original CLICK_TO_BEGIN.png image.) */
+
+/* The slam animation — fired by JS adding .cue-slam to the scene */
+.scene-est.cue-slam .est-cable,
+.scene-est.cue-slam .est-button {
+  animation: slam-cycle 460ms forwards;
+}
+@keyframes slam-cycle {
+  0%   { transform: scale(1); animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1); }
+  48%  { transform: scale(1.075); animation-timing-function: linear; }
+  62%  { transform: scale(1.075); animation-timing-function: cubic-bezier(0.7, 0, 0.85, 0); }
+  100% { transform: scale(1); }
+}
+.scene-est.cue-flat .est-cable,
+.scene-est.cue-flat .est-button {
+  opacity: 0;
+  pointer-events: none;
+}
+.scene-est.cue-flat .est-hot { display: none; }
+
+/* =========================================================
+   PASS → MEMBERS TRANSITION — lanyard falls downward off-screen,
+   bg fades to black, page navigates to members.html where the
+   laminate drops in from above and lands on the desk.
+   ========================================================= */
+.scene-pass.pass-falling .lanyard-wrap {
+  animation: pass-fall 720ms cubic-bezier(0.5, 0, 0.75, 0) forwards;
+}
+@keyframes pass-fall {
+  0%   { transform: translateY(0)     rotate(0deg);   opacity: 1; }
+  60%  { transform: translateY(70vh)  rotate(6deg);   opacity: 1; }
+  100% { transform: translateY(140vh) rotate(10deg);  opacity: 0.85; }
+}
+.scene-pass.pass-falling .scene-title,
+.scene-pass.pass-falling .pass-cta-prompt,
+.scene-pass.pass-falling .scroll-cue {
+  animation: pass-elements-fade 360ms ease-out forwards;
+}
+@keyframes pass-elements-fade {
+  to { opacity: 0; }
+}
+/* Black-out overlay covers the scene as the lanyard exits */
+.pass-fade-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 600ms ease-in;
+}
+.scene-pass.pass-falling ~ .pass-fade-overlay,
+.pass-fade-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Per-scene big display title (Pass, Console, etc.) — Archivo 900 */
+.scene-title {
+  position: absolute;
+  top: 6vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 18;
+  font-family: var(--display-font);
+  font-size: clamp(40px, 6vw, 88px);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 0.95;
+  text-transform: uppercase;
+  color: var(--cream);
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+  max-width: 92vw;
+}
+.scene-title .accent { color: var(--orange); }
+.scene-title .sub {
+  display: block;
+  font-family: 'SF Mono', monospace;
+  font-size: clamp(9px, 0.9vw, 12px);
+  letter-spacing: 0.4em;
+  font-weight: 700;
+  color: rgba(242, 235, 221, 0.55);
+  margin-top: 8px;
+}
+
+/* Hide the scroll cue once the slam fires — auto-scroll now takes you forward */
+.scene-est .scroll-cue { transition: opacity 400ms ease; }
+.scene-est.cue-slam .scroll-cue { opacity: 0; pointer-events: none; }
+
+/* Arrow-only scroll cue (EST scene) — no text, just the ↓ arrow.
+   The base .scroll-cue::after already renders the arrow; we just empty
+   the wrapper text and let the pseudo-element carry the visual. */
+.scroll-cue-arrow-only::after { font-size: 28px; opacity: 0.7; }
+.scroll-cue-arrow-only        { font-size: 0;  }  /* kill the (empty) text node */
+
+/* =========================================================
+   POWER ON — layers ONTO scene-est after the slam. The flat
+   XLR sketch (est-bg-2) stays visible behind, so the window
+   feels cut into the blueprint the user just landed on.
+   No scroll change — everything builds in place.
+   ========================================================= */
+.power-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 600ms ease-out;
+}
+.scene-est.cue-flat .power-layer { opacity: 1; }
+.scene-est.cue-powered .power-layer { pointer-events: auto; }
+
+.power-stage {
+  /* Match est-stage exactly — both assets share the same 4000×2250 canvas, so
+     pixel-mapped percentages line up perfectly with the XLR sketch behind. */
+  position: relative;
+  width: min(96vw, calc(96vh * 16/9));
+  aspect-ratio: 16/9;
+  max-width: 100vw;
+}
+.power-stage img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Layer 01 — PD wall + cables (backmost). Fades in DURING the cable slam so
+   it's already there when the frame snaps in. Triggered by cue-slam (not a
+   later cue) per Gibby's spec — "as soon as the frame snaps, the BG is ready." */
+.power-bg-pd {
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 380ms ease-out 60ms;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,0.4));
+}
+.scene-est.cue-slam .power-bg-pd { opacity: 1; }
+
+/* Slam darkness — fades in at slam impact (cue-flat). Covers the whole scene
+   with a subtle darkness, EXCEPT inside the XLR-circle cutout (a transparent
+   hole in the gradient leaves that area at full brightness). Sits above the
+   frame (z=4) but below status text/UI (z=6+), so the title + status read
+   clearly while the surrounding world fades back. */
+.scene-est-darkness {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 280ms ease-out;
+  background: radial-gradient(circle at 50% 50%,
+    transparent 0,
+    transparent 11vw,                       /* clear inside the cutout */
+    rgba(0, 0, 0, 0.32) 14vw,               /* moderate just outside */
+    rgba(0, 0, 0, 0.62) 32vw,               /* steeper ramp through mid */
+    rgba(0, 0, 0, 0.82) 62vw);              /* darker, sooner, at the perimeter */
+}
+.scene-est.cue-flat .scene-est-darkness { opacity: 1; }
+
+/* Cutout vignette — circular radial gradient centered on the frame's hole.
+   Transparent in the middle so the PD is clearly visible there; ramps to
+   dark at the cutout edges, simulating a recessed window. Lives at z-index 2
+   (same as the PD) but later in DOM order, so it stacks on top of the PD
+   only — the switch box (z=3) renders above this layer untouched.
+   The portion of this gradient that extends past the cutout is naturally
+   hidden behind the opaque frame at z=4. */
+.power-cutout-vignette {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 700ms ease-out 200ms;
+  background: radial-gradient(circle 13vw at 49.6% 49.7%,
+    transparent 0%,
+    transparent 58%,
+    rgba(0, 0, 0, 0.35) 82%,
+    rgba(0, 0, 0, 0.60) 100%);
+}
+.scene-est.cue-flat .power-cutout-vignette { opacity: 1; }
+
+/* Layer 03 — blue grid + XLR-circle frame (front). Transparent circular cutout
+   in the center reveals 01 and 02 behind. Snaps in at cue-flat — the moment
+   the cable lands, this replaces the est-bg-2 sketch visually. */
+.power-frame-grid {
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 80ms linear, filter 700ms ease-out;
+}
+.scene-est.cue-flat .power-frame-grid {
+  opacity: 1;
+  filter: drop-shadow(0 0 22px rgba(0,0,0,0.5));
+}
+
+/* Layer 02 — power switchbox. Rises into view from below (lanyard-style entry)
+   on cue-snap-02-in. Once settled, mouse parallax via JS overrides the resting
+   state; a gentle float keeps it alive when the cursor is far away. */
+.power-stage { overflow: hidden; perspective: 1200px; }
+.power-switch-box {
+  z-index: 3;
+  opacity: 0;
+  transform-origin: 49.5% 60%;
+  transform: translateY(55%) scale(0.92);
+  transition: opacity 700ms ease-out 200ms,
+              transform 1000ms cubic-bezier(0.22, 1, 0.36, 1) 200ms;
+  filter: drop-shadow(0 14px 28px rgba(0,0,0,0.6))
+          drop-shadow(0  4px  8px rgba(0,0,0,0.45));
+  will-change: transform;
+}
+.scene-est.cue-snap-02-in .power-switch-box {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.scene-est.cue-power-ready .power-switch-box {
+  animation: switch-float 5.5s ease-in-out infinite;
+  transition: transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+              filter    350ms ease-out;
+}
+@keyframes switch-float {
+  0%,100% { transform: translateY(0)     rotateY(-1.2deg) rotateX( 0.6deg) scale(1); }
+  50%     { transform: translateY(-3px)  rotateY( 1.2deg) rotateX(-0.5deg) scale(1.004); }
+}
+
+/* Powered state — slight brightness pop preserves shadows */
+.scene-est.cue-powered .power-bg-pd      { filter: brightness(1.08) saturate(1.12) drop-shadow(0 4px 14px rgba(0,0,0,0.4)); }
+.scene-est.cue-powered .power-switch-box { filter: brightness(1.12) saturate(1.15) drop-shadow(0 14px 28px rgba(0,0,0,0.6)) drop-shadow(0 4px 8px rgba(0,0,0,0.45)); }
+.scene-est.cue-powered .power-frame-grid { filter: drop-shadow(0 0 22px rgba(120, 255, 160, 0.25)); }
+
+/* Click hotspot — covers the switch's visible area inside the frame's cutout */
+.power-switch-hotspot {
+  position: absolute;
+  left: 40%;
+  top: 44%;
+  width: 19%;
+  height: 26%;
+  z-index: 8;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 600ms ease-out;
+}
+.scene-est.cue-power-ready .power-switch-hotspot {
+  opacity: 1;
+  pointer-events: auto;
+}
+.scene-est.cue-powered .power-switch-hotspot { cursor: default; pointer-events: none; }
+
+/* Swelling glow centered on the POWER ON/OFF panel. Lives below the LED
+   and hotspot in z-order, breathing to draw the eye there. */
+.power-switch-swell {
+  position: absolute;
+  left: 47.6%;
+  top: 55.88%;
+  transform: translate(-50%, -50%);
+  width: 14%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(216, 90, 31, 0.40) 0%,
+    rgba(216, 90, 31, 0.18) 30%,
+    rgba(216, 90, 31, 0.05) 60%,
+    transparent 80%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9;
+  transition: opacity 700ms ease-out;
+}
+.scene-est.cue-power-ready .power-switch-swell {
+  opacity: 1;
+  animation: switch-swell 2.4s ease-in-out infinite;
+}
+.scene-est.cue-powered .power-switch-swell { opacity: 0; }
+@keyframes switch-swell {
+  0%, 100% { transform: translate(-50%, -50%) scale(0.85); filter: brightness(1);    }
+  50%      { transform: translate(-50%, -50%) scale(1.18); filter: brightness(1.25); }
+}
+
+/* (Old .power-cta arrow callout removed — the ENGAGE POWER button image
+   asset replaces the textual call-to-action.) */
+
+/* Power ripple — expanding ring on click, radiates from the switch */
+.power-ripple {
+  position: absolute;
+  left: 47.6%;
+  top: 55.88%;
+  width: 4%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) scale(1);
+  border-radius: 50%;
+  border: 2px solid rgba(120, 255, 160, 0.95);
+  box-shadow:
+    0 0 12px rgba(120, 255, 160, 0.85),
+    inset 0 0 12px rgba(120, 255, 160, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 13;
+}
+.scene-est.cue-powered .power-ripple {
+  animation: power-ripple 1100ms ease-out forwards;
+}
+@keyframes power-ripple {
+  0%   { transform: translate(-50%, -50%) scale(1);  opacity: 0.95; border-width: 3px; }
+  100% { transform: translate(-50%, -50%) scale(28); opacity: 0;    border-width: 0.5px; }
+}
+
+/* Three-stage status text — content swaps via class progression */
+.power-status::before { content: "OFFLINE \2014  CLICK TO ENGAGE"; }
+.scene-est.cue-powered      .power-status::before { content: "INITIALIZING RIG ..."; }
+.scene-est.cue-rig-ready    .power-status::before { content: "RIG READY \2014  ENTERING LIGHTING"; }
+
+/* Status colors per stage */
+.scene-est.cue-power-ready .power-status { color: rgba(216, 90, 31, 0.92); }
+.scene-est.cue-powered     .power-status { color: rgba(220, 200, 90, 0.95); }
+.scene-est.cue-rig-ready   .power-status { color: rgba(60, 230, 100, 1.0); }
+
+/* =========================================================
+   LIGHTS SCENE — warm-up entrance
+   Beams start dark when the scene enters view, fade up over
+   ~900ms (the "rig coming online" feel) before the cursor
+   tracking takes over.
+   ========================================================= */
+.scene-hero.beams-off .hero-light-beam,
+.scene-hero.beams-off .hero-silhouette-cone {
+  opacity: 0;
+  transition: opacity 900ms ease-out;
+}
+
+/* (Old .power-switch-hotspot styles removed — replaced by .power-engage-hot
+   which wraps the new ENGAGE POWER button asset.) */
+
+/* LED dot — overlaid at the EXACT pixel location of the orange dot on the
+   v2 power switchbox PNG: canvas 47.6% × 55.88%. */
+.power-led {
+  position: absolute;
+  left: 47.6%;
+  top: 55.88%;
+  width: 1.1%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff8a4a 0%, #e04a18 55%, #6a1a0a 100%);
+  box-shadow:
+    0 0 6px rgba(255, 90, 30, 0.95),
+    0 0 14px rgba(255, 90, 30, 0.55),
+    0 0 28px rgba(255, 90, 30, 0.28);
+  z-index: 11;
+  pointer-events: none;
+  opacity: 0;
+  animation: led-pulse-red 1.6s ease-in-out infinite;
+  transition: background 380ms ease-out, box-shadow 380ms ease-out, opacity 500ms ease-out 1200ms;
+}
+.scene-est.cue-power-ready .power-led { opacity: 1; }
+@keyframes led-pulse-red {
+  0%, 100% { filter: brightness(1)    drop-shadow(0 0 4px rgba(255, 90, 30, 0.7)); }
+  50%      { filter: brightness(1.25) drop-shadow(0 0 10px rgba(255, 90, 30, 0.95)); }
+}
+.scene-est.cue-powered .power-led {
+  background: radial-gradient(circle at 35% 30%, #c8ff9c 0%, #2cd84a 55%, #0a5a18 100%);
+  box-shadow:
+    0 0 8px rgba(60, 230, 100, 1.0),
+    0 0 18px rgba(60, 230, 100, 0.65),
+    0 0 38px rgba(60, 230, 100, 0.32);
+  animation: led-pulse-green 2.2s ease-in-out infinite;
+}
+@keyframes led-pulse-green {
+  0%, 100% { filter: brightness(1)    drop-shadow(0 0 5px rgba(60, 230, 100, 0.8)); }
+  50%      { filter: brightness(1.25) drop-shadow(0 0 14px rgba(60, 230, 100, 1.0)); }
+}
+
+/* Power-up flash — fires once on click, radiating from the LED */
+.power-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: radial-gradient(ellipse 60% 70% at 47.6% 55.88%,
+    rgba(120, 255, 160, 0.65) 0%,
+    rgba(120, 255, 160, 0.22) 22%,
+    transparent 65%);
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.scene-est.cue-flash .power-flash {
+  animation: power-flash 1100ms ease-out forwards;
+}
+@keyframes power-flash {
+  0%   { opacity: 0; }
+  18%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Engineering callouts inside the framed window */
+.power-callouts {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  font-family: 'SF Mono', monospace;
+  color: rgba(27, 61, 110, 0.7);
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+.power-callouts > div {
+  position: absolute;
+  opacity: 0;
+  transition: opacity 600ms ease-out 1500ms;
+}
+.scene-est.cue-power-ready .power-callouts > div { opacity: 1; }
+.power-callouts .pc-1 { top: 6%;  left: 7%;  }
+.power-callouts .pc-2 { top: 6%;  right: 7%; text-align: right; }
+.power-callouts .pc-3 { bottom: 6%; right: 7%; text-align: right; }
+
+/* Title + status badge */
+.power-title {
+  position: absolute;
+  top: 4vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  color: rgba(27, 61, 110, 0.85);
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 700ms ease-out 300ms;
+  pointer-events: none;
+}
+.scene-est.cue-power-ready .power-title { opacity: 1; }
+
+.power-status {
+  position: absolute;
+  top: 36%;                             /* just above center of the scene */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  color: rgba(216, 90, 31, 0.92);
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 500ms ease-out, color 350ms ease-out, border-color 350ms ease-out;
+  pointer-events: none;
+  /* Dark plate behind the text so it pops against the busy backdrop */
+  padding: 9px 16px 8px;
+  background: rgba(8, 18, 36, 0.72);
+  border: 1px solid rgba(216, 90, 31, 0.45);
+  border-radius: 2px;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+}
+.scene-est.cue-powered     .power-status { border-color: rgba(220, 200, 90, 0.55); }
+.scene-est.cue-rig-ready   .power-status { border-color: rgba(60, 230, 100, 0.6);  }
+.scene-est.cue-power-ready .power-status { opacity: 1; }
+.scene-est.cue-powered .power-status {
+  color: rgba(60, 200, 90, 0.98);
+}
+.power-status::before {
+  content: "OFFLINE \2014  CLICK SWITCH TO POWER ON";
+}
+.scene-est.cue-powered .power-status::before {
+  content: "POWER ON \2014  ADVANCING TO LIGHTS";
+}
+
+/* =========================================================
+   SCENE 2 — HERO — brand mark + moving light tracks cursor
+   ========================================================= */
+.scene-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+}
+
+/* Old SVG rig hidden — replaced by the truss image rig below */
+.hero-light-rig { display: none; }
+.hero-light-rig svg { width: 100%; height: 100%; overflow: visible; }
+
+/* Truss rig — static truss + 4 fixed lights, plus the live (middle) light layered on top.
+   Both PNGs are 4000×2250 same-canvas so they stack pixel-perfect. */
+.hero-truss-rig {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 82vw;
+  aspect-ratio: 16 / 9;
+  z-index: 5;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.35));
+}
+.truss-static,
+.truss-light-live {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* Three identical moving lights, positioned at left / center / right of the truss.
+   Each rotates around its own yoke pivot (50% × 11.56% of its own image box).
+   All three rotate in unison via the shared --light-tilt variable. */
+.truss-light-live {
+  transform-origin: 50% 11.56%;
+  transform: translateX(var(--light-offset, 0%)) rotate(var(--light-tilt, 0deg));
+  transition: transform 350ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.truss-light-left   { --light-offset: -20%; }
+.truss-light-center { --light-offset:   0%; }
+.truss-light-right  { --light-offset: +20%; }
+
+/* Scene 2 backdrop — dark moody grid only (no silhouettes here).
+   The beam screens over this to "light up" the grid where the cone passes. */
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Scene-wide vignette — soft edge darkening for depth */
+.hero-darkness {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: radial-gradient(ellipse 120% 100% at 50% 50%, transparent 40%, rgba(0,0,0,0.18) 100%);
+  pointer-events: none;
+}
+
+/* Silhouette reveal layer — pure black silhouettes on transparent.
+   Sits ABOVE the beam so silhouettes stay dark when the beam lights up the grid.
+   A cone-shaped mask reveals silhouettes only where the beam shines. The wrap
+   rotates with the beam; the inner image counter-rotates so the band stays put
+   while only the cone mask sweeps across them. */
+/* Three silhouette reveal cones, one per beam. Each cone has its mask centered
+   at its own --cone-x, and rotates with the shared --beam-tilt. The inner image
+   counter-rotates so the band stays still while the cone of revelation sweeps.
+   Opacity follows the same intensity variable as that cone's beam. */
+.hero-silhouette-cone {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  transform-origin: var(--cone-x, 50%) 8.25vw;
+  transform: rotate(var(--beam-tilt, 0deg));
+  -webkit-mask-image: radial-gradient(ellipse 13vw 110vh at var(--cone-x, 50%) 8.25vw,
+    black 0%, black 35%, rgba(0,0,0,0.65) 60%, rgba(0,0,0,0.2) 82%, transparent 95%);
+  mask-image: radial-gradient(ellipse 13vw 110vh at var(--cone-x, 50%) 8.25vw,
+    black 0%, black 35%, rgba(0,0,0,0.65) 60%, rgba(0,0,0,0.2) 82%, transparent 95%);
+  transition: transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+              opacity   220ms ease-out;
+}
+.cone-left   { --cone-x: 33.6%; opacity: var(--intensity-left,   0); }
+.cone-center { --cone-x: 50%;   opacity: var(--intensity-center, 1); }
+.cone-right  { --cone-x: 66.4%; opacity: var(--intensity-right,  0); }
+.hero-silhouette-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  transform-origin: var(--cone-x, 50%) 8.25vw;
+  transform: rotate(calc(var(--beam-tilt, 0deg) * -1));
+  transition: transform 350ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* The light beam — vertex aligned with the rig's lens. Element is way wider than
+   the viewport so the hard clip-path edges sit off-screen. Only the bright
+   center cone is ever visible; the gradient falls off softly into the scene. */
+/* Three beams, one per moving light. Each anchored at its own X position via
+   --beam-x. All three share the same tilt angle (--beam-tilt). Each beam's
+   opacity is controlled by its intensity variable so they cross-fade as the
+   cursor moves between zones. */
+.hero-light-beam {
+  position: absolute;
+  top: 8.25vw;
+  left: var(--beam-x, 50%);
+  transform-origin: 50% 0%;
+  width: 180vw;
+  height: 160vh;
+  z-index: 3;
+  pointer-events: none;
+  background: radial-gradient(ellipse 13vw 110vh at top,
+    rgba(var(--glow-rgb), 0.92) 0%,
+    rgba(var(--glow-rgb), 0.70) 25%,
+    rgba(var(--glow-rgb), 0.45) 50%,
+    rgba(var(--glow-rgb), 0.22) 72%,
+    rgba(var(--glow-rgb), 0.08) 88%,
+    rgba(var(--glow-rgb), 0)    100%);
+  clip-path: polygon(50% 0, 88.25% 100%, 11.75% 100%);
+  filter: blur(3px);                     /* slightly sharper baseline — less ambient haze when haze button is off */
+  mix-blend-mode: screen;
+  transform: translateX(-50%) rotate(var(--beam-tilt, 0deg));
+  transition: transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+              opacity   220ms ease-out;
+}
+.beam-left   { --beam-x: 33.6%; opacity: var(--intensity-left,   0); }
+.beam-center { --beam-x: 50%;   opacity: var(--intensity-center, 1); }
+.beam-right  { --beam-x: 66.4%; opacity: var(--intensity-right,  0); }
+
+/* CUE ANIMATIONS — pure CSS. The cue-XXX classes trigger keyframe animations
+   that the browser interpolates natively at the compositor level. No JS in
+   the loop = no rAF/transition fighting = no strobing. Colors snap at
+   keyframe boundaries (a handful per cue), opacity interpolates smoothly. */
+.scene-hero.cue-running .hero-light-beam {
+  transition: none;
+}
+
+@keyframes cue-wash {
+  0%   { opacity: 0; --glow-rgb: 80, 160, 255; }
+  10%  { opacity: 1; }
+  40%  { opacity: 1; --glow-rgb: 80, 160, 255; }
+  41%  { --glow-rgb: 217, 122, 58; }
+  74%  { opacity: 1; --glow-rgb: 217, 122, 58; }
+  75%  { --glow-rgb: 255, 255, 255; }
+  85%  { opacity: 1; }
+  100% { opacity: 0; --glow-rgb: 255, 255, 255; }
+}
+
+@keyframes cue-pulse {
+  0%   { opacity: 0; --glow-rgb: 80, 160, 255; }
+  3%   { opacity: 1; }
+  9%   { opacity: 1; --glow-rgb: 80, 160, 255; }
+  10%  { --glow-rgb: 217, 122, 58; opacity: 0.45; }
+  16%  { opacity: 1; }
+  17%  { --glow-rgb: 80, 160, 255; opacity: 0.45; }
+  23%  { opacity: 1; }
+  24%  { --glow-rgb: 217, 122, 58; opacity: 0.45; }
+  30%  { opacity: 1; }
+  31%  { --glow-rgb: 80, 160, 255; opacity: 0.45; }
+  37%  { opacity: 1; }
+  38%  { --glow-rgb: 217, 122, 58; opacity: 0.45; }
+  44%  { opacity: 1; }
+  45%  { --glow-rgb: 80, 160, 255; opacity: 0.45; }
+  51%  { opacity: 1; }
+  52%  { --glow-rgb: 217, 122, 58; opacity: 0.45; }
+  58%  { opacity: 1; }
+  59%  { --glow-rgb: 80, 160, 255; opacity: 0.45; }
+  65%  { opacity: 1; }
+  66%  { --glow-rgb: 217, 122, 58; opacity: 0.45; }
+  72%  { opacity: 1; }
+  78%  { --glow-rgb: 255, 255, 255; opacity: 1; }
+  92%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* CHASE — each beam has its own keyframe pattern with offset timing.
+   Orange chase L→C→R, then blue chase R→C→L, then white finale. */
+@keyframes cue-chase-left {
+  0%   { opacity: 0; --glow-rgb: 217, 122, 58; }
+  4%   { opacity: 1; }
+  16%  { opacity: 0; --glow-rgb: 217, 122, 58; }
+  77%  { --glow-rgb: 80, 160, 255; opacity: 0; }
+  82%  { opacity: 1; }
+  90%  { opacity: 0; --glow-rgb: 80, 160, 255; }
+  91%  { --glow-rgb: 255, 255, 255; }
+  93%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes cue-chase-center {
+  0%   { opacity: 0; --glow-rgb: 217, 122, 58; }
+  18%  { opacity: 0; }
+  22%  { opacity: 1; }
+  34%  { opacity: 0; --glow-rgb: 217, 122, 58; }
+  61%  { --glow-rgb: 80, 160, 255; opacity: 0; }
+  66%  { opacity: 1; }
+  74%  { opacity: 0; --glow-rgb: 80, 160, 255; }
+  91%  { --glow-rgb: 255, 255, 255; }
+  93%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes cue-chase-right {
+  0%   { opacity: 0; --glow-rgb: 217, 122, 58; }
+  34%  { opacity: 0; }
+  38%  { opacity: 1; }
+  50%  { opacity: 0; --glow-rgb: 217, 122, 58; }
+  45%  { --glow-rgb: 80, 160, 255; opacity: 0; }
+  50%  { opacity: 1; }
+  58%  { opacity: 0; --glow-rgb: 80, 160, 255; }
+  91%  { --glow-rgb: 255, 255, 255; }
+  93%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.scene-hero.cue-wash .hero-light-beam {
+  animation: cue-wash 4s linear forwards;
+}
+.scene-hero.cue-pulse .hero-light-beam {
+  animation: cue-pulse 4s linear forwards;
+}
+.scene-hero.cue-chase .beam-left   { animation: cue-chase-left   4s linear forwards; }
+.scene-hero.cue-chase .beam-center { animation: cue-chase-center 4s linear forwards; }
+.scene-hero.cue-chase .beam-right  { animation: cue-chase-right  4s linear forwards; }
+
+/* =========================================================
+   HAZE LAYER — atmospheric smoke that fills the scene when triggered
+   Sits above truss + silhouettes so the lights catch in it visually.
+   ========================================================= */
+.haze-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.4s ease-out;
+  mix-blend-mode: screen;
+}
+.haze-layer.active {
+  opacity: 1;
+  transition: opacity 0.7s ease-in;
+}
+.haze-blob {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(225, 230, 240, 0.18) 0%,
+    rgba(225, 230, 240, 0.09) 40%,
+    transparent 75%);
+  filter: blur(80px);
+  will-change: transform;
+}
+.haze-blob.b1 { left:  5%; top: 30%; width: 60vw; height: 55vh; animation: hd1  9s ease-in-out infinite alternate; }
+.haze-blob.b2 { left: 45%; top: 15%; width: 50vw; height: 50vh; animation: hd2 11s ease-in-out infinite alternate; }
+.haze-blob.b3 { left: 20%; top: 55%; width: 70vw; height: 50vh; animation: hd3 10s ease-in-out infinite alternate; }
+.haze-blob.b4 { left: 65%; top: 45%; width: 45vw; height: 50vh; animation: hd4 12s ease-in-out infinite alternate; }
+.haze-blob.b5 { left: 30%; top: 70%; width: 60vw; height: 40vh; animation: hd5  8s ease-in-out infinite alternate; }
+@keyframes hd1 { 0% { transform: translate( 0vw,  0vh) scale(1);    } 100% { transform: translate( 10vw, -4vh) scale(1.08); } }
+@keyframes hd2 { 0% { transform: translate(-3vw,  2vh) scale(1);    } 100% { transform: translate(  6vw, -3vh) scale(1.10); } }
+@keyframes hd3 { 0% { transform: translate( 0vw,  0vh) scale(1.05); } 100% { transform: translate( -8vw, -2vh) scale(1.00); } }
+@keyframes hd4 { 0% { transform: translate( 2vw, -2vh) scale(1);    } 100% { transform: translate( -5vw,  3vh) scale(1.06); } }
+@keyframes hd5 { 0% { transform: translate(-4vw,  0vh) scale(1.02); } 100% { transform: translate(  7vw, -3vh) scale(0.95); } }
+
+/* Beams brighten while haze is in the air — sells the "light catching in haze" effect */
+.scene-hero.haze-on .hero-light-beam {
+  filter: blur(4px) brightness(1.25);
+}
+
+/* =========================================================
+   HAZE CONTROL — in-world DMX-style hazer button (bottom-left)
+   ========================================================= */
+.haze-control {
+  position: absolute;
+  bottom: 4vh;
+  left: 3vw;
+  z-index: 16;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+  width: 88px;
+  background: linear-gradient(180deg, #1B3D6E 0%, #0A1828 100%);
+  border: 1px solid rgba(140, 175, 230, 0.4);
+  border-radius: 3px;
+  padding: 10px 8px 12px;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  color: #ECE8DB;
+  box-shadow:
+    0 4px 14px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.haze-control:hover {
+  border-color: rgba(216, 90, 31, 0.6);
+  box-shadow:
+    0 4px 14px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 0 12px rgba(216, 90, 31, 0.18);
+}
+.haze-control .label-top {
+  font-size: 7px;
+  letter-spacing: 0.25em;
+  opacity: 0.45;
+  text-transform: uppercase;
+}
+.haze-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3a1810;
+  border: 1px solid rgba(0,0,0,0.4);
+  margin: 2px 0;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.haze-control.firing .haze-led {
+  background: #D85A1F;
+  box-shadow: 0 0 8px #D85A1F, 0 0 14px rgba(216, 90, 31, 0.4);
+}
+.haze-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a5870 0%, #1B3D6E 70%, #0A1828 100%);
+  border: 1px solid #2a3a5a;
+  box-shadow:
+    inset 0 1px 2px rgba(255,255,255,0.15),
+    inset 0 -2px 4px rgba(0,0,0,0.4),
+    0 2px 4px rgba(0,0,0,0.5);
+  transition: transform 0.08s, box-shadow 0.08s;
+  margin: 2px 0;
+  pointer-events: none;
+}
+.haze-control:active .haze-button {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 -1px 2px rgba(255,255,255,0.1),
+    inset 0 2px 4px rgba(0,0,0,0.5),
+    0 1px 2px rgba(0,0,0,0.5);
+}
+.haze-label {
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+/* =========================================================
+   CUE PANEL — in-world lighting console (bottom-right)
+   ========================================================= */
+.cue-panel {
+  position: absolute;
+  bottom: 4vh;
+  right: 3vw;
+  z-index: 16;
+  pointer-events: auto;
+  user-select: none;
+  background: linear-gradient(180deg, #1B3D6E 0%, #0A1828 100%);
+  border: 1px solid rgba(140, 175, 230, 0.4);
+  border-radius: 3px;
+  padding: 10px;
+  font-family: 'SF Mono', monospace;
+  color: #ECE8DB;
+  box-shadow:
+    0 4px 14px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cue-panel-title {
+  font-size: 7px;
+  letter-spacing: 0.25em;
+  opacity: 0.45;
+  text-align: center;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.cue-button {
+  position: relative;
+  width: 110px;
+  height: 30px;
+  background: linear-gradient(180deg, rgba(140, 175, 230, 0.12) 0%, rgba(10, 24, 40, 0.5) 100%);
+  border: 1px solid rgba(140, 175, 230, 0.35);
+  border-radius: 2px;
+  color: #ECE8DB;
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 0 10px;
+}
+.cue-button::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2a1810;
+  border: 1px solid rgba(0,0,0,0.4);
+  flex-shrink: 0;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.cue-button:hover {
+  background: linear-gradient(180deg, rgba(140, 175, 230, 0.22) 0%, rgba(27, 61, 110, 0.6) 100%);
+  border-color: rgba(216, 90, 31, 0.6);
+}
+.cue-button.firing::before {
+  background: #D85A1F;
+  box-shadow: 0 0 6px #D85A1F, 0 0 12px rgba(216, 90, 31, 0.5);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 10;
+  padding-top: 30vh;  /* pushes wordmark below the light rig */
+}
+.hero-wordmark {
+  font-family: var(--display-font);  /* Archivo Black — matches scene-title on pages 4 + 5 */
+  font-size: clamp(44px, 8vw, 152px);  /* subtle downsize — Archivo 900 reads heavier than Teko at the same px */
+  letter-spacing: -0.01em;
+  line-height: 0.95;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--cream);
+  text-shadow: 0 0 28px rgba(var(--glow-rgb), 0.18);
+}
+.hero-wordmark .accent { color: var(--orange); }
+
+.hero-tagline {
+  margin-top: 26px;
+  font-family: 'SF Mono', monospace;
+  font-size: clamp(11px, 1.1vw, 14px);
+  letter-spacing: 0.45em;
+  text-transform: uppercase;
+  color: rgba(242, 235, 221, 0.7);
+}
+
+/* Hero callouts — engineering annotations that float on the grid */
+.hero-callouts {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.callout {
+  position: absolute;
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: rgba(242, 235, 221, 0.45);
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 700ms ease;
+}
+.scene-hero.in-view .callout { opacity: 1; }
+.callout::before {
+  content: "+";
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--orange);
+  font-weight: 700;
+}
+.callout-1 { top: 22%; left: 8%;  transition-delay: 200ms; }
+.callout-2 { top: 35%; right: 9%; transition-delay: 400ms; }
+.callout-3 { bottom: 30%; left: 12%; transition-delay: 600ms; }
+.callout-4 { bottom: 22%; right: 14%; transition-delay: 800ms; }
+
+/* =========================================================
+   SCENE 3 — THE STUDIO — products page in scene form
+   ========================================================= */
+.scene-studio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.studio-stage {
+  position: relative;
+  width: min(96vw, calc(96vh * 16/9));
+  aspect-ratio: 16/9;
+  max-width: 100vw;
+}
+.studio-stage > img {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+.studio-title {
+  position: absolute;
+  top: 2.5%;
+  left: 50%;
+  z-index: 30;
+  font-family: var(--display-font);  /* Archivo Black — matches scene-title on pages 4 + 5 */
+  font-size: clamp(34px, 4.8vw, 68px);
+  letter-spacing: -0.01em;
+  line-height: 0.95;
+  font-weight: 900;
+  color: var(--cream);
+  text-transform: uppercase;
+  text-align: center;
+  text-shadow: 0 2px 14px rgba(20, 44, 79, 0.85);
+  opacity: 0;
+  transform: translate(-50%, -8px);
+  transition: opacity 800ms ease, transform 900ms cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+.studio-title .sub {
+  display: block;
+  width: fit-content;
+  margin: 4px auto 0;          /* tight gap under title — was inline-block w/ margin-top 8px which inherited huge parent line-height */
+  padding: 5px 14px;
+  font-family: 'SF Mono', monospace;
+  font-size: clamp(10px, 0.95vw, 13px);
+  line-height: 1;
+  letter-spacing: 0.4em;
+  color: var(--cream);
+  text-transform: uppercase;
+  background: rgba(20, 44, 79, 0.78);
+  border-left: 2px solid var(--orange);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+}
+.scene-studio.in-view .studio-title {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Floating same-canvas item PNGs — hover lifts each one off the desk */
+.studio-item-layer {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+  z-index: 5;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.30));
+  transition: transform 0.45s cubic-bezier(0.22, 1.2, 0.36, 1),
+              filter 0.45s ease;
+  will-change: transform, filter;
+}
+.studio-item-layer.lifted {
+  transform: translateY(-1.5%) scale(1.035);
+  filter: drop-shadow(0 0 24px rgba(var(--glow-rgb), 0.45))
+          drop-shadow(0 22px 32px rgba(0, 0, 0, 0.5));
+  z-index: 10;
+}
+/* The audit docs slide aside instead of lifting */
+.studio-slide-aside.lifted {
+  transform: translate(11%, 1.5%) rotate(10deg);
+  filter: drop-shadow(0 0 24px rgba(var(--glow-rgb), 0.45))
+          drop-shadow(0 20px 28px rgba(0, 0, 0, 0.5));
+}
+
+/* Latched item — stays lifted with a breathing glow, sits above the dim overlay */
+.studio-item-layer.latched {
+  z-index: 25;
+  animation: studio-glow-breathe 2.6s ease-in-out infinite;
+}
+@keyframes studio-glow-breathe {
+  0%, 100% {
+    filter: drop-shadow(0 0 18px rgba(var(--glow-rgb), 0.45))
+            drop-shadow(0 22px 32px rgba(0, 0, 0, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 38px rgba(var(--glow-rgb), 0.95))
+            drop-shadow(0 0 70px rgba(var(--glow-rgb), 0.45))
+            drop-shadow(0 22px 32px rgba(0, 0, 0, 0.5));
+  }
+}
+
+/* Gear layer behind the items — visible always, but blends with the desk drawing.
+   When the sliding docs lift away, the gear gets a warm glow and starts spinning. */
+.studio-gear {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+  z-index: 3;
+  pointer-events: none;
+  user-select: none;
+  transform-origin: 79.125% 67.733%;       /* gear's true visual center (measured) */
+  animation: studio-gear-spin 8s linear infinite;
+  animation-play-state: paused;
+  transition: filter 600ms ease;
+}
+@keyframes studio-gear-spin {
+  to { transform: rotate(360deg); }
+}
+/* When the sliding docs are lifted OR latched, the gear glows + spins */
+#studio-sliding.lifted ~ .studio-gear {
+  animation-play-state: running;
+  filter: drop-shadow(0 0 18px rgba(var(--glow-rgb), 0.55))
+          drop-shadow(0 0 36px rgba(var(--glow-rgb), 0.25));
+}
+
+/* Dim overlay — darkens everything except the latched item when active */
+.studio-dim {
+  position: absolute; inset: 0;
+  z-index: 18;
+  background-color: rgba(0, 0, 0, 0);
+  pointer-events: none;
+  cursor: pointer;
+  transition: background-color 400ms ease;
+}
+.scene-studio.has-latched .studio-dim {
+  background-color: rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+}
+
+/* Latched hot zone — lift it above the dim overlay so the second click registers */
+.studio-hot.latched { z-index: 26; }
+
+/* Sticky note in latched (confirm) state */
+.studio-note.latched {
+  pointer-events: auto;
+  cursor: pointer;
+  box-shadow:
+    0 0 28px rgba(var(--glow-rgb), 0.7),
+    0 0 60px rgba(var(--glow-rgb), 0.3),
+    0 18px 30px rgba(0, 0, 0, 0.55),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+/* Invisible click/hover hot zones over each item */
+.studio-hot {
+  position: absolute;
+  z-index: 25;
+  cursor: pointer;
+  display: block;
+  /* uncomment to debug: background: rgba(255,122,58,0.2); outline: 1px dashed rgba(255,255,255,0.5); */
+}
+
+/* Sticky-note style description that lands in the center on hover */
+.studio-note {
+  position: absolute;
+  top: 56%;
+  left: 50%;
+  width: 14%;
+  height: 11%;
+  z-index: 30;
+  background: #f4ecd5;
+  color: var(--navy);
+  border-radius: 2px;
+  box-shadow:
+    0 18px 30px rgba(0, 0, 0, 0.55),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  transform: translate(-50%, 300%) rotate(-1.5deg);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.4s cubic-bezier(0.45, 0, 0.55, 1),
+              opacity 0.4s ease;
+}
+.studio-note.visible {
+  transform: translate(-50%, -50%) rotate(-1.5deg);
+  opacity: 1;
+  transition: transform 0.5s cubic-bezier(0.22, 1.15, 0.36, 1),
+              opacity 0.5s ease;
+}
+.studio-note-inner {
+  position: absolute;
+  inset: 0;
+  padding: 8% 10%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.studio-note-header {
+  font-family: 'SF Mono', monospace;
+  font-size: clamp(7px, 0.6vw, 10px);
+  letter-spacing: 0.3em;
+  color: var(--orange);
+  font-weight: 700;
+  margin-bottom: 0.5em;
+}
+.studio-note-text {
+  font-family: 'SF Mono', monospace;
+  font-size: clamp(10px, 1vw, 14px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  color: var(--navy);
+}
+
+/* =========================================================
+   SCENE 4 — THE PASS — laminated backstage pass on a lanyard
+   ========================================================= */
+.scene-pass {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.pass-context {
+  position: absolute;
+  top: 14%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  text-align: center;
+  pointer-events: none;
+}
+.pass-context .label {
+  font-family: 'Teko', sans-serif;
+  font-size: clamp(34px, 4.8vw, 68px);
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  color: var(--cream);
+  text-transform: uppercase;
+  text-shadow: 0 2px 14px rgba(20, 44, 79, 0.7);
+}
+.pass-context .sub {
+  display: inline-block;
+  font-family: 'SF Mono', monospace;
+  font-size: clamp(11px, 1vw, 14px);
+  font-weight: 600;
+  letter-spacing: 0.4em;
+  color: var(--cream);
+  margin-top: 8px;
+  padding: 5px 14px;
+  text-transform: uppercase;
+  background: rgba(20, 44, 79, 0.78);
+  border-left: 2px solid var(--orange);
+}
+
+.lanyard-wrap {
+  position: relative;
+  z-index: 10;
+  perspective: 1200px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+/* Lanyard string going up off-screen — extended ~10px past the lanyard-wrap
+   top edge so it tucks INTO the credential clip and doesn't visually
+   disconnect on tilt. */
+.lanyard-string {
+  position: absolute;
+  top: calc(-50vh + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 50vh;
+  background: linear-gradient(180deg, rgba(20,44,79,0) 0%, var(--orange) 30%, var(--orange) 100%);
+  z-index: 9;
+}
+.lanyard-clip {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 18px;
+  background: linear-gradient(180deg, #C0C0C0 0%, #707070 100%);
+  border-radius: 3px;
+  z-index: 11;
+}
+
+/* Pass card now uses the same credential close-up image as the Members Hub
+   inspect view — same lanyard for both contexts. */
+.pass-card {
+  position: relative;
+  display: block;
+  width: clamp(340px, 38.4vw, 528px);   /* bumped ~20% from clamp(280, 32vw, 440) */
+  aspect-ratio: 1 / 1;       /* credential close-up is square */
+  background: transparent;
+  border-radius: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(0deg) rotateY(0deg);
+  transition: transform 350ms cubic-bezier(0.22, 1.2, 0.36, 1);
+  cursor: pointer;
+  z-index: 10;
+  animation: pass-sway 7s ease-in-out infinite;
+  text-decoration: none;
+}
+.pass-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 22px 50px rgba(0,0,0,0.55))
+          drop-shadow(0 8px 18px rgba(0,0,0,0.35));
+  transition: filter 280ms ease-out;
+  pointer-events: none;
+  user-select: none;
+}
+/* CSS lanyard clip is hidden — the credential image has its own clip baked in */
+.lanyard-clip { display: none; }
+@keyframes pass-sway {
+  0%, 100% { transform: rotateZ(-2deg) rotateY(-3deg); }
+  50%      { transform: rotateZ( 2deg) rotateY( 3deg); }
+}
+
+/* Hover shadow goes on the IMG via drop-shadow filter so it follows the
+   credential's alpha shape (not the square image bounding box). */
+.pass-card:hover img {
+  filter: drop-shadow(0 30px 60px rgba(0,0,0,0.7))
+          drop-shadow(0 12px 24px rgba(0,0,0,0.45))
+          drop-shadow(0 0 32px rgba(var(--glow-rgb), 0.35));
+}
+
+.pass-inner {
+  position: absolute;
+  inset: 0;
+  padding: 22px 22px 26px;
+  display: flex;
+  flex-direction: column;
+  color: var(--navy);
+  font-family: 'Inter', sans-serif;
+}
+.pass-hole {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 8px;
+  background: var(--navy);
+  border-radius: 4px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+}
+.pass-header {
+  margin-top: 14px;
+  font-family: 'Teko', sans-serif;
+  font-size: clamp(14px, 1.8vw, 22px);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-align: center;
+  color: var(--navy);
+}
+.pass-access {
+  margin-top: auto;
+  padding: 10px 0;
+  background: var(--orange);
+  color: var(--cream);
+  text-align: center;
+  font-family: 'Archivo', sans-serif;
+  font-weight: 800;
+  font-size: clamp(22px, 3vw, 40px);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.pass-details {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: rgba(13,13,13,0.7);
+  text-transform: uppercase;
+}
+.pass-barcode {
+  margin-top: 10px;
+  height: 30px;
+  background:
+    repeating-linear-gradient(
+      to right,
+      var(--ink) 0px, var(--ink) 2px,
+      transparent 2px, transparent 4px,
+      var(--ink) 4px, var(--ink) 7px,
+      transparent 7px, transparent 9px,
+      var(--ink) 9px, var(--ink) 10px,
+      transparent 10px, transparent 13px,
+      var(--ink) 13px, var(--ink) 16px,
+      transparent 16px, transparent 18px
+    );
+}
+.pass-serial {
+  margin-top: 6px;
+  text-align: center;
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.35em;
+  color: rgba(13,13,13,0.55);
+}
+
+.pass-cta-prompt {
+  position: absolute;
+  bottom: 14%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  font-family: 'SF Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.45em;
+  color: rgba(242, 235, 221, 0.95);
+  text-transform: uppercase;
+  pointer-events: none;
+  text-align: center;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+.pass-cta-prompt .key { color: var(--orange); font-weight: 700; }
+
+/* =========================================================
+   SCENE 5 — THE CONSOLE — Clear-Com style intercom
+   ========================================================= */
+.scene-console {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.console-context {
+  position: absolute;
+  top: 14%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  text-align: center;
+  pointer-events: none;
+}
+.console-context .label {
+  font-family: 'Teko', sans-serif;
+  font-size: clamp(34px, 4.8vw, 68px);
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  color: var(--cream);
+  text-transform: uppercase;
+  text-shadow: 0 2px 14px rgba(20, 44, 79, 0.7);
+}
+.console-context .sub {
+  display: inline-block;
+  font-family: 'SF Mono', monospace;
+  font-size: clamp(11px, 1vw, 14px);
+  font-weight: 600;
+  letter-spacing: 0.4em;
+  color: var(--cream);
+  margin-top: 8px;
+  padding: 5px 14px;
+  text-transform: uppercase;
+  background: rgba(20, 44, 79, 0.78);
+  border-left: 2px solid var(--orange);
+}
+
+.console-panel {
+  position: relative;
+  width: clamp(340px, 38vw, 580px);
+  background: linear-gradient(180deg, #2A4A78 0%, #16335A 100%);
+  border-radius: 10px;
+  padding: 28px 24px 32px;
+  box-shadow:
+    0 30px 60px rgba(0,0,0,0.55),
+    0 10px 20px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    inset 0 -1px 0 rgba(0,0,0,0.5);
+  z-index: 10;
+  margin-top: 8vh;
+}
+.console-screws {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.console-screws::before, .console-screws::after,
+.console-screws span::before, .console-screws span::after {
+  content: "";
+  position: absolute;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #888 0%, #444 60%, #222 100%);
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.5);
+}
+.console-screws::before { top: 8px; left: 8px; }
+.console-screws::after  { top: 8px; right: 8px; }
+.console-screws span::before { bottom: 8px; left: 8px; }
+.console-screws span::after  { bottom: 8px; right: 8px; }
+
+.console-readout {
+  background: #0A1828;
+  border-radius: 4px;
+  padding: 14px 18px;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+  font-family: 'SF Mono', monospace;
+  color: #5CFF8E;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 22px;
+  position: relative;
+}
+.console-readout .label {
+  font-size: 9px;
+  color: rgba(92, 255, 142, 0.4);
+  letter-spacing: 0.3em;
+  display: block;
+  margin-bottom: 4px;
+}
+.console-readout .channel { font-weight: 700; }
+
+.console-channels {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.channel-btn {
+  background: #1A3358;
+  border: 1px solid #2C4870;
+  border-radius: 4px;
+  padding: 10px 6px;
+  text-align: center;
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: rgba(242, 235, 221, 0.65);
+  text-transform: uppercase;
+  cursor: pointer;
+  position: relative;
+  transition: background 200ms ease, color 200ms ease;
+}
+.channel-btn .led {
+  position: absolute;
+  top: 5px; right: 5px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #335577;
+  transition: background 200ms ease, box-shadow 200ms ease;
+}
+.channel-btn:hover {
+  background: #234173;
+  color: var(--cream);
+}
+.channel-btn.active {
+  background: #2D4E80;
+  color: var(--cream);
+}
+.channel-btn.active .led {
+  background: var(--orange);
+  box-shadow: 0 0 8px var(--orange), 0 0 14px rgba(216, 90, 31, 0.6);
+}
+.channel-btn:nth-child(1) .led { animation: led-blink 1.2s ease-in-out infinite; }
+.channel-btn:nth-child(3) .led { animation: led-blink 1.8s ease-in-out infinite 0.4s; }
+@keyframes led-blink {
+  0%, 100% { background: #335577; }
+  50%      { background: rgba(92, 255, 142, 0.7); box-shadow: 0 0 6px rgba(92, 255, 142, 0.5); }
+}
+
+.ptt-button {
+  display: block;
+  width: 100%;
+  background: linear-gradient(180deg, #E26730 0%, #B14516 100%);
+  border: 1px solid #8C3210;
+  border-radius: 6px;
+  padding: 18px 0;
+  font-family: 'Archivo', sans-serif;
+  font-weight: 800;
+  font-size: clamp(13px, 1.5vw, 18px);
+  letter-spacing: 0.3em;
+  color: var(--cream);
+  text-transform: uppercase;
+  cursor: pointer;
+  text-align: center;
+  box-shadow:
+    0 4px 0 #6C2A0E,
+    0 6px 14px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.18);
+  transition: transform 120ms ease, box-shadow 120ms ease, background 200ms ease;
+  text-decoration: none;
+}
+.ptt-button:hover {
+  background: linear-gradient(180deg, #ED7A48 0%, #C5511C 100%);
+  box-shadow:
+    0 4px 0 #6C2A0E,
+    0 8px 22px rgba(216, 90, 31, 0.5),
+    inset 0 1px 0 rgba(255,255,255,0.22);
+}
+.ptt-button:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 #6C2A0E,
+    0 2px 6px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+.console-footer {
+  margin-top: 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: rgba(242, 235, 221, 0.55);
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+@media (max-width: 720px) {
+  .brand-mark { top: 16px; left: 18px; font-size: 13px; letter-spacing: 1px; }
+  .cue-indicator { top: 20px; right: 18px; font-size: 9px; letter-spacing: 0.2em; }
+  .cue-indicator .cue-name { display: none; }
+  .cue-list { right: 14px; gap: 11px; }
+  .cue-dot { width: 8px; height: 8px; }
+  .tour-status { bottom: 16px; left: 18px; font-size: 9px; }
+  .hero-content { padding-top: 38vh; }
+  .pass-card { width: clamp(264px, 84vw, 384px); }
+  .console-panel { width: clamp(280px, 88vw, 380px); padding: 20px 16px 24px; }
+  .console-channels { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* =========================================================
+   POST-TOUR SEND-OFF — appears below the console panel.
+   Final beat of the experience: "now you've seen the rig,
+   come dive deeper into the trade."
+   ========================================================= */
+.post-tour-cta {
+  margin: 42px auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  max-width: 540px;
+  padding: 0 24px;
+  animation: post-cta-rise 1100ms ease-out 600ms backwards;
+}
+@keyframes post-cta-rise {
+  0%   { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.post-tour-tag {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 10px;
+  letter-spacing: 0.36em;
+  color: var(--orange, #D85A1F);
+  text-transform: uppercase;
+}
+.post-tour-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  padding: 17px 32px;
+  background: transparent;
+  border: 1.5px solid var(--cream, #ECE8DB);
+  color: var(--cream, #ECE8DB);
+  font-family: 'Archivo', 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: 17px;
+  letter-spacing: 0.22em;
+  text-decoration: none;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 260ms ease,
+              color 260ms ease,
+              transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 260ms ease;
+  position: relative;
+  overflow: hidden;
+}
+.post-tour-btn:hover {
+  background: var(--cream, #ECE8DB);
+  color: #0B1731;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.5),
+              0 0 26px rgba(255, 220, 150, 0.42);
+}
+.post-tour-btn-arrow {
+  font-size: 19px;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  display: inline-block;
+}
+.post-tour-btn:hover .post-tour-btn-arrow {
+  transform: translate(3px, 3px) rotate(-8deg);
+}
+.post-tour-sub {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: rgba(236, 232, 219, 0.55);
+  text-transform: uppercase;
+  line-height: 1.6;
+}
+@media (max-width: 760px) {
+  .post-tour-cta { margin-top: 28px; gap: 9px; }
+  .post-tour-btn { padding: 13px 22px; font-size: 14px; letter-spacing: 0.18em; gap: 12px; }
+  .post-tour-tag { font-size: 9px; letter-spacing: 0.28em; }
+  .post-tour-sub { font-size: 10px; letter-spacing: 0.12em; }
+}
+
+/* =========================================================
+   BOOT SPLASH — first-load state. Cycles status through
+   PLOTTING ROUTE → LOADING IN → DOORS // SHOW READY, then
+   fades out into the experience.
+   ========================================================= */
+#boot-splash {
+  position: fixed; inset: 0; z-index: 9999;
+  background: #0A1828;
+  background-image:
+    linear-gradient(rgba(140, 175, 230, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(140, 175, 230, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(140, 175, 230, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(140, 175, 230, 0.12) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px, 200px 200px, 200px 200px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--cream);
+  font-family: 'Inter', system-ui, sans-serif;
+  transition: opacity 520ms ease, visibility 0s linear 520ms;
+}
+#boot-splash.boot-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+#boot-splash .boot-col {
+  width: min(420px, 80vw);
+  display: flex; flex-direction: column; align-items: center; gap: 30px;
+  text-align: center;
+}
+#boot-splash .boot-mark {
+  display: inline-block;
+  border: 1px solid rgba(242, 235, 221, 0.55);
+  font-family: 'Archivo', sans-serif;
+  letter-spacing: 0.28em;
+  line-height: 1;
+  user-select: none;
+}
+#boot-splash .boot-mark .top,
+#boot-splash .boot-mark .bot {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+#boot-splash .boot-mark .top { font-weight: 900; }
+#boot-splash .boot-mark .bot {
+  font-weight: 300;
+  border-top: 0.5px solid rgba(242, 235, 221, 0.4);
+  letter-spacing: 0.32em;
+  font-size: 11px;
+}
+#boot-splash .boot-mark .reg {
+  vertical-align: super; font-size: 7px; margin-left: 4px; opacity: 0.7;
+}
+
+#boot-splash .boot-meter {
+  width: 100%;
+  height: 4px;
+  background: rgba(242, 235, 221, 0.12);
+  position: relative;
+  overflow: hidden;
+  border-radius: 1px;
+}
+#boot-splash .boot-meter-fill {
+  position: absolute;
+  inset: 0 100% 0 0;
+  background: linear-gradient(90deg, var(--orange) 0%, #ff8a4a 100%);
+  box-shadow: 0 0 12px rgba(216, 90, 31, 0.55);
+  transition: right 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Subtle traveling shimmer over the fill so it never looks frozen */
+#boot-splash .boot-meter-fill::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg,
+    transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%);
+  animation: boot-shimmer 1.4s linear infinite;
+}
+@keyframes boot-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+#boot-splash .boot-statusrow {
+  width: 100%;
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px;
+  font-family: 'SF Mono', 'Menlo', monospace;
+}
+#boot-splash .boot-status {
+  font-size: 12px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--cream);
+  text-align: left;
+  flex: 1;
+  transition: opacity 220ms ease;
+}
+#boot-splash .boot-status.swap { opacity: 0; }
+#boot-splash .boot-pct {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--orange);
+  font-weight: 700;
+  text-align: right;
+  min-width: 50px;
+}
+
+#boot-splash .boot-tag {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 9px;
+  letter-spacing: 0.4em;
+  color: rgba(242, 235, 221, 0.4);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- ============================
+     BOOT SPLASH — first-load state
+     ============================ -->
+<div id="boot-splash">
+  <div class="boot-col">
+    <div class="boot-mark">
+      <div class="top">BCKSTG <span class="reg">M</span></div>
+      <div class="bot">BLPRNT</div>
+    </div>
+    <div class="boot-meter"><div class="boot-meter-fill" id="boot-fill"></div></div>
+    <div class="boot-statusrow">
+      <div class="boot-status" id="boot-status">PLOTTING ROUTE</div>
+      <div class="boot-pct" id="boot-pct">00%</div>
+    </div>
+    <div class="boot-tag">// BACKSTAGE BLUEPRINT &middot; INITIALIZING RIG</div>
+  </div>
+</div>
+
+<!-- ============================
+     PERSISTENT UI
+     ============================ -->
+<div class="brand-mark">BCKSTG &middot; BLPRNT<span class="reg">M</span></div>
+
+<div class="cue-indicator">
+  <span class="cue-num">CUE&nbsp;<span id="cue-num">1</span>/5</span>
+  <span class="cue-name" id="cue-name">EST.</span>
+</div>
+
+<nav class="cue-list" id="cue-list" aria-label="Tour navigation">
+  <button class="cue-dot active" data-cue="0" title="EST."></button>
+  <button class="cue-dot"        data-cue="1" title="Hero"></button>
+  <button class="cue-dot"        data-cue="2" title="Front of House (Products)"></button>
+  <button class="cue-dot"        data-cue="3" title="The Pass (Members)"></button>
+  <button class="cue-dot"        data-cue="4" title="Console (Contact)"></button>
+</nav>
+
+<div class="tour-status">
+  <span class="live-dot"></span>SHOWCALL · BCKSTG · BLPRNT · LIVE
+</div>
+
+<!-- Pass → Members transition: black overlay fades up as lanyard falls -->
+<div class="pass-fade-overlay" id="pass-fade-overlay" aria-hidden="true"></div>
+
+
+<!-- ============================
+     THE TOUR
+     ============================ -->
+<div class="tour" id="tour">
+
+  <!-- ====================
+       SCENE 1 — EST.
+       ==================== -->
+  <section class="scene scene-est" data-cue="0" data-cue-name="EST.">
+    <div class="est-stage">
+      <img class="est-bg-1" src="HOME_PAGE/LANDING PAGE OPTIONS ASSETS/LANDING_PAGE_REFERENCE.png" alt="">
+      <img class="est-bg-2" src="HOME_PAGE/NEW_5-27/BB_WEBSITE_PAGES/BACKGROUND_XLR_CLICK_1.png" alt="">
+
+      <div class="est-cable">
+        <img src="HOME_PAGE/LANDING PAGE OPTIONS ASSETS/XLRCABLE_1.png" alt="">
+      </div>
+      <div class="est-hot"></div>
+      <img class="est-button" src="HOME_PAGE/LANDING PAGE OPTIONS ASSETS/CLICK_TO_BEGIN.png" alt="">
+    </div>
+
+    <!-- POWER ON (v2 — flow revision) — Layered window onto the power switch.
+         Sequence: cable click triggers the PD background to fade in behind
+         everything. When the cable slams down, we snap to the 03 frame
+         (blue grid + XLR circle cutout). The switch box then RISES into the
+         frame's circular window from below like a card on a lanyard, with
+         subtle mouse-reactive tilt. Click the switch to engage power.
+         Solo XLR and ENGAGE button are intentionally omitted (will revisit). -->
+    <div class="power-layer">
+      <div class="power-stage">
+        <img class="power-bg-pd"      src="POWER_ON/V2/01_BG_PD_CABLES.png"        alt="" />
+        <!-- Inset vignette inside the cutout — darkens the edges of the visible
+             circular window on the PD wall behind, making the wall feel
+             recessed. Sits BETWEEN the PD (z=2) and the switch box (z=3) so
+             the switch stays untouched. -->
+        <div class="power-cutout-vignette" aria-hidden="true"></div>
+        <img class="power-switch-box" id="power-switch-box"
+             src="POWER_ON/V2/02_POWER_SWITCHBOX.png" alt="" />
+        <img class="power-frame-grid" src="POWER_ON/V2/03_FRAME_BLUEGRID_XLR.png"  alt="" />
+
+        <!-- Swelling glow centered on the LED to draw the eye -->
+        <div class="power-switch-swell" aria-hidden="true"></div>
+
+        <!-- Click hotspot over the visible switch box (40–59% × 44–70%) -->
+        <div class="power-switch-hotspot" id="power-switch-hotspot"
+             role="button" tabindex="0" aria-label="Engage power"></div>
+
+        <!-- LED overlay precisely positioned over the orange dot in 02 -->
+        <div class="power-led" id="power-led"></div>
+
+        <div class="power-callouts">
+          <div class="pc-1">RACK 1A &middot; 200A SERVICE</div>
+          <div class="pc-2">DISTRO &middot; BB.PWR.01</div>
+          <div class="pc-3">CKT&nbsp;24 &middot; LIVE</div>
+        </div>
+        <div class="power-flash"></div>
+        <div class="power-ripple"></div>
+      </div>
+      <div class="power-title">// POWER DISTRIBUTION UNIT &mdash; INITIALIZE RIG</div>
+      <div class="power-status"></div>
+    </div>
+
+    <!-- Slam darkness — dims everything outside the XLR-circle window -->
+    <div class="scene-est-darkness" aria-hidden="true"></div>
+
+    <!-- Just a quiet arrow — no "scroll" verbiage. Click OR scroll, no announcement. -->
+    <div class="scroll-cue scroll-cue-arrow-only"></div>
+  </section>
+
+
+  <!-- ====================
+       SCENE 2 — HERO
+       ==================== -->
+  <section class="scene scene-hero beams-off" data-cue="1" data-cue-name="HERO">
+
+    <!-- Backdrop — dark grid only. The beam screens over this. -->
+    <img class="hero-bg" src="LIGHING_SCENE/GRID_BG.png" alt="" />
+
+    <!-- Subtle vignette darkening on top of the BG -->
+    <div class="hero-darkness"></div>
+
+    <!-- Truss rig — new stick of truss (no lights baked in). Three moving lights
+         layered on top, positioned at left, center, right. All move in unison. -->
+    <div class="hero-truss-rig" id="hero-truss-rig">
+      <img class="truss-static" src="HOME_PAGE/MOVING%20LIGHTS%20TRUSS/BB_WEBSITE_PAGES-12%20(1).png" alt="" />
+      <img class="truss-light-live truss-light-left"   src="HOME_PAGE/MOVING%20LIGHTS%20TRUSS/SINGLE_LIGHT_CENTER_260px.png" alt="" />
+      <img class="truss-light-live truss-light-center" src="HOME_PAGE/MOVING%20LIGHTS%20TRUSS/SINGLE_LIGHT_CENTER_260px.png" alt="" />
+      <img class="truss-light-live truss-light-right"  src="HOME_PAGE/MOVING%20LIGHTS%20TRUSS/SINGLE_LIGHT_CENTER_260px.png" alt="" />
+    </div>
+
+    <!-- Three beams, one per moving light. Opacity cross-fades with cursor X. -->
+    <div class="hero-light-beam beam-left"></div>
+    <div class="hero-light-beam beam-center"></div>
+    <div class="hero-light-beam beam-right"></div>
+
+    <!-- Three silhouette reveal cones, each masked to its beam's footprint -->
+    <div class="hero-silhouette-cone cone-left">
+      <img class="hero-silhouette-img" src="LIGHING_SCENE/SILHOUETTES_ONLY.png" alt="" />
+    </div>
+    <div class="hero-silhouette-cone cone-center">
+      <img class="hero-silhouette-img" src="LIGHING_SCENE/SILHOUETTES_ONLY.png" alt="" />
+    </div>
+    <div class="hero-silhouette-cone cone-right">
+      <img class="hero-silhouette-img" src="LIGHING_SCENE/SILHOUETTES_ONLY.png" alt="" />
+    </div>
+
+    <!-- Engineering callouts that fade in when scene is visible -->
+    <div class="hero-callouts">
+      <div class="callout callout-1">CIRCUIT&nbsp;24A · 1200W</div>
+      <div class="callout callout-2">DMX CH 032</div>
+      <div class="callout callout-3">FOH POSITION &mdash; 38'-6"</div>
+      <div class="callout callout-4">FOCUS: STAGE CTR · 22°</div>
+    </div>
+
+    <div class="hero-content">
+      <h1 class="hero-wordmark">BACKSTAGE<br><span class="accent">BLUEPRINT</span></h1>
+      <div class="hero-tagline">Production &middot; Live &middot; Touring Systems</div>
+    </div>
+
+    <!-- Atmospheric haze layer — fills the scene when the haze button is pressed -->
+    <div class="haze-layer" id="haze-layer">
+      <div class="haze-blob b1"></div>
+      <div class="haze-blob b2"></div>
+      <div class="haze-blob b3"></div>
+      <div class="haze-blob b4"></div>
+      <div class="haze-blob b5"></div>
+    </div>
+
+    <!-- Haze button (bottom-left, in-world DMX-style controller) -->
+    <div class="haze-control" id="haze-control" role="button" tabindex="0" aria-label="Trigger haze">
+      <div class="label-top">// HAZER</div>
+      <div class="haze-led"></div>
+      <div class="haze-button"></div>
+      <div class="haze-label">HAZE</div>
+    </div>
+
+    <!-- Cue panel (bottom-right, in-world lighting console) -->
+    <div class="cue-panel" id="cue-panel">
+      <div class="cue-panel-title">// CUES</div>
+      <button class="cue-button" data-cue="wash"  type="button">WASH</button>
+      <button class="cue-button" data-cue="chase" type="button">CHASE</button>
+      <button class="cue-button" data-cue="pulse" type="button">PULSE</button>
+    </div>
+
+    <div class="scroll-cue">CONTINUE THE TOUR</div>
+  </section>
+
+
+  <!-- ====================
+       SCENE 3 — THE STUDIO
+       ==================== -->
+  <section class="scene scene-studio" id="scene-production-office" data-cue="2" data-cue-name="FRONT OF HOUSE">
+    <div class="studio-stage">
+      <!-- Backdrop with all items removed (same canvas) -->
+      <img src="BLUEPRINT_BG_ITEMS/BP_PAGE_BG.png" alt="">
+
+      <!-- Floating same-canvas item PNGs -->
+      <img class="studio-item-layer" id="studio-templates" src="BLUEPRINT_BG_ITEMS/BP_PAGE_TEMPLATES.png" alt="">
+      <img class="studio-item-layer" id="studio-blueprint" src="BLUEPRINT_BG_ITEMS/BP_PAGE_BLUEPRINT_DOCS.png" alt="">
+      <img class="studio-item-layer" id="studio-keyboard" src="BLUEPRINT_BG_ITEMS/BP_PAGE_KEYBOARD.png" alt="">
+      <img class="studio-item-layer" id="studio-course" src="BLUEPRINT_BG_ITEMS/BP_PAGE_THE_COURSE.png" alt="">
+      <img class="studio-item-layer" id="studio-checklist" src="BLUEPRINT_BG_ITEMS/BP_PAGE_THE_FREE_CHECKLIST.png" alt="">
+      <img class="studio-item-layer studio-slide-aside" id="studio-sliding" src="BLUEPRINT_BG_ITEMS/BP_PAGE_SLIDING_DOCS.png" alt="">
+
+      <!-- Gear layer — must come AFTER #studio-sliding in DOM so the sibling selector matches -->
+      <img class="studio-gear" id="studio-gear" src="BLUEPRINT_BG_ITEMS/BP_PAGE_GEAR.png" alt="">
+
+      <!-- Dim overlay — activates when an item is latched -->
+      <div class="studio-dim" id="studio-dim"></div>
+
+      <div class="studio-title">
+        Front of House
+        <span class="sub">Products &middot; Templates &middot; Training</span>
+      </div>
+
+      <!-- Hot zones over each item (positions = trimmed bounding boxes from blueprint-page) -->
+      <a class="studio-hot" data-target="studio-templates" data-label="Individual Templates"
+         href="templates.html"
+         style="left: 11.5%; top: 21.3%; width: 13.18%; height: 23.46%;"></a>
+      <a class="studio-hot" data-target="studio-blueprint" data-label="The Complete Template Bundle"
+         href="blueprint.html"
+         style="left: 25.68%; top: 29.6%; width: 12.92%; height: 25.08%;"></a>
+      <a class="studio-hot" data-target="studio-keyboard" data-label="Tech Rider &amp; Stage Plot Builder"
+         href="toolkit.html"
+         style="left: 42.4%; top: 27.9%; width: 14.7%; height: 10.4%;"></a>
+      <a class="studio-hot" data-target="studio-course" data-label="Full Live Production Training"
+         href="course.html"
+         style="left: 63.1%; top: 24.2%; width: 16.5%; height: 26.01%;"></a>
+      <a class="studio-hot" data-target="studio-checklist" data-label="Free Production Checklist"
+         href="checklist.html"
+         style="left: 13.3%; top: 61.58%; width: 14.5%; height: 23.12%;"></a>
+      <a class="studio-hot" data-target="studio-sliding" data-label="Audit &amp; Consultation"
+         href="audit.html"
+         style="left: 72.5%; top: 58.41%; width: 15.6%; height: 26.69%;"></a>
+
+      <!-- Sticky note that lands in the center on hover -->
+      <div class="studio-note" id="studio-note">
+        <div class="studio-note-inner">
+          <div class="studio-note-header">// REF</div>
+          <div class="studio-note-text" id="studio-note-text"></div>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-cue">NEXT &mdash; THE PASS</div>
+  </section>
+
+
+  <!-- ====================
+       SCENE 4 — THE PASS
+       ==================== -->
+  <section class="scene scene-pass" id="scene-pass" data-cue="3" data-cue-name="PASS">
+    <div class="scene-title">
+      MEMBERSHIP <span class="accent">ALL-ACCESS</span> PASS
+      <span class="sub">CRED &middot; 001 &middot; CLEARED FOR ALL DECKS</span>
+    </div>
+
+    <div class="lanyard-wrap">
+      <div class="lanyard-string"></div>
+      <div class="lanyard-clip"></div>
+
+      <a class="pass-card" id="pass-card" href="members.html" aria-label="Open Member Hub">
+        <img src="Members%20Room/BB_UPDATED_MEMBER%20CREDENTIAL.png" alt="Backstage credential">
+      </a>
+    </div>
+
+    <div class="pass-cta-prompt"><span class="key">·</span> CLICK PASS TO ENTER <span class="key">·</span></div>
+    <div class="scroll-cue">NEXT &mdash; THE CONSOLE</div>
+  </section>
+
+
+  <!-- ====================
+       SCENE 5 — THE CONSOLE
+       ==================== -->
+  <section class="scene scene-console" data-cue="4" data-cue-name="CONSOLE">
+    <div class="scene-title">
+      <span class="accent">REACH</span> CREW
+      <span class="sub">OPEN CHANNEL &middot; WE'RE LISTENING</span>
+    </div>
+
+    <div class="console-panel">
+      <div class="console-screws"><span></span></div>
+
+      <div class="console-readout">
+        <span class="label">Selected Channel</span>
+        <span class="channel" id="active-channel">CH 1 · GENERAL</span>
+      </div>
+
+      <div class="console-channels" id="console-channels">
+        <div class="channel-btn active" data-channel="CH 1 · GENERAL">
+          <span class="led"></span>Gen
+        </div>
+        <div class="channel-btn" data-channel="CH 2 · TOURING">
+          <span class="led"></span>Tour
+        </div>
+        <div class="channel-btn" data-channel="CH 3 · CONSULTS">
+          <span class="led"></span>Consult
+        </div>
+        <div class="channel-btn" data-channel="CH 4 · COURSE Q&amp;A">
+          <span class="led"></span>Course
+        </div>
+      </div>
+
+      <a class="ptt-button" id="ptt" href="mailto:hello@backstageblueprint.com?subject=BCKSTG%20·%20BLPRNT%20Inquiry">
+        ⌁ Press to Talk ⌁
+      </a>
+
+      <div class="console-footer">
+        <span>BCKSTG · BLPRNT · COMMS</span>
+        <span>EST. 2026</span>
+      </div>
+    </div>
+
+    <!-- Send-off CTA — final beat of the tour. Dive into the Lexicon corridor. -->
+    <div class="post-tour-cta">
+      <div class="post-tour-tag">// AFTER THE SHOW</div>
+      <a href="lexicon.html" class="post-tour-btn">
+        <span>ENTER THE LEXICON</span>
+        <span class="post-tour-btn-arrow">↘</span>
+      </a>
+      <div class="post-tour-sub">A drift through the gear, tools &amp; vocabulary of the trade</div>
+    </div>
+  </section>
+
+</div><!-- /.tour -->
+
+
+<script>
+  // ===============================================
+  // BOOT SPLASH — preloads critical scene assets, drives the meter from
+  //   real load progress (capped to a min duration so the cycling status
+  //   text gets a chance to show), then fades out.
+  //   Status cycles:
+  //      0–49%   PLOTTING ROUTE
+  //      50–99%  LOADING IN
+  //      100%    DOORS // SHOW READY  (held ~700ms before fade)
+  // ===============================================
+  (function bootSplash() {
+    const splash = document.getElementById('boot-splash');
+    if (!splash) return;
+    const fill   = document.getElementById('boot-fill');
+    const status = document.getElementById('boot-status');
+    const pctEl  = document.getElementById('boot-pct');
+
+    // Critical assets the user sees in the first ~10 seconds of the experience.
+    const ASSETS = [
+      'HOME_PAGE/LANDING PAGE OPTIONS ASSETS/LANDING_PAGE_REFERENCE.png',
+      'HOME_PAGE/NEW_5-27/BB_WEBSITE_PAGES/BACKGROUND_XLR_CLICK_1.png',
+      'HOME_PAGE/LANDING PAGE OPTIONS ASSETS/XLRCABLE_1.png',
+      'HOME_PAGE/LANDING PAGE OPTIONS ASSETS/CLICK_TO_BEGIN.png',
+      'POWER_ON/V2/01_BG_PD_CABLES.png',
+      'POWER_ON/V2/03_FRAME_BLUEGRID_XLR.png',
+      'LIGHING_SCENE/GRID_BG.png',
+      'HOME_PAGE/MOVING LIGHTS TRUSS/BB_WEBSITE_PAGES-12 (1).png',
+      'HOME_PAGE/MOVING LIGHTS TRUSS/SINGLE_LIGHT_CENTER_260px.png',
+      'LIGHING_SCENE/SILHOUETTES_ONLY.png',
+      'BLUEPRINT_BG_ITEMS/BP_PAGE_BG.png',
+      'Members Room/BB_UPDATED_MEMBER CREDENTIAL.png',
+    ];
+
+    const MIN_DURATION = 1700;   // ms — guarantees PLOTTING ROUTE → LOADING IN cycle
+    const DOORS_HOLD   = 800;    // ms — DOORS // SHOW READY stays up before fade
+    const start = performance.now();
+
+    let loaded = 0;
+    const total = ASSETS.length;
+    ASSETS.forEach(src => {
+      const img = new Image();
+      img.onload  = () => { loaded++; };
+      img.onerror = () => { loaded++; };  // count errors so we don't hang
+      img.src = src;
+    });
+
+    let currentLabel = 'PLOTTING ROUTE';
+    function setStatus(text) {
+      if (currentLabel === text) return;
+      currentLabel = text;
+      status.classList.add('swap');
+      setTimeout(() => {
+        status.textContent = text;
+        status.classList.remove('swap');
+      }, 220);
+    }
+
+    let doorsAt = null;
+    function tick(now) {
+      const elapsed   = now - start;
+      const realPct   = loaded / total;                       // 0..1
+      const minPct    = Math.min(elapsed / MIN_DURATION, 1);  // 0..1, capped
+      // Use the SLOWER of the two so meter never finishes before MIN_DURATION
+      // and never claims completion before assets actually loaded.
+      const pct = Math.min(realPct, minPct);
+
+      const shown = Math.round(pct * 100);
+      pctEl.textContent = String(shown).padStart(2, '0') + '%';
+      fill.style.right = (100 - shown) + '%';
+
+      if (shown < 50)        setStatus('PLOTTING ROUTE');
+      else if (shown < 100)  setStatus('LOADING IN');
+      else                   setStatus('DOORS // SHOW READY');
+
+      if (shown >= 100) {
+        if (!doorsAt) doorsAt = now;
+        if (now - doorsAt >= DOORS_HOLD) {
+          splash.classList.add('boot-out');
+          // Drop from DOM after the fade completes
+          setTimeout(() => splash.remove(), 600);
+          return;
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  })();
+
+  // ===============================================
+  // HASH HANDLER — if the URL has a #scene-id, jump straight to that scene
+  //   (used by destination pages' back-links), then clear the hash so a
+  //   manual refresh starts clean from Scene 1.
+  // ===============================================
+  window.addEventListener('load', () => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    const target = document.getElementById(hash);
+    const tour = document.getElementById('tour');
+    if (target && tour) {
+      setTimeout(() => {
+        tour.scrollTo({ top: target.offsetTop, behavior: 'auto' });
+        // Clean the hash from the URL so a refresh doesn't repeat the jump
+        history.replaceState(null, '', window.location.pathname);
+      }, 50);
+    }
+  });
+
+  // ===============================================
+  // SCENE 1 — Establishing cinematic
+  //   slam → snap to flat XLR sketch → power frame fades in over the sketch
+  //   → power box materializes → user clicks switch → LED green + flash →
+  //   THEN auto-scroll to Hero (lights). No scroll between slam and power —
+  //   they build on the same scene so the bright XLR backdrop stays visible.
+  // ===============================================
+  const sceneEst = document.querySelector('.scene-est');
+  const estHot   = sceneEst.querySelector('.est-hot');
+  const powerHotspot = document.getElementById('power-switch-hotspot');
+  let powerActivated = false;
+
+  estHot.addEventListener('click', () => {
+    if (sceneEst.classList.contains('cue-slam')) return;
+    sceneEst.classList.add('cue-slam');
+    // New v2 sequence (revised timing):
+    //    0 ms  — cue-slam fires. 01 PD background fades in over ~380ms via
+    //            CSS so it's behind everything by the time the cable lands.
+    //  460 ms  — cue-flat: cable disappears, 03 frame snaps in, scene-wide
+    //            darkness fades in around the XLR circle (subtle).
+    // 460–1200 ms — Frame sits empty, PD visible through the cutout — pause
+    //            for the scene to breathe before the switch arrives.
+    // 1200 ms  — cue-snap-02-in: switch box begins rising from below
+    //            (1000 ms transition). It SETTLES at ~2200 ms.
+    // 2200 ms  — cue-power-ready: switch settles, LED + status + swell +
+    //            callouts all appear together (synced with the switch arrival).
+    setTimeout(() => sceneEst.classList.add('cue-flat'),         460);
+    setTimeout(() => sceneEst.classList.add('cue-snap-02-in'),  1200);
+    setTimeout(() => sceneEst.classList.add('cue-power-ready'), 2200);
+  });
+
+  function activatePower() {
+    if (powerActivated) return;
+    if (!sceneEst.classList.contains('cue-power-ready')) return;
+    powerActivated = true;
+    // Sequence — give the moment room to breathe:
+    //    0 ms  → flash radiates from the switch, ripple expands
+    //  160 ms  → LED flips green, status: "INITIALIZING RIG..."
+    // 1100 ms  → status: "RIG READY — ENTERING LIGHTING"
+    // 1700 ms  → scroll to the lights (which then warms up on arrival)
+    sceneEst.classList.add('cue-flash');
+    setTimeout(() => sceneEst.classList.add('cue-powered'),   160);
+    setTimeout(() => sceneEst.classList.add('cue-rig-ready'), 1100);
+    setTimeout(() => {
+      const tourEl = document.getElementById('tour');
+      const heroScene = document.querySelector('.scene-hero');
+      if (heroScene && tourEl) {
+        tourEl.scrollTo({ top: heroScene.offsetTop, behavior: 'smooth' });
+      }
+    }, 1700);
+  }
+
+  if (powerHotspot) {
+    powerHotspot.addEventListener('click', activatePower);
+    powerHotspot.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activatePower(); }
+    });
+  }
+
+  // ===============================================
+  // POWER SWITCH — lanyard-style magnetic-zone parallax
+  // When cursor is near the switch (using the hotspot as the reference frame),
+  // tilt the switch box on X/Y axes around its visible center. Beyond that
+  // radius the gentle float animation resumes.
+  // ===============================================
+  const powerSwitchBox = document.getElementById('power-switch-box');
+  if (powerSwitchBox && powerHotspot) {
+    sceneEst.addEventListener('mousemove', (e) => {
+      if (!sceneEst.classList.contains('cue-power-ready')) return;
+      if (sceneEst.classList.contains('cue-powered'))     return;
+
+      const rect = powerHotspot.getBoundingClientRect();
+      const cx = rect.left + rect.width  / 2;
+      const cy = rect.top  + rect.height / 2;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+
+      const halfDiag = Math.sqrt(rect.width * rect.width + rect.height * rect.height) / 2;
+      const magneticRadius = halfDiag * 2.4;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < magneticRadius) {
+        const falloff = 1 - (dist / magneticRadius);
+        const rotY =  (dx / rect.width)  * 14 * falloff;
+        const rotX = -(dy / rect.height) * 10 * falloff;
+        powerSwitchBox.style.animation = 'none';
+        powerSwitchBox.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+      } else {
+        powerSwitchBox.style.animation = '';
+        powerSwitchBox.style.transform = '';
+      }
+    });
+  }
+
+  // ===============================================
+  // CUE INDICATOR + ACTIVE DOT — track which scene is in view
+  // ===============================================
+  const tour = document.getElementById('tour');
+  const scenes = document.querySelectorAll('.scene');
+  const dots = document.querySelectorAll('.cue-dot');
+  const cueNumEl = document.getElementById('cue-num');
+  const cueNameEl = document.getElementById('cue-name');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && entry.intersectionRatio > 0.55) {
+        const scene = entry.target;
+        const cueIdx = parseInt(scene.dataset.cue, 10);
+        const cueName = scene.dataset.cueName || '';
+
+        // Update cue indicator
+        cueNumEl.textContent = cueIdx + 1;
+        cueNameEl.textContent = cueName;
+
+        // Update dot active state
+        dots.forEach(d => d.classList.remove('active'));
+        dots[cueIdx]?.classList.add('active');
+
+        // Trigger any scene-specific reveal animations
+        scene.classList.add('in-view');
+        // Lights scene warm-up: when it enters view, FORCE-PAINT the cue
+        // rendering path by cycling through the cue colors with inline opacity
+        // overrides. Inline opacity = 0.002 overrides .beams-off's opacity:0,
+        // so the browser must actually paint the gradient (compiling the
+        // shader). At 0.002 the beam is invisible to the eye but real to the
+        // renderer — the first cue click after this gets a hot path.
+        if (scene.classList.contains('scene-hero') && scene.classList.contains('beams-off')) {
+          const warmupBeams = document.querySelectorAll('.hero-light-beam');
+          const warmupCones = document.querySelectorAll('.hero-silhouette-cone');
+          // Force-paint with blue (forces gradient shader compile)
+          warmupBeams.forEach(b => {
+            b.style.opacity = '0.002';
+            b.style.setProperty('--glow-rgb', '80, 160, 255');
+          });
+          warmupCones.forEach(c => { c.style.opacity = '0.002'; });
+          // Force a layout flush so paint actually happens this tick
+          void warmupBeams[0].offsetHeight;
+          requestAnimationFrame(() => {
+            // Cycle to orange (forces re-paint with new color)
+            warmupBeams.forEach(b => b.style.setProperty('--glow-rgb', '217, 122, 58'));
+            void warmupBeams[0].offsetHeight;
+            requestAnimationFrame(() => {
+              // Cycle to white
+              warmupBeams.forEach(b => b.style.setProperty('--glow-rgb', '255, 255, 255'));
+              void warmupBeams[0].offsetHeight;
+              requestAnimationFrame(() => {
+                // Clean up — clear overrides so beams return to .beams-off state
+                warmupBeams.forEach(b => {
+                  b.style.removeProperty('--glow-rgb');
+                  b.style.removeProperty('opacity');
+                });
+                warmupCones.forEach(c => { c.style.removeProperty('opacity'); });
+                // NOW remove beams-off so the beams ramp up to cursor values
+                setTimeout(() => scene.classList.remove('beams-off'), 200);
+              });
+            });
+          });
+        }
+      }
+    });
+  }, { root: tour, threshold: [0.55] });
+
+  scenes.forEach(s => observer.observe(s));
+
+  // ===============================================
+  // CUE DOT CLICK — jump to that scene
+  // ===============================================
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      const idx = parseInt(dot.dataset.cue, 10);
+      scenes[idx]?.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  // ===============================================
+  // SCENE 2 — Three moving lights tracking the cursor
+  // All three lights tilt in unison via --light-tilt; all three beams + cones
+  // share --beam-tilt. Per-fixture intensities are cross-faded based on cursor X
+  // so the dominant light follows the cursor across left / center / right zones.
+  // ===============================================
+  const sceneHero = document.querySelector('.scene-hero');
+
+  // Smoothstep — gentle ease for crossfade transitions
+  function smoothstep(edge0, edge1, x) {
+    const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+    return t * t * (3 - 2 * t);
+  }
+  // Flat-top intensity curve: full from peakStart..peakEnd, smooth ramps on each side
+  function lightIntensity(x, peakStart, peakEnd, rampWidth) {
+    if (x < peakStart - rampWidth) return 0;
+    if (x > peakEnd   + rampWidth) return 0;
+    if (x < peakStart) return smoothstep(peakStart - rampWidth, peakStart, x);
+    if (x > peakEnd)   return 1 - smoothstep(peakEnd, peakEnd + rampWidth, x);
+    return 1;
+  }
+
+  // Shared cue state — set true while a lighting cue is running. Mousemove
+  // tracking is paused while a cue takes control of the beams.
+  let cueRunning = false;
+
+  sceneHero.addEventListener('mousemove', (e) => {
+    const rect = sceneHero.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;   // 0..1
+
+    // Tilt — non-linear, ramps up at edges. ALWAYS update tilt so the fixtures
+    // keep tracking the cursor even while a cue is running (the cue only
+    // controls colors + intensities; aim still follows the mouse).
+    const t = (x - 0.5) * 2;
+    const sign = Math.sign(t);
+    const mag = Math.abs(t);
+    const eased = mag + mag * mag * 0.5;
+    const tilt = sign * eased * 22;
+
+    sceneHero.style.setProperty('--light-tilt', `${-tilt * 0.4}deg`);
+    sceneHero.style.setProperty('--beam-tilt',  `${-tilt}deg`);
+
+    // Intensities update only when no cue is firing — cues take over brightness
+    // + color while the user keeps directional control of the rig.
+    if (cueRunning) return;
+    sceneHero.style.setProperty('--intensity-left',   lightIntensity(x, 0,    0.20, 0.30));
+    sceneHero.style.setProperty('--intensity-center', lightIntensity(x, 0.40, 0.60, 0.30));
+    sceneHero.style.setProperty('--intensity-right',  lightIntensity(x, 0.80, 1.0,  0.30));
+  });
+
+  // ===============================================
+  // SCENE 2 — Haze button (atmospheric smoke fill)
+  // ===============================================
+  const hazeLayer   = document.getElementById('haze-layer');
+  const hazeControl = document.getElementById('haze-control');
+  let hazeActive = false;
+
+  function fireHaze() {
+    if (hazeActive) return;
+    hazeActive = true;
+    hazeLayer.classList.add('active');
+    hazeControl.classList.add('firing');
+    sceneHero.classList.add('haze-on');
+    // Hold (fade-in 0.7s + plateau 2.4s) = 3.1s, then fade out 1.4s
+    setTimeout(() => {
+      hazeLayer.classList.remove('active');
+      sceneHero.classList.remove('haze-on');
+    }, 3100);
+    setTimeout(() => {
+      hazeControl.classList.remove('firing');
+      hazeActive = false;
+    }, 4500);
+  }
+  hazeControl.addEventListener('click', fireHaze);
+  hazeControl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fireHaze(); }
+  });
+
+  // ===============================================
+  // SCENE 2 — Lighting cue panel (3 cues, brand palette)
+  // Colors: blue / orange / white only. Cues take over all three beams,
+  // pause cursor tracking, then release control when complete.
+  // ===============================================
+  const cueButtons = document.querySelectorAll('.cue-button');
+  const beamEls = [
+    document.querySelector('.beam-left'),
+    document.querySelector('.beam-center'),
+    document.querySelector('.beam-right'),
+  ];
+
+  const C = {
+    cream:  [255, 245, 215],
+    blue:   [ 80, 160, 255],
+    orange: [217, 122,  58],
+    white:  [255, 255, 255],
+  };
+
+  function rgbStr(arr) { return `${Math.round(arr[0])}, ${Math.round(arr[1])}, ${Math.round(arr[2])}`; }
+  function lerpRGB(a, b, t) {
+    return [a[0] + (b[0]-a[0])*t, a[1] + (b[1]-a[1])*t, a[2] + (b[2]-a[2])*t];
+  }
+  // Cache last-applied color string per beam — skip setProperty when the
+  // rounded color hasn't changed since the previous frame. WASH lerps every
+  // frame but produces the same rounded integers for ~1-2 frames at a time;
+  // avoiding redundant property writes saves gradient recompiles.
+  const _lastColorStr = ['', '', ''];
+  function setBeamColors(l, c, r) {
+    const sL = rgbStr(l), sC = rgbStr(c), sR = rgbStr(r);
+    if (sL !== _lastColorStr[0]) { beamEls[0].style.setProperty('--glow-rgb', sL); _lastColorStr[0] = sL; }
+    if (sC !== _lastColorStr[1]) { beamEls[1].style.setProperty('--glow-rgb', sC); _lastColorStr[1] = sC; }
+    if (sR !== _lastColorStr[2]) { beamEls[2].style.setProperty('--glow-rgb', sR); _lastColorStr[2] = sR; }
+  }
+  function setIntensities(l, c, r) {
+    sceneHero.style.setProperty('--intensity-left',   l);
+    sceneHero.style.setProperty('--intensity-center', c);
+    sceneHero.style.setProperty('--intensity-right',  r);
+  }
+  // During a cue, drive beam opacity DIRECTLY via inline style instead of
+  // through --intensity-* on sceneHero. That bypasses the silhouette cones
+  // (which use --intensity-* for opacity and have expensive masks). Cones stay
+  // at the cursor-driven value, beams do the cue effect. Much cheaper to
+  // paint — only 3 elements update per frame instead of 6 (3 beams + 3 cones).
+  function setCueBeamOpacity(l, c, r) {
+    beamEls[0].style.opacity = l;
+    beamEls[1].style.opacity = c;
+    beamEls[2].style.opacity = r;
+  }
+  function endCue(button) {
+    button.classList.remove('firing');
+    beamEls.forEach(b => {
+      b.style.removeProperty('--glow-rgb');
+      b.style.removeProperty('opacity');     // un-pin the beam from cue-driven opacity
+    });
+    sceneHero.classList.remove('cue-running');
+    _lastColorStr[0] = _lastColorStr[1] = _lastColorStr[2] = '';
+    cueRunning = false;
+  }
+
+  // Snapshot the beams' current visible opacities so a cue can blend smoothly
+  // from wherever the cursor had them to the cue's first frame.
+  function captureBeamState() {
+    return {
+      L: parseFloat(getComputedStyle(beamEls[0]).opacity) || 0,
+      C: parseFloat(getComputedStyle(beamEls[1]).opacity) || 0,
+      R: parseFloat(getComputedStyle(beamEls[2]).opacity) || 0,
+    };
+  }
+  // Smoothly blend from captured pre-cue state into the cue's target value
+  // during the first BLEND_T of the cue (in normalized cue time).
+  const CUE_BLEND_T = 0.10;     // ~400ms at a 4000ms cue duration
+  function blend(prev, cueVal, t) {
+    const k = Math.min(1, t / CUE_BLEND_T);
+    return prev * (1 - k) + cueVal * k;
+  }
+
+  // Cues are pure-CSS animations now (see @keyframes cue-wash, cue-pulse,
+  // cue-chase-*). JS just adds a class, waits 4s, removes it. No rAF, no
+  // per-frame property writes, no fighting transitions — the browser handles
+  // all interpolation natively at the compositor level.
+  cueButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (cueRunning) return;
+      cueRunning = true;
+      const name = btn.dataset.cue;
+      btn.classList.add('firing');
+      sceneHero.classList.add('cue-running');
+      sceneHero.classList.add('cue-' + name);
+      setTimeout(() => {
+        sceneHero.classList.remove('cue-' + name);
+        sceneHero.classList.remove('cue-running');
+        btn.classList.remove('firing');
+        cueRunning = false;
+      }, 4000);
+    });
+  });
+
+  // ===============================================
+  // SCENE 3 — Front of House:
+  //   hover → item lifts + sticky note (REF)
+  //   click → latch (dim screen, breathing glow, sticky → CONFIRM)
+  //   click latched item or sticky → navigate
+  //   click dim overlay or Esc → unlatch
+  // ===============================================
+  const sceneStudio    = document.querySelector('.scene-studio');
+  const studioHots     = document.querySelectorAll('.studio-hot');
+  const studioNote     = document.getElementById('studio-note');
+  const studioNoteText = document.getElementById('studio-note-text');
+  const studioNoteHeader = studioNote.querySelector('.studio-note-header');
+  const studioDim      = document.getElementById('studio-dim');
+  let studioActive  = null;   // currently hovered hot
+  let studioLatched = null;   // currently latched hot
+
+  function studioLatchItem(hot) {
+    const target = document.getElementById(hot.dataset.target);
+    studioLatched = hot;
+    target.classList.add('lifted', 'latched');
+    hot.classList.add('latched');
+    sceneStudio.classList.add('has-latched');
+    studioNote.classList.add('latched', 'visible');
+    studioNoteHeader.textContent = '// CONFIRM';
+    studioNoteText.innerHTML = 'Click to View';
+  }
+
+  function studioUnlatch() {
+    if (!studioLatched) return;
+    const target = document.getElementById(studioLatched.dataset.target);
+    target.classList.remove('lifted', 'latched');
+    studioLatched.classList.remove('latched');
+    sceneStudio.classList.remove('has-latched');
+    studioNote.classList.remove('latched', 'visible');
+    studioNoteHeader.textContent = '// REF';
+    studioLatched = null;
+    studioActive  = null;
+  }
+
+  studioHots.forEach(hot => {
+    const target = document.getElementById(hot.dataset.target);
+    const label  = hot.dataset.label;
+    const url    = hot.getAttribute('href');
+
+    hot.addEventListener('mouseenter', () => {
+      if (studioLatched) return;                  // hovers locked out while latched
+      if (studioActive && studioActive !== hot) {
+        document.getElementById(studioActive.dataset.target)?.classList.remove('lifted');
+      }
+      studioActive = hot;
+      target.classList.add('lifted');
+      studioNoteHeader.textContent = '// REF';
+      studioNoteText.innerHTML = label;
+      studioNote.classList.add('visible');
+    });
+
+    hot.addEventListener('mouseleave', () => {
+      if (studioLatched) return;                  // keep latched item lifted
+      setTimeout(() => {
+        if (studioActive === hot) {
+          target.classList.remove('lifted');
+          studioNote.classList.remove('visible');
+          studioActive = null;
+        }
+      }, 30);
+    });
+
+    hot.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (studioLatched === hot) {
+        window.location.href = url;               // second click — navigate
+      } else if (!studioLatched) {
+        studioLatchItem(hot);                     // first click — latch
+      }
+      // (other latched: ignore — must unlatch first)
+    });
+  });
+
+  // Click the sticky note while latched = navigate to that item's url
+  studioNote.addEventListener('click', () => {
+    if (studioLatched) window.location.href = studioLatched.getAttribute('href');
+  });
+
+  // Click dim overlay to exit
+  studioDim.addEventListener('click', studioUnlatch);
+
+  // Esc exits latch (only when the studio scene is in view)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && studioLatched) studioUnlatch();
+  });
+
+  // ===============================================
+  // SCENE 4 — Pass card with WIDE magnetic-zone parallax
+  //   Cursor anywhere within ~2.5× the card's half-diagonal tilts it.
+  //   Beyond that, the gentle sway animation resumes.
+  // ===============================================
+  const passCard  = document.getElementById('pass-card');
+  const scenePass = document.querySelector('.scene-pass');
+
+  scenePass.addEventListener('mousemove', (e) => {
+    const rect = passCard.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+
+    const halfDiag = Math.sqrt(rect.width * rect.width + rect.height * rect.height) / 2;
+    const magneticRadius = halfDiag * 2.6;        // generous "sticky" zone around the card
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < magneticRadius) {
+      const falloff = 1 - (dist / magneticRadius);          // 1 at center → 0 at edge
+      const rotY = ( dx / rect.width  ) * 30 * falloff;     // tilt around vertical
+      const rotX = -( dy / rect.height ) * 24 * falloff;    // tilt around horizontal
+      passCard.style.animation = 'none';
+      passCard.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+    } else {
+      // Outside magnetic zone — restore the gentle sway
+      passCard.style.animation = '';
+      passCard.style.transform = '';
+    }
+  });
+  scenePass.addEventListener('mouseleave', () => {
+    passCard.style.animation = '';
+    passCard.style.transform = '';
+  });
+
+  // Pass card click → lanyard falls downward, scene fades to black, navigate
+  // to members.html. A sessionStorage flag tells Members Hub to play the
+  // "laminate drops onto the desk" entrance animation on arrival.
+  const passFadeOverlay = document.getElementById('pass-fade-overlay');
+  if (passCard) {
+    // Preload Members Hub bg + credential image for smooth handoff
+    ['Members%20Room/NEW%20DESK_5-31/01_BG_DESKANDROOM.png',
+     'Members%20Room/NEW%20DESK_5-31/04_CREDENTIAL_LAMINATE.png',
+     'Members%20Room/BB_UPDATED_MEMBER%20CREDENTIAL.png'].forEach(src => {
+      const i = new Image();
+      i.src = src;
+    });
+
+    let falling = false;
+    passCard.addEventListener('click', (e) => {
+      if (falling) return;
+      e.preventDefault();
+      falling = true;
+      // Reset parallax inline transforms so the fall starts from rest
+      passCard.style.animation = '';
+      passCard.style.transform = '';
+      // Trigger fall animation on the lanyard-wrap
+      scenePass.classList.add('pass-falling');
+      // Fade overlay to black on a slight delay so the fall is visible first
+      setTimeout(() => passFadeOverlay && passFadeOverlay.classList.add('active'), 200);
+      // Flag for the Members Hub entrance
+      try { sessionStorage.setItem('bb-from-pass', '1'); } catch (_) {}
+      // Navigate after the lanyard has cleared the screen
+      setTimeout(() => {
+        window.location.href = passCard.getAttribute('href') || 'members.html';
+      }, 850);
+    });
+  }
+
+  // ===============================================
+  // SCENE 5 — Console channel switcher
+  // ===============================================
+  const channelBtns = document.querySelectorAll('.channel-btn');
+  const activeChannelEl = document.getElementById('active-channel');
+  channelBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      channelBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeChannelEl.textContent = btn.dataset.channel;
+    });
+  });
+</script>
+
+</body>
+</html>

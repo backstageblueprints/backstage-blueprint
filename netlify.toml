@@ -1,9 +1,25 @@
 # Netlify configuration — Backstage Blueprint platform
 
 [build]
-  # The site files live at the repo root for now.
+  # Build the toolkit-app (Vite/React) as part of every deploy.
+  # Output: toolkit-app/dist/ → moved to /toolkit/ at publish root.
+  command = "cd toolkit-app && npm install && npm run build && rm -rf ../toolkit && mv dist ../toolkit"
   publish = "."
 
 [functions]
-  # Server-side code (Stripe checkout, webhook, content gate) will live here.
+  # Server-side code (Stripe webhook, etc.) will live here.
   directory = "netlify/functions"
+
+# Option I: root URL serves experience.html without changing the URL bar.
+[[redirects]]
+  from = "/"
+  to = "/experience.html"
+  status = 200
+  force = true
+
+# SPA fallback inside the toolkit-app — any client-side route under
+# /toolkit/* falls back to the app's index.html.
+[[redirects]]
+  from = "/toolkit/*"
+  to = "/toolkit/index.html"
+  status = 200

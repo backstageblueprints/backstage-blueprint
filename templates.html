@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1B3D6E">
+<title>Templates — À La Carte | Backstage Blueprint</title>
+<meta name="description" content="14 BB templates, sold individually. Pick what your tour actually needs. Or get the full kit — that's The Blueprint.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   TEMPLATES OVERVIEW — Order 005 · Level 1
+   Flat-scroll catalog page. Public/Front-of-House system.
+   ========================================================= */
+:root {
+  --navy:        #1B3D6E;
+  --navy-deep:   #142C4F;
+  --navy-glass:  rgba(20, 44, 79, 0.78);
+  --orange:      #D85A1F;
+  --cream:       #F2EBDD;
+  --ink:         #0D0D0D;
+  --grid-line:   rgba(242, 235, 221, 0.08);
+  --grid-major:  rgba(242, 235, 221, 0.14);
+  --line:        rgba(242, 235, 221, 0.18);
+  --line-strong: rgba(242, 235, 221, 0.32);
+  --dim:         rgba(242, 235, 221, 0.60);
+  --display-font: 'Archivo', sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background-color: var(--navy);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px, 200px 200px, 200px 200px;
+  background-attachment: fixed;
+  color: var(--cream);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* HEADER */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: rgba(20, 44, 79, 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 0.5px solid var(--line);
+}
+.brand-mark {
+  font-family: var(--display-font);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  color: var(--cream);
+  text-decoration: none;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  transition: color 200ms ease;
+}
+.brand-mark:hover { color: var(--orange); }
+.brand-mark .reg {
+  display: inline-block;
+  width: 13px; height: 13px;
+  border: 1.25px solid currentColor;
+  border-radius: 50%;
+  font-family: 'SF Mono', monospace;
+  font-size: 8.5px; font-weight: 700;
+  line-height: 11px;
+  text-align: center;
+  vertical-align: 4px;
+  margin-left: 6px;
+}
+.header-back {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--cream);
+  text-decoration: none;
+  text-transform: uppercase;
+  padding: 9px 16px;
+  border: 1px solid var(--line-strong);
+  transition: border-color 200ms ease, color 200ms ease;
+}
+.header-back:hover { border-color: var(--orange); color: var(--orange); }
+
+/* PAGE WRAP */
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 32px; }
+
+/* SHARED TYPE */
+.mono-label {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.3em;
+  color: var(--orange);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.section-num {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px; letter-spacing: 0.3em;
+  color: var(--orange);
+  margin-bottom: 8px;
+}
+.section-title {
+  font-family: var(--display-font);
+  font-size: clamp(30px, 4vw, 52px);
+  font-weight: 900;
+  letter-spacing: -0.012em;
+  line-height: 0.98;
+  text-transform: uppercase;
+}
+.section-title .accent { color: var(--orange); }
+.section-rule {
+  width: 48px; height: 2px;
+  background: var(--orange);
+  margin: 14px 0 22px;
+}
+
+/* HERO */
+.hero {
+  padding: 80px 0 60px;
+}
+.hero-title {
+  font-family: var(--display-font);
+  font-size: clamp(44px, 6.4vw, 92px);
+  font-weight: 900;
+  letter-spacing: -0.014em;
+  line-height: 0.92;
+  text-transform: uppercase;
+  color: var(--cream);
+}
+.hero-title .accent { color: var(--orange); }
+.hero-sub {
+  margin-top: 22px;
+  font-size: clamp(16px, 1.5vw, 20px);
+  line-height: 1.55;
+  color: var(--cream);
+  max-width: 640px;
+}
+.hero-body {
+  margin-top: 18px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: rgba(242, 235, 221, 0.85);
+  max-width: 640px;
+}
+.hero-meta {
+  margin-top: 30px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  align-items: center;
+}
+.tier-key {
+  font-family: 'SF Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.tier-key .swatch {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border: 1px solid currentColor;
+}
+.tier-key .swatch.flag { background: var(--orange); border-color: var(--orange); }
+.tier-key .swatch.prem {
+  background: transparent;
+  border-color: var(--orange);
+  position: relative;
+}
+.tier-key .swatch.prem::after {
+  content: ""; position: absolute; inset: 2px; background: var(--orange);
+}
+
+/* PHASES */
+.phases {
+  padding: 24px 0 80px;
+}
+.phase {
+  margin-top: 56px;
+}
+.phase:first-of-type { margin-top: 24px; }
+.phase-head {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 22px;
+}
+.phase-name {
+  font-family: 'SF Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--orange);
+  white-space: nowrap;
+}
+.phase-rule {
+  flex: 1; height: 2px;
+  background: linear-gradient(90deg, var(--orange) 0%, transparent 100%);
+  opacity: 0.5;
+}
+.phase-count {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* TEMPLATE ROWS */
+.tpl-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.tpl-card {
+  display: grid;
+  grid-template-columns: 64px 1fr auto auto;
+  gap: 22px;
+  align-items: center;
+  padding: 18px 24px;
+  background: var(--navy-glass);
+  border: 0.5px solid var(--line-strong);
+  border-left: 2px solid var(--line-strong);
+  text-decoration: none;
+  color: var(--cream);
+  transition: border-left-color 240ms ease, background 240ms ease, transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.tpl-card:hover {
+  border-left-color: var(--orange);
+  background: rgba(20, 44, 79, 0.92);
+  transform: translateX(3px);
+}
+.tpl-num {
+  font-family: 'SF Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--orange);
+  line-height: 1;
+}
+.tpl-main { min-width: 0; }
+.tpl-name {
+  font-family: var(--display-font);
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--cream);
+  line-height: 1.1;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.tpl-name .guide-badge {
+  font-family: 'SF Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--orange);
+  padding: 2px 6px;
+  border: 0.5px solid var(--orange);
+  text-transform: uppercase;
+}
+.tpl-desc {
+  margin-top: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(242, 235, 221, 0.78);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.tpl-tier {
+  font-family: 'SF Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: right;
+  color: var(--dim);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.tpl-tier.flag, .tpl-tier.prem { color: var(--orange); }
+.tpl-price {
+  font-family: var(--display-font);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: var(--cream);
+  line-height: 1;
+  white-space: nowrap;
+}
+.tpl-card.flag .tpl-price,
+.tpl-card.prem .tpl-price { color: var(--orange); }
+.tpl-arrow {
+  font-family: 'SF Mono', monospace;
+  font-size: 18px;
+  color: var(--cream);
+  margin-left: 8px;
+  transition: transform 240ms cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+.tpl-card:hover .tpl-arrow { transform: translateX(6px); color: var(--orange); }
+
+/* CROSS-SELL RIBBON */
+.cross-sell {
+  background: var(--navy-deep);
+  border-top: 0.5px solid var(--line);
+  border-bottom: 0.5px solid var(--line);
+  padding: 72px 0;
+  position: relative;
+  overflow: hidden;
+}
+.cross-sell::before {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--orange);
+}
+.cross-sell-inner {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 40px;
+  align-items: center;
+}
+.cross-sell-title {
+  font-family: var(--display-font);
+  font-size: clamp(28px, 3.6vw, 44px);
+  font-weight: 900;
+  letter-spacing: -0.005em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.cross-sell-title .accent { color: var(--orange); }
+.cross-sell-body {
+  margin-top: 14px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(242, 235, 221, 0.88);
+  max-width: 600px;
+}
+.cta-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 26px;
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--cream);
+  background: transparent;
+  border: 1px solid var(--cream);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 200ms ease, color 200ms ease, transform 200ms cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+.cta-secondary:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+  transform: translateY(-2px);
+}
+.cta-primary-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 28px;
+  font-family: var(--display-font);
+  font-size: 13px; font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: var(--orange);
+  color: var(--cream);
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: transform 200ms cubic-bezier(0.22, 1.2, 0.36, 1),
+              filter 200ms ease,
+              box-shadow 200ms ease;
+}
+.cta-primary-link:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+  box-shadow: 0 8px 22px rgba(216, 90, 31, 0.45);
+}
+
+/* FOOTER */
+.site-footer {
+  padding: 36px 32px;
+  border-top: 0.5px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+.footer-meta,
+.footer-links {
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.footer-links { display: flex; gap: 22px; }
+.footer-links a { color: var(--dim); text-decoration: none; transition: color 200ms ease; }
+.footer-links a:hover { color: var(--orange); }
+
+/* RESPONSIVE */
+@media (max-width: 880px) {
+  .wrap { padding: 0 22px; }
+  .hero { padding: 56px 0 40px; }
+  .tpl-card {
+    grid-template-columns: 56px 1fr;
+    gap: 14px;
+  }
+  .tpl-tier, .tpl-price { grid-column: 2; text-align: left; }
+  .tpl-price { margin-top: 8px; }
+  .tpl-arrow { grid-column: 2; }
+  .cross-sell-inner { grid-template-columns: 1fr; gap: 22px; }
+  .cta-secondary { justify-content: center; }
+}
+@media (max-width: 560px) {
+  .site-header { padding: 14px 18px; }
+  .brand-mark { font-size: 17px; }
+  .header-back {
+    font-size: 9.5px;
+    letter-spacing: 0.22em;
+    padding: 7px 12px;
+  }
+  .wrap { padding: 0 18px; }
+  .tpl-card { padding: 16px 18px; }
+  .tpl-name { font-size: 16px; }
+  .site-footer { padding: 28px 18px; flex-direction: column; align-items: flex-start; gap: 12px; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand-mark" href="experience.html" aria-label="Backstage Blueprint — back to the tour">BCKSTG &middot; BLPRNT<span class="reg">M</span></a>
+  <a class="header-back" href="experience.html#scene-production-office">&larr; FRONT OF HOUSE</a>
+</header>
+
+
+<main>
+
+  <section class="hero">
+    <div class="wrap">
+      <div class="mono-label">// 14 TEMPLATES &middot; INDIVIDUALLY</div>
+      <h1 class="hero-title">Pick what<br>you need<span class="accent">.</span></h1>
+      <p class="hero-sub">All 14 BB templates, sold individually. Or get the full kit at one bundle price &mdash; that&rsquo;s The Blueprint.</p>
+      <p class="hero-body">Someone needs just the budget. Someone else needs just a settlement sheet. À la carte gets you to one document, fast. Or pick a few and build toward the full set later.</p>
+      <div class="hero-meta">
+        <span class="tier-key"><span class="swatch"></span>Standard $7</span>
+        <span class="tier-key"><span class="swatch flag"></span>Flagship $12</span>
+        <span class="tier-key"><span class="swatch prem"></span>Premium $15</span>
+        <span class="tier-key">+ Guide = paired guide included</span>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="phases">
+    <div class="wrap">
+
+      <div class="phase">
+        <div class="phase-head">
+          <span class="phase-name">&mdash; PLANNING</span>
+          <span class="phase-rule"></span>
+          <span class="phase-count">02</span>
+        </div>
+        <div class="tpl-grid">
+
+          <a class="tpl-card prem" href="template.html?id=master-budget">
+            <div class="tpl-num">201</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Master Budget <span class="guide-badge">+ GUIDE</span></div>
+              <div class="tpl-desc">The 12-tab budget a working tour actually runs on. Premium flagship &mdash; the deepest doc in the kit.</div>
+            </div>
+            <div class="tpl-tier prem">// PREMIUM</div>
+            <div class="tpl-price">$15<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+          <a class="tpl-card" href="template.html?id=show-design-worksheet">
+            <div class="tpl-num">202</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Show Design Worksheet</div>
+              <div class="tpl-desc">Translate the artist&rsquo;s vision into the production deliverables.</div>
+            </div>
+            <div class="tpl-tier">// STANDARD</div>
+            <div class="tpl-price">$7<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+        </div>
+      </div>
+
+
+      <div class="phase">
+        <div class="phase-head">
+          <span class="phase-name">&mdash; TEAM &amp; ADVANCE</span>
+          <span class="phase-rule"></span>
+          <span class="phase-count">07</span>
+        </div>
+        <div class="tpl-grid">
+
+          <a class="tpl-card" href="template.html?id=crew-onboarding">
+            <div class="tpl-num">203</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Crew Onboarding</div>
+              <div class="tpl-desc">The PDF form every crew member fills out before they roll.</div>
+            </div>
+            <div class="tpl-tier">// STANDARD</div>
+            <div class="tpl-price">$7<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+          <a class="tpl-card" href="template.html?id=technical-rider">
+            <div class="tpl-num">204</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Technical Rider <span class="guide-badge">+ GUIDE</span></div>
+              <div class="tpl-desc">The technical spec the venue actually reads &mdash; without the bloat.</div>
+            </div>
+            <div class="tpl-tier">// STANDARD</div>
+            <div class="tpl-price">$7<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+          <a class="tpl-card" href="template.html?id=input-list">
+            <div class="tpl-num">205</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Input List</div>
+              <div class="tpl-desc">Channel-by-channel for the console &mdash; pairs with the rider.</div>
+            </div>
+            <div class="tpl-tier">// STANDARD</div>
+            <div class="tpl-price">$7<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+          <a class="tpl-card" href="template.html?id=hospitality-rider">
+            <div class="tpl-num">206</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Hospitality Rider <span class="guide-badge">+ GUIDE</span></div>
+              <div class="tpl-desc">The rider section that breaks most riders. Done right.</div>
+            </div>
+            <div class="tpl-tier">// STANDARD</div>
+            <div class="tpl-price">$7<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+          <a class="tpl-card" href="template.html?id=truck-routing">
+            <div class="tpl-num">207</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Truck Routing</div>
+              <div class="tpl-desc">Routing math + drive-time reality &mdash; before the bus moves.</div>
+            </div>
+            <div class="tpl-tier">// STANDARD</div>
+            <div class="tpl-price">$7<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+          <a class="tpl-card" href="template.html?id=travel-grid">
+            <div class="tpl-num">208</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Travel Grid</div>
+              <div class="tpl-desc">Flights, hotels, ground &mdash; one place, one source of truth.</div>
+            </div>
+            <div class="tpl-tier">// STANDARD</div>
+            <div class="tpl-price">$7<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+          <a class="tpl-card flag" href="template.html?id=show-advance-packet">
+            <div class="tpl-num">209</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Show Advance Packet <span class="guide-badge">+ GUIDE</span></div>
+              <div class="tpl-desc">The complete advance handed to the venue. Flagship.</div>
+            </div>
+            <div class="tpl-tier flag">// FLAGSHIP</div>
+            <div class="tpl-price">$12<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+        </div>
+      </div>
+
+
+      <div class="phase">
+        <div class="phase-head">
+          <span class="phase-name">&mdash; SHOW DAY</span>
+          <span class="phase-rule"></span>
+          <span class="phase-count">03</span>
+        </div>
+        <div class="tpl-grid">
+
+          <a class="tpl-card" href="template.html?id=day-sheet">
+            <div class="tpl-num">210</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Day Sheet <span class="guide-badge">+ GUIDE</span></div>
+              <div class="tpl-desc">The one-pager every crew member pulls up before doors.</div>
+            </div>
+            <div class="tpl-tier">// STANDARD</div>
+            <div class="tpl-price">$7<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+          <a class="tpl-card" href="template.html?id=pass-sheet">
+            <div class="tpl-num">211</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Pass Sheet</div>
+              <div class="tpl-desc">Credential matrix by access tier &mdash; clear on day-of.</div>
+            </div>
+            <div class="tpl-tier">// STANDARD</div>
+            <div class="tpl-price">$7<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+          <a class="tpl-card" href="template.html?id=wayfinding-pack">
+            <div class="tpl-num">212</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Wayfinding Pack</div>
+              <div class="tpl-desc">Signs, room labels, dressing-room names &mdash; printable + tidy.</div>
+            </div>
+            <div class="tpl-tier">// STANDARD</div>
+            <div class="tpl-price">$7<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+        </div>
+      </div>
+
+
+      <div class="phase">
+        <div class="phase-head">
+          <span class="phase-name">&mdash; THE CLOSE</span>
+          <span class="phase-rule"></span>
+          <span class="phase-count">02</span>
+        </div>
+        <div class="tpl-grid">
+
+          <a class="tpl-card flag" href="template.html?id=road-report">
+            <div class="tpl-num">213</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Road Report <span class="guide-badge">+ GUIDE</span></div>
+              <div class="tpl-desc">The post-show debrief that makes the next run better. Flagship.</div>
+            </div>
+            <div class="tpl-tier flag">// FLAGSHIP</div>
+            <div class="tpl-price">$12<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+          <a class="tpl-card" href="template.html?id=show-settlement">
+            <div class="tpl-num">214</div>
+            <div class="tpl-main">
+              <div class="tpl-name">Show Settlement <span class="guide-badge">+ GUIDE</span></div>
+              <div class="tpl-desc">What to verify before you leave the venue. The page that ends the night clean.</div>
+            </div>
+            <div class="tpl-tier">// STANDARD</div>
+            <div class="tpl-price">$7<span class="tpl-arrow">&rarr;</span></div>
+          </a>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <section class="cross-sell">
+    <div class="wrap">
+      <div class="cross-sell-inner">
+        <div>
+          <div class="mono-label">// PICKING UP MORE THAN TWO</div>
+          <h3 class="cross-sell-title">Get the full kit<span class="accent">.</span></h3>
+          <p class="cross-sell-body">Three templates piecemeal already runs you $30. All 14 &mdash; plus 7 paired guides &mdash; is $79 bundled. About a third off. <strong>That&rsquo;s The Blueprint.</strong></p>
+        </div>
+        <a class="cta-primary-link" href="blueprint.html">
+          EXPLORE THE BLUEPRINT
+          <span>&rarr;</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+
+<footer class="site-footer">
+  <div class="brand-mark" style="font-size: 16px;">BCKSTG &middot; BLPRNT<span class="reg" style="width:10px;height:10px;font-size:7px;line-height:8px;vertical-align:3px;">M</span></div>
+  <div class="footer-meta">EST. 2026 &middot; BACKSTAGEBLUEPRINT.CO</div>
+  <div class="footer-links">
+    <a href="experience.html">THE TOUR</a>
+    <a href="experience.html#scene-console">CONTACT</a>
+    <a href="experience.html#scene-production-office">FRONT OF HOUSE</a>
+    <a href="privacy.html">PRIVACY</a>
+    <a href="terms.html">TERMS</a>
+  </div>
+</footer>
+
+</body>
+</html>

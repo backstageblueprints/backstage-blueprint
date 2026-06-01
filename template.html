@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1B3D6E">
+<title>Template — Backstage Blueprint</title>
+<meta name="description" content="A single BB template — sold individually. Pick what your tour actually needs.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   PER-TEMPLATE DETAIL PAGE — Order 005 · Level 2
+   Scene-carousel; content driven by URL ?id= param.
+   Single parametrized HTML file for all 14 templates.
+   ========================================================= */
+:root {
+  --navy:        #1B3D6E;
+  --navy-deep:   #142C4F;
+  --navy-glass:  rgba(20, 44, 79, 0.78);
+  --orange:      #D85A1F;
+  --cream:       #F2EBDD;
+  --ink:         #0D0D0D;
+  --grid-line:   rgba(242, 235, 221, 0.08);
+  --grid-major:  rgba(242, 235, 221, 0.14);
+  --line:        rgba(242, 235, 221, 0.18);
+  --line-strong: rgba(242, 235, 221, 0.32);
+  --dim:         rgba(242, 235, 221, 0.60);
+  --display-font: 'Archivo', sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100vh; overflow: hidden; }
+body {
+  background-color: var(--navy);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px, 200px 200px, 200px 200px;
+  background-attachment: fixed;
+  color: var(--cream);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.site-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 32px;
+  background: linear-gradient(180deg, rgba(20,44,79,0.78) 0%, rgba(20,44,79,0) 100%);
+  pointer-events: none;
+}
+.site-header > * { pointer-events: auto; }
+.brand-mark {
+  font-family: var(--display-font);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  color: var(--cream);
+  text-decoration: none;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  transition: color 200ms ease;
+}
+.brand-mark:hover { color: var(--orange); }
+.brand-mark .reg {
+  display: inline-block;
+  width: 13px; height: 13px;
+  border: 1.25px solid currentColor;
+  border-radius: 50%;
+  font-family: 'SF Mono', monospace;
+  font-size: 8.5px; font-weight: 700;
+  line-height: 11px;
+  text-align: center;
+  vertical-align: 4px;
+  margin-left: 6px;
+}
+.header-back {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--cream);
+  text-decoration: none;
+  text-transform: uppercase;
+  padding: 9px 16px;
+  border: 1px solid var(--line-strong);
+  background: rgba(20,44,79,0.5);
+  backdrop-filter: blur(6px);
+  transition: border-color 200ms ease, color 200ms ease;
+}
+.header-back:hover { border-color: var(--orange); color: var(--orange); }
+
+.tour {
+  position: relative;
+  width: 100%; height: 100vh;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  perspective: 1500px;
+  perspective-origin: 50% 50%;
+}
+.tour::-webkit-scrollbar { width: 0; }
+.tour { scrollbar-width: none; }
+
+.screen {
+  position: relative;
+  width: 100%; height: 100vh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 28px 80px;
+  transform-style: preserve-3d;
+}
+.table-anchor {
+  width: min(920px, 92vw);
+  max-height: calc(100vh - 180px);
+  position: relative;
+  transform-style: preserve-3d;
+  transform: translateZ(-700px) translateY(60px) rotateX(10deg);
+  opacity: 0;
+  transition: transform 1100ms cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 600ms ease-out;
+  pointer-events: none;
+}
+.screen.in-view .table-anchor {
+  transform: translateZ(0) translateY(0) rotateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.table {
+  position: relative;
+  background: var(--navy-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--orange);
+  padding: 40px 48px;
+  transform-style: preserve-3d;
+  transform: rotateX(0) rotateY(0);
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.45),
+    0 8px 22px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 0.5px rgba(242, 235, 221, 0.08);
+}
+.table-id {
+  position: absolute;
+  top: 14px; right: 18px;
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--dim);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.mono-label {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.3em;
+  color: var(--orange);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.table-title {
+  font-family: var(--display-font);
+  font-size: clamp(32px, 4.4vw, 60px);
+  font-weight: 900;
+  letter-spacing: -0.012em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+.table-title .accent { color: var(--orange); }
+.table-rule {
+  width: 48px; height: 2px;
+  background: var(--orange);
+  margin: 14px 0 22px;
+}
+.body-p {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: rgba(242, 235, 221, 0.88);
+  margin-bottom: 12px;
+}
+.body-p strong { color: var(--cream); font-weight: 600; }
+
+/* TBL 01 — HERO */
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 0.85fr;
+  gap: 44px;
+  align-items: center;
+}
+.hero-meta {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+.hero-num { color: var(--orange); font-weight: 700; }
+.hero-tier { color: var(--dim); }
+.hero-tier.flag, .hero-tier.prem { color: var(--orange); }
+.hero-title-main {
+  font-family: var(--display-font);
+  font-size: clamp(36px, 5vw, 72px);
+  font-weight: 900;
+  letter-spacing: -0.014em;
+  line-height: 0.92;
+  text-transform: uppercase;
+  color: var(--cream);
+}
+.hero-title-main .accent { color: var(--orange); }
+.hero-sub {
+  margin-top: 16px;
+  font-size: clamp(14.5px, 1.35vw, 18px);
+  line-height: 1.5;
+  color: var(--cream);
+  max-width: 400px;
+}
+.price-block {
+  margin-top: 24px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+.price-main {
+  font-family: var(--display-font);
+  font-size: clamp(36px, 4.4vw, 56px);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  color: var(--orange);
+}
+.price-aside {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.buy-row {
+  margin-top: 22px;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 26px;
+  font-family: var(--display-font);
+  font-size: 12.5px; font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: var(--orange);
+  color: var(--cream);
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 200ms cubic-bezier(0.22, 1.2, 0.36, 1),
+              filter 200ms ease,
+              box-shadow 200ms ease;
+}
+.cta-primary:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+  box-shadow: 0 8px 22px rgba(216, 90, 31, 0.45);
+}
+.license-note {
+  margin-top: 14px;
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  max-width: 400px;
+  line-height: 1.55;
+}
+
+.preview-frame {
+  position: relative;
+  transform: rotate(1.5deg);
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+}
+.preview-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 4;          /* lock display aspect — kills PNG-to-PNG subject-size inconsistency */
+  object-fit: cover;            /* zoom-fill each PNG into the same visible frame */
+  object-position: center;
+  background: #000;             /* solid backing kills any transparent-edge bleed */
+  filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.5))
+          drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
+  user-select: none;
+  -webkit-user-drag: none;
+  border: 0.5px solid var(--line-strong);
+}
+.preview-spec {
+  position: absolute;
+  bottom: -10px;
+  right: 8px;
+  padding: 4px 10px;
+  font-family: 'SF Mono', monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--cream);
+  background: var(--navy-deep);
+  border-left: 2px solid var(--orange);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* TBL 02 — WHAT'S INCLUDED */
+.included-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.included-item {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  background: rgba(13, 13, 13, 0.3);
+  border: 0.5px solid var(--line-strong);
+  border-left: 2px solid var(--orange);
+}
+.included-mark {
+  font-family: 'SF Mono', monospace;
+  font-size: 16px;
+  color: var(--orange);
+  font-weight: 700;
+  text-align: center;
+}
+.included-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--cream);
+  line-height: 1.4;
+}
+.included-text strong { color: var(--cream); font-weight: 600; }
+.included-text .note {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: rgba(242, 235, 221, 0.7);
+  font-style: italic;
+}
+
+/* TBL 03 — PAIRS WITH */
+.pairs-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+}
+.pairs-card {
+  display: block;
+  padding: 20px 22px;
+  background: rgba(13, 13, 13, 0.3);
+  border: 0.5px solid var(--line-strong);
+  border-left: 2px solid var(--orange);
+  text-decoration: none;
+  color: var(--cream);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms ease, border-color 200ms ease;
+}
+.pairs-card:hover {
+  transform: translateY(-3px);
+  background: rgba(20, 44, 79, 0.92);
+  border-left-color: var(--cream);
+}
+.pairs-num {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--orange);
+  margin-bottom: 8px;
+}
+.pairs-name {
+  font-family: var(--display-font);
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--cream);
+  line-height: 1.1;
+}
+.pairs-sub {
+  margin-top: 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(242, 235, 221, 0.78);
+}
+.pairs-arrow {
+  margin-top: 12px;
+  font-family: 'SF Mono', monospace;
+  font-size: 13px;
+  color: var(--orange);
+  transition: transform 220ms cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+.pairs-card:hover .pairs-arrow { transform: translateX(4px); }
+
+/* TBL 04 — BLUEPRINT CROSS-SELL */
+.cross-sell-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 32px;
+  align-items: center;
+}
+.cta-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--cream);
+  background: transparent;
+  border: 1px solid var(--cream);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 200ms ease, color 200ms ease, transform 200ms cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+.cta-secondary:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+  transform: translateY(-2px);
+}
+
+/* BUY MODAL */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  opacity: 0; visibility: hidden;
+  transition: opacity 240ms ease, visibility 0ms 240ms;
+}
+.modal-backdrop.open {
+  opacity: 1; visibility: visible;
+  transition: opacity 240ms ease, visibility 0ms 0ms;
+}
+.modal {
+  width: min(520px, 100%);
+  background: var(--navy-deep);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--orange);
+  padding: 32px 36px;
+  position: relative;
+  transform: translateY(20px) scale(0.96);
+  transition: transform 320ms cubic-bezier(0.22, 1.2, 0.36, 1);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+.modal-backdrop.open .modal { transform: translateY(0) scale(1); }
+.modal-close {
+  position: absolute;
+  top: 14px; right: 14px;
+  width: 30px; height: 30px;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--cream);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 200ms ease, color 200ms ease;
+}
+.modal-close:hover { border-color: var(--orange); color: var(--orange); }
+.modal-label {
+  font-family: 'SF Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 14px;
+}
+.modal-title {
+  font-family: var(--display-font);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--cream);
+}
+.modal-rule {
+  width: 40px; height: 2px;
+  background: var(--orange);
+  margin: 14px 0 16px;
+}
+.modal-body {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: rgba(242, 235, 221, 0.88);
+}
+.modal-body strong { color: var(--cream); font-weight: 600; }
+.modal-body code {
+  font-family: 'SF Mono', monospace;
+  font-size: 11.5px;
+  color: var(--orange);
+  background: rgba(255,255,255,0.08);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+/* PERSISTENT UI */
+.cue-list {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 150;
+  display: flex; gap: 14px;
+}
+.cue-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(242, 235, 221, 0.45);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: background 240ms ease, border-color 240ms ease, transform 240ms ease;
+}
+.cue-dot.active {
+  background: var(--orange);
+  border-color: var(--orange);
+  transform: scale(1.25);
+}
+.cue-dot:hover { border-color: var(--cream); }
+.footer-status {
+  position: fixed;
+  bottom: 22px;
+  left: 32px;
+  z-index: 150;
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(242, 235, 221, 0.85);
+  display: inline-flex;
+  align-items: center;
+}
+.footer-status .live-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--orange);
+  border-radius: 50%;
+  margin-right: 10px;
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+.footer-meta {
+  position: fixed;
+  bottom: 22px;
+  right: 32px;
+  z-index: 150;
+  font-family: 'SF Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+@media (max-width: 880px) {
+  .table { padding: 32px 28px; }
+  .hero-grid { grid-template-columns: 1fr; gap: 22px; }
+  .preview-frame { max-width: 240px; margin: 0 auto; }
+  .cross-sell-grid { grid-template-columns: 1fr; gap: 20px; }
+  .cta-secondary { justify-content: center; }
+  .footer-meta { display: none; }
+}
+@media (max-width: 560px) {
+  .site-header { padding: 14px 18px; }
+  .brand-mark { font-size: 17px; }
+  .header-back {
+    font-size: 9.5px;
+    letter-spacing: 0.22em;
+    padding: 7px 12px;
+  }
+  .table { padding: 26px 22px; }
+  .footer-status { font-size: 10px; bottom: 18px; left: 18px; }
+  .cue-list { bottom: 18px; }
+}
+@media (max-height: 720px) {
+  .table-anchor { max-height: calc(100vh - 140px); }
+  .table { padding: 26px 32px; }
+  .hero-title-main { font-size: clamp(30px, 4.2vw, 54px); }
+  .table-title { font-size: clamp(26px, 3.4vw, 44px); }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand-mark" href="experience.html" aria-label="Backstage Blueprint — back to the tour">BCKSTG &middot; BLPRNT<span class="reg">M</span></a>
+  <a class="header-back" href="templates.html">&larr; ALL TEMPLATES</a>
+</header>
+
+
+<div class="tour" id="tour">
+
+  <!-- TBL 01 — HERO -->
+  <section class="screen" id="screen-1" data-cue="1">
+    <div class="table-anchor">
+      <div class="table">
+        <div class="table-id">// TBL 01/4</div>
+        <div class="hero-grid">
+          <div>
+            <div class="hero-meta">
+              <span class="hero-num" id="hero-num">--</span>
+              <span class="hero-tier" id="hero-tier">// TIER</span>
+            </div>
+            <h1 class="hero-title-main" id="hero-title">Template<span class="accent">.</span></h1>
+            <p class="hero-sub" id="hero-sub">One-line description of what it does in a tour.</p>
+            <div class="price-block">
+              <div class="price-main" id="hero-price">$7</div>
+              <div class="price-aside" id="hero-price-aside">// SINGLE TEMPLATE</div>
+            </div>
+            <div class="buy-row">
+              <button class="cta-primary" id="buy-btn" type="button">GET IT <span>&rarr;</span></button>
+            </div>
+            <p class="license-note">// LICENSED FOR YOUR OWN TOURS &middot; NO RESALE &middot; ONE PURCHASE, ONE USER</p>
+          </div>
+          <div class="preview-frame">
+            <img class="preview-img" id="hero-preview" src="" alt="Template preview" loading="eager">
+            <span class="preview-spec" id="hero-doc">DOC BB-XXX</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- TBL 02 — DESCRIPTION + WHAT'S INCLUDED -->
+  <section class="screen" id="screen-2" data-cue="2">
+    <div class="table-anchor">
+      <div class="table">
+        <div class="table-id">// TBL 02/4</div>
+        <div class="mono-label">// WHAT YOU GET</div>
+        <h2 class="table-title" id="t2-title">What&rsquo;s included<span class="accent">.</span></h2>
+        <div class="table-rule"></div>
+        <p class="body-p" id="t2-body">Description.</p>
+        <ul class="included-list" id="included-list">
+          <!-- JS-populated -->
+        </ul>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- TBL 03 — PAIRS WITH -->
+  <section class="screen" id="screen-3" data-cue="3">
+    <div class="table-anchor">
+      <div class="table">
+        <div class="table-id">// TBL 03/4</div>
+        <div class="mono-label">// PAIRS WITH</div>
+        <h2 class="table-title">Run it with<span class="accent">.</span></h2>
+        <div class="table-rule"></div>
+        <p class="body-p" style="margin-bottom: 18px;">These templates work alongside this one &mdash; same tour, different moments.</p>
+        <ul class="pairs-grid" id="pairs-grid">
+          <!-- JS-populated -->
+        </ul>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- TBL 04 — BLUEPRINT CROSS-SELL -->
+  <section class="screen" id="screen-4" data-cue="4">
+    <div class="table-anchor">
+      <div class="table">
+        <div class="table-id">// TBL 04/4</div>
+        <div class="cross-sell-grid">
+          <div>
+            <div class="mono-label">// NEED MORE THAN JUST THIS</div>
+            <h2 class="table-title">The Blueprint<span class="accent">.</span></h2>
+            <div class="table-rule"></div>
+            <p class="body-p">The full kit a working tour runs on. All 14 templates plus 7 paired guides &mdash; bundled at <strong>$79</strong> ($49 launch). About a third off versus picking them up one at a time.</p>
+          </div>
+          <a class="cta-secondary" href="blueprint.html">
+            EXPLORE
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- TBL 01 CLONE for loop -->
+  <section class="screen" id="screen-1-clone" data-cue="1" aria-hidden="true">
+    <div class="table-anchor">
+      <div class="table">
+        <div class="table-id">// TBL 01/4</div>
+        <div class="hero-grid">
+          <div>
+            <div class="hero-meta">
+              <span class="hero-num" id="clone-num">--</span>
+              <span class="hero-tier" id="clone-tier">// TIER</span>
+            </div>
+            <h1 class="hero-title-main" id="clone-title">Template<span class="accent">.</span></h1>
+            <p class="hero-sub" id="clone-sub"></p>
+            <div class="price-block">
+              <div class="price-main" id="clone-price">$7</div>
+              <div class="price-aside" id="clone-price-aside">// SINGLE TEMPLATE</div>
+            </div>
+            <div class="buy-row">
+              <button class="cta-primary" type="button" onclick="document.getElementById('tour').scrollTo({top:0,behavior:'smooth'});">GET IT <span>&rarr;</span></button>
+            </div>
+            <p class="license-note">// LICENSED FOR YOUR OWN TOURS &middot; NO RESALE &middot; ONE PURCHASE, ONE USER</p>
+          </div>
+          <div class="preview-frame">
+            <img class="preview-img" id="clone-preview" src="" alt="" loading="lazy">
+            <span class="preview-spec" id="clone-doc">DOC BB-XXX</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+
+<!-- BUY MODAL -->
+<div class="modal-backdrop" id="buy-modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal">
+    <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+    <div class="modal-label">// CHECKOUT &middot; PLACEHOLDER</div>
+    <h3 class="modal-title">Stripe Checkout</h3>
+    <div class="modal-rule"></div>
+    <p class="modal-body"><strong>The real Buy flow goes live when the Stripe price ID is wired in.</strong></p>
+    <p class="modal-body" style="margin-top: 12px;">On purchase, Stripe Checkout will run, the buyer&rsquo;s email becomes their Guest Pass account, and this template (plus its paired guide if applicable) lands in their My Binder. Wiring documented in <code>03_Wiring/stripe_templates.md</code> once provided.</p>
+  </div>
+</div>
+
+
+<nav class="cue-list" id="cue-list" aria-label="Section navigation">
+  <button class="cue-dot active" data-go="1" aria-label="Section 1"></button>
+  <button class="cue-dot" data-go="2" aria-label="Section 2"></button>
+  <button class="cue-dot" data-go="3" aria-label="Section 3"></button>
+  <button class="cue-dot" data-go="4" aria-label="Section 4"></button>
+</nav>
+
+<div class="footer-status"><span class="live-dot"></span>BCKSTG &middot; BLPRNT &middot; TEMPLATES</div>
+<div class="footer-meta" style="text-align:right;">
+  <div style="margin-bottom:4px;"><a href="experience.html" style="color:inherit;text-decoration:none;">THE TOUR</a> &middot; <a href="experience.html#scene-console" style="color:inherit;text-decoration:none;">CONTACT</a> &middot; <a href="experience.html#scene-production-office" style="color:inherit;text-decoration:none;">FRONT OF HOUSE</a> &middot; <a href="privacy.html" style="color:inherit;text-decoration:none;">PRIVACY</a> &middot; <a href="terms.html" style="color:inherit;text-decoration:none;">TERMS</a></div>
+  <div>EST. 2026 &middot; BACKSTAGEBLUEPRINT.CO</div>
+</div>
+
+
+<script>
+// =========================================================
+// 14 TEMPLATE DATA OBJECTS — keyed by slug
+// =========================================================
+const TEMPLATES = {
+  'master-budget': {
+    num: '201', name: 'Master Budget',
+    tier: 'PREMIUM', tierClass: 'prem', price: 15,
+    sub: 'The 12-tab budget a working tour actually runs on.',
+    body: 'The deepest deliverable in the kit. Twelve tabs covering production cost floor, day-off math, insurance lines, labor multipliers, ship-vs-rent math, hospitality, contingency. Built so a first-timer can run a real budget — and a veteran can finally retire the spreadsheet they’ve been carrying around.',
+    guide: 'Master Budget Guide',
+    preview: 'templates/Template_Previews/201_BB_Template_Preview_Master_Budget.png',
+    pairs: ['truck-routing', 'road-report']
+  },
+  'show-design-worksheet': {
+    num: '202', name: 'Show Design Worksheet',
+    tier: 'STANDARD', tierClass: '', price: 7,
+    sub: 'Translate the artist’s vision into the production deliverables.',
+    body: 'A working bridge between the artist conversation and the technical conversation. Captures intent, references, non-negotiables, energy curve, and audience priority — so the rest of the production team designs against something specific instead of guessing.',
+    guide: null,
+    preview: 'templates/Template_Previews/202_BB_Template_Preview_Show_Design_Worksheet.png',
+    pairs: ['technical-rider', 'master-budget']
+  },
+  'crew-onboarding': {
+    num: '203', name: 'Crew Onboarding',
+    tier: 'STANDARD', tierClass: '', price: 7,
+    sub: 'The PDF form every crew member fills out before they roll.',
+    body: 'Travel profile, dietary needs, document status, frequent-flyer numbers, emergency contact. The file you wish you’d had before the first rebooking emergency on tour one.',
+    guide: null,
+    preview: 'templates/Template_Previews/203_BB_Template_Preview_Crew_Onboarding.png',
+    pairs: ['travel-grid', 'show-advance-packet']
+  },
+  'technical-rider': {
+    num: '204', name: 'Technical Rider',
+    tier: 'STANDARD', tierClass: '', price: 7,
+    sub: 'The technical spec the venue actually reads — without the bloat.',
+    body: 'Stage plot, input list parity, power requirements by phase, backline by model number, rigging weight loads, reasonable substitutions clause. Built to get approved without three rounds of back-and-forth.',
+    guide: 'Technical Rider Guide',
+    preview: 'templates/Template_Previews/204_BB_Template_Preview_Technical_Rider.png',
+    pairs: ['input-list', 'hospitality-rider']
+  },
+  'input-list': {
+    num: '205', name: 'Input List',
+    tier: 'STANDARD', tierClass: '', price: 7,
+    sub: 'Channel-by-channel for the console — pairs with the rider.',
+    body: 'Channel count matches your console scenes exactly. Backup channels and spares included. The mismatch fight nobody wants to have on day-of — solved on paper, in advance.',
+    guide: null,
+    preview: 'templates/Template_Previews/205_BB_Template_Preview_Input_List.png',
+    pairs: ['technical-rider']
+  },
+  'hospitality-rider': {
+    num: '206', name: 'Hospitality Rider',
+    tier: 'STANDARD', tierClass: '', price: 7,
+    sub: 'The rider section that breaks most riders. Done right.',
+    body: 'Dietary needs stated as needs, brand specificity only when required, must-have versus nice-to-have, allergen disclosure, substitution policy. The hospitality section venues actually deliver on — because it asks for what matters.',
+    guide: 'Hospitality Rider Guide',
+    preview: 'templates/Template_Previews/206_BB_Template_Preview_Hospitality_Rider.png',
+    pairs: ['technical-rider']
+  },
+  'truck-routing': {
+    num: '207', name: 'Truck Routing',
+    tier: 'STANDARD', tierClass: '', price: 7,
+    sub: 'Routing math + drive-time reality — before the bus moves.',
+    body: 'City-to-city math, real drive times, fuel and toll estimates, rest stops, alternative routes. Tied into the tour calendar so day-off costs show up where they belong.',
+    guide: null,
+    preview: 'templates/Template_Previews/207_BB_Template_Preview_Truck_Routing.png',
+    pairs: ['master-budget', 'travel-grid']
+  },
+  'travel-grid': {
+    num: '208', name: 'Travel Grid',
+    tier: 'STANDARD', tierClass: '', price: 7,
+    sub: 'Flights, hotels, ground — one place, one source of truth.',
+    body: 'Per-person itineraries packaged so any rebooking or gate issue gets handled instantly. Pulls from crew onboarding for passport-exact names. Saves hours every week.',
+    guide: null,
+    preview: 'templates/Template_Previews/208_BB_Template_Preview_Travel_Grid.png',
+    pairs: ['truck-routing', 'crew-onboarding']
+  },
+  'show-advance-packet': {
+    num: '209', name: 'Show Advance Packet',
+    tier: 'FLAGSHIP', tierClass: 'flag', price: 12,
+    sub: 'The complete advance handed to the venue. Flagship.',
+    body: 'Everything the venue needs in one packet: stage plot, input list, rider, ROS, crew calls, hospitality, contacts. The packet that opens the door for everything to flow back to you cleanly.',
+    guide: 'Show Advance Guide',
+    preview: 'templates/Template_Previews/209_BB_Template_Preview_Show_Advance_Packet.png',
+    pairs: ['technical-rider', 'crew-onboarding']
+  },
+  'day-sheet': {
+    num: '210', name: 'Day Sheet',
+    tier: 'STANDARD', tierClass: '', price: 7,
+    sub: 'The one-pager every crew member pulls up before doors.',
+    body: 'Call times by department, key contacts, venue address, hotel info, schedule down to the minute. The single source of truth for the day — distributed pre-show, updated live.',
+    guide: 'Day Sheet Guide',
+    preview: 'templates/Template_Previews/210_BB_Template_Preview_Day_Sheet.png',
+    pairs: ['pass-sheet', 'wayfinding-pack']
+  },
+  'pass-sheet': {
+    num: '211', name: 'Pass Sheet',
+    tier: 'STANDARD', tierClass: '', price: 7,
+    sub: 'Credential matrix by access tier — clear on day-of.',
+    body: 'Who gets what wristband, who gets stage access, who gets the bus pass. Built so the runner and security can spot-check without asking. Pairs with the wayfinding pack.',
+    guide: null,
+    preview: 'templates/Template_Previews/211_BB_Template_Preview_Pass_Sheet.png',
+    pairs: ['day-sheet', 'wayfinding-pack']
+  },
+  'wayfinding-pack': {
+    num: '212', name: 'Wayfinding Pack',
+    tier: 'STANDARD', tierClass: '', price: 7,
+    sub: 'Signs, room labels, dressing-room names — printable + tidy.',
+    body: 'Templates for every sign the load-in crew tapes up. Branded, consistent, printable from any venue’s back-office printer. The small thing that keeps everyone moving the right direction.',
+    guide: null,
+    preview: 'templates/Template_Previews/212_BB_Template_Preview_Wayfinding_Pack.png',
+    pairs: ['day-sheet', 'pass-sheet']
+  },
+  'road-report': {
+    num: '213', name: 'Road Report',
+    tier: 'FLAGSHIP', tierClass: 'flag', price: 12,
+    sub: 'The post-show debrief that makes the next run better. Flagship.',
+    body: 'Capture what worked, what didn’t, what to fix before the next city. The institutional knowledge that walks off the bus with your crew — written down, kept around, used.',
+    guide: 'Road Report Guide',
+    preview: 'templates/Template_Previews/213_BB_Template_Preview_Road_Report.png',
+    pairs: ['show-settlement', 'master-budget']
+  },
+  'show-settlement': {
+    num: '214', name: 'Show Settlement',
+    tier: 'STANDARD', tierClass: '', price: 7,
+    sub: 'What to verify before you leave the venue. The page that ends the night clean.',
+    body: 'Turnstile audit, merch reconciliation, hospitality damage walk, crew tips, returned gear inventory, settlement check confirmation. The doc that turns the venue release from chaos into a checklist.',
+    guide: 'Settlement Guide',
+    preview: 'templates/Template_Previews/214_BB_Template_Preview_Show_Settlement.png',
+    pairs: ['road-report']
+  }
+};
+
+
+// =========================================================
+// READ URL ID, POPULATE THE PAGE
+// =========================================================
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  let id = (params.get('id') || 'master-budget').toLowerCase();
+  if (!TEMPLATES[id]) id = 'master-budget';
+  const t = TEMPLATES[id];
+
+  // Update title tag
+  document.title = `${t.name} — BB Template | Backstage Blueprint`;
+
+  // Hero
+  document.getElementById('hero-num').textContent = `// ${t.num}`;
+  const tierEl = document.getElementById('hero-tier');
+  tierEl.textContent = `// ${t.tier}`;
+  if (t.tierClass) tierEl.classList.add(t.tierClass);
+
+  const heroTitle = document.getElementById('hero-title');
+  heroTitle.innerHTML = `${t.name}<span class="accent">.</span>`;
+  document.getElementById('hero-sub').textContent = t.sub;
+  document.getElementById('hero-price').textContent = `$${t.price}`;
+  document.getElementById('hero-price-aside').innerHTML = t.guide
+    ? '// SINGLE TEMPLATE<br>+ PAIRED GUIDE'
+    : '// SINGLE TEMPLATE';
+  document.getElementById('hero-preview').src = t.preview;
+  document.getElementById('hero-preview').alt = `${t.name} preview`;
+  document.getElementById('hero-doc').textContent = `DOC BB-${t.num}`;
+
+  // Clone (for loop)
+  document.getElementById('clone-num').textContent = `// ${t.num}`;
+  const cloneTier = document.getElementById('clone-tier');
+  cloneTier.textContent = `// ${t.tier}`;
+  if (t.tierClass) cloneTier.classList.add(t.tierClass);
+  document.getElementById('clone-title').innerHTML = `${t.name}<span class="accent">.</span>`;
+  document.getElementById('clone-sub').textContent = t.sub;
+  document.getElementById('clone-price').textContent = `$${t.price}`;
+  document.getElementById('clone-price-aside').innerHTML = t.guide
+    ? '// SINGLE TEMPLATE<br>+ PAIRED GUIDE'
+    : '// SINGLE TEMPLATE';
+  document.getElementById('clone-preview').src = t.preview;
+  document.getElementById('clone-doc').textContent = `DOC BB-${t.num}`;
+
+  // TBL 02 — Description + What's Included
+  document.getElementById('t2-body').textContent = t.body;
+  const includedList = document.getElementById('included-list');
+  const items = [
+    { mark: '+', text: `<strong>The ${t.name} template</strong>`, note: 'Editable. Plain language. Yours to keep.' }
+  ];
+  if (t.guide) {
+    items.push({ mark: '+', text: `<strong>${t.guide}</strong>`, note: 'A working narrative that walks through how to use this doc on a real tour. Included free.' });
+  }
+  items.push({ mark: '+', text: '<strong>Lifetime access</strong>', note: 'Lives in your My Binder. Re-access anytime, no expiry.' });
+  includedList.innerHTML = items.map(i => `
+    <li class="included-item">
+      <span class="included-mark">${i.mark}</span>
+      <div class="included-text">${i.text}<span class="note">${i.note}</span></div>
+    </li>
+  `).join('');
+
+  // TBL 03 — Pairs With
+  const pairsGrid = document.getElementById('pairs-grid');
+  pairsGrid.innerHTML = t.pairs.map(slug => {
+    const p = TEMPLATES[slug];
+    if (!p) return '';
+    return `
+      <a class="pairs-card" href="template.html?id=${slug}">
+        <div class="pairs-num">// ${p.num}</div>
+        <div class="pairs-name">${p.name}</div>
+        <div class="pairs-sub">${p.sub}</div>
+        <div class="pairs-arrow">VIEW &rarr;</div>
+      </a>
+    `;
+  }).join('');
+})();
+
+
+// =========================================================
+// CAROUSEL CONTROLLER (same as checklist/blueprint)
+// =========================================================
+(function() {
+  const tour = document.getElementById('tour');
+  const screens = Array.from(tour.querySelectorAll('.screen'));
+  const cueDots = Array.from(document.querySelectorAll('.cue-dot'));
+  const cloneScreen = document.getElementById('screen-1-clone');
+
+  const inViewObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.intersectionRatio >= 0.55) e.target.classList.add('in-view');
+    });
+  }, { threshold: [0, 0.25, 0.55, 0.75, 1] });
+  screens.forEach(s => inViewObs.observe(s));
+  requestAnimationFrame(() => screens[0].classList.add('in-view'));
+
+  function updateActiveCue() {
+    const h = tour.clientHeight;
+    let idx = Math.round(tour.scrollTop / h);
+    if (idx >= 4) idx = 0;
+    cueDots.forEach((d, i) => d.classList.toggle('active', i === idx));
+  }
+
+  let scrollTimer = null;
+  let isJumping = false;
+  function maybeLoop() {
+    if (isJumping) return;
+    const cloneTop = cloneScreen.offsetTop;
+    if (Math.abs(tour.scrollTop - cloneTop) < 4) {
+      isJumping = true;
+      tour.style.scrollBehavior = 'auto';
+      tour.scrollTop = 0;
+      requestAnimationFrame(() => {
+        tour.style.scrollBehavior = 'smooth';
+        isJumping = false;
+        screens[0].classList.add('in-view');
+        updateActiveCue();
+      });
+    }
+  }
+  tour.addEventListener('scroll', () => {
+    updateActiveCue();
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(maybeLoop, 220);
+  });
+
+  cueDots.forEach((d, i) => {
+    d.addEventListener('click', () => {
+      if (screens[i]) screens[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  const PARALLAX_TILT_X = 8;
+  const PARALLAX_TILT_Y = 10;
+  const PARALLAX_LIFT   = 18;
+  screens.forEach(screen => {
+    const table = screen.querySelector('.table');
+    if (!table) return;
+    let raf = null;
+    let pending = null;
+    function applyTilt(rx, ry, tz) {
+      table.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) translateZ(${tz}px)`;
+    }
+    screen.addEventListener('mousemove', (e) => {
+      const rect = screen.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = (e.clientX - cx) / (rect.width / 2);
+      const dy = (e.clientY - cy) / (rect.height / 2);
+      const clamp = (v) => Math.max(-1, Math.min(1, v));
+      pending = {
+        rx: -clamp(dy) * PARALLAX_TILT_X,
+        ry:  clamp(dx) * PARALLAX_TILT_Y,
+        tz:  (1 - Math.min(1, Math.hypot(dx, dy))) * PARALLAX_LIFT
+      };
+      if (!raf) {
+        raf = requestAnimationFrame(() => {
+          if (pending) applyTilt(pending.rx, pending.ry, pending.tz);
+          raf = null;
+        });
+      }
+    });
+    screen.addEventListener('mouseleave', () => {
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      applyTilt(0, 0, 0);
+    });
+  });
+
+  // Buy modal
+  const buyBtn = document.getElementById('buy-btn');
+  const modal = document.getElementById('buy-modal');
+  const modalClose = document.getElementById('modal-close');
+  function openModal() { modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false'); }
+  function closeModal() { modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); }
+  if (buyBtn) buyBtn.addEventListener('click', openModal);
+  if (modalClose) modalClose.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (modal.classList.contains('open')) return;
+    if (['ArrowDown', 'PageDown', 'Space'].includes(e.key) || e.code === 'Space') {
+      e.preventDefault();
+      const h = tour.clientHeight;
+      const next = Math.min(screens.length - 1, Math.round(tour.scrollTop / h) + 1);
+      screens[next].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (['ArrowUp', 'PageUp'].includes(e.key)) {
+      e.preventDefault();
+      const h = tour.clientHeight;
+      const prev = Math.max(0, Math.round(tour.scrollTop / h) - 1);
+      screens[prev].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+
+  updateActiveCue();
+})();
+</script>
+
+</body>
+</html>
