@@ -10,15 +10,27 @@
   # Server-side code (Stripe webhook, etc.) will live here.
   directory = "netlify/functions"
 
-# Option I: root URL serves experience.html without changing the URL bar.
+# Root URL serves experience.html without changing the URL bar.
 [[redirects]]
   from = "/"
   to = "/experience.html"
   status = 200
   force = true
 
-# SPA fallback inside the toolkit-app — any client-side route under
-# /toolkit/* falls back to the app's index.html.
+# /toolkit (no trailing slash) → /toolkit/ (with slash).
+# Without this, Netlify's pretty-URL behavior strips the slash off /toolkit/
+# and matches toolkit.html (the sales page) instead of /toolkit/index.html
+# (the React app). The force = true makes this redirect win over the
+# pretty-URL extension lookup.
+[[redirects]]
+  from = "/toolkit"
+  to = "/toolkit/"
+  status = 301
+  force = true
+
+# SPA fallback for /toolkit/* — any client-side route inside the React app
+# falls back to the app's index.html. Real assets (JS/CSS/images) still win
+# because this rule is non-forced (status = 200 only, no force).
 [[redirects]]
   from = "/toolkit/*"
   to = "/toolkit/index.html"
