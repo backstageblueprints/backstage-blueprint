@@ -2863,4 +2863,11 @@
   prevBtn.addEventListener('click',flipPrev);
   nextBtn.addEventListener('click',flipNext);
   document.addEventListener('keydown',function(e){
-    if(gate.classList.contains('hidden')==
+    if(gate.classList.contains('hidden')==false) return;
+    if (/INPUT|TEXTAREA/i.test((e.target && e.target.tagName) || '')) return;
+    if (e.key === 'ArrowLeft' || e.keyCode === 37) flipPrev();
+    else if (e.key === 'ArrowRight' || e.keyCode === 39) flipNext();
+  });
+
+})();
+</script>
