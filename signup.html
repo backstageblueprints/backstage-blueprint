@@ -230,13 +230,18 @@ body {
 
 </main>
 
-<!-- Clerk JS — loaded from JSDelivr CDN. Publishable key is safe in source
-     (it's the public/client-side key, designed for browsers). -->
-<script type="module">
-  import { Clerk } from 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.mjs';
-
-  const PK = 'pk_test_ZmFjdHVhbC1hc3AtMzAuY2xlcmsuYWNjb3VudHMuZGV2JA';
-
+<!-- Clerk JS — loaded from Clerk's own frontend-API CDN.
+     The data-clerk-publishable-key attribute auto-instantiates a global
+     `window.Clerk` instance configured with the right key. Publishable
+     keys are designed to live in browser source — no secret leaked here. -->
+<script
+  async
+  crossorigin="anonymous"
+  data-clerk-publishable-key="pk_test_ZmFjdHVhbC1hc3AtMzAuY2xlcmsuYWNjb3VudHMuZGV2JA"
+  src="https://factual-asp-30.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+  onload="bbBootClerk()"
+></script>
+<script>
   // Read ?return=… from the URL so different entry points can redirect
   // differently after signup/signin. Default to /toolkit/.
   const params = new URLSearchParams(window.location.search);
@@ -300,45 +305,47 @@ body {
 
   let mode = 'signUp'; // or 'signIn'
 
-  async function bootClerk() {
-    const clerk = new Clerk(PK);
-    await clerk.load();
+  // Called by the script tag's onload after Clerk's bundle is fetched.
+  // window.Clerk is already instantiated from the data-clerk-publishable-key
+  // attribute, so we just need to call .load() before mounting.
+  async function bbBootClerk() {
+    try {
+      await window.Clerk.load();
 
-    // If the user is already signed in, jump straight to the return URL.
-    if (clerk.user) {
-      window.location.replace(returnUrl);
-      return;
-    }
-
-    function mount() {
-      mountEl.innerHTML = '';
-      const opts = {
-        appearance: bbAppearance,
-        afterSignUpUrl: returnUrl,
-        afterSignInUrl: returnUrl,
-        redirectUrl: returnUrl,
-      };
-      if (mode === 'signUp') {
-        clerk.mountSignUp(mountEl, opts);
-        toggleBtn.textContent = 'Sign in instead →';
-      } else {
-        clerk.mountSignIn(mountEl, opts);
-        toggleBtn.textContent = 'Need a pass? Sign up →';
+      // If the user is already signed in, jump straight to the return URL.
+      if (window.Clerk.user) {
+        window.location.replace(returnUrl);
+        return;
       }
-    }
 
-    toggleBtn.addEventListener('click', () => {
-      mode = mode === 'signUp' ? 'signIn' : 'signUp';
+      function mount() {
+        mountEl.innerHTML = '';
+        const opts = {
+          appearance: bbAppearance,
+          afterSignUpUrl: returnUrl,
+          afterSignInUrl: returnUrl,
+          redirectUrl: returnUrl,
+        };
+        if (mode === 'signUp') {
+          window.Clerk.mountSignUp(mountEl, opts);
+          toggleBtn.textContent = 'Sign in instead →';
+        } else {
+          window.Clerk.mountSignIn(mountEl, opts);
+          toggleBtn.textContent = 'Need a pass? Sign up →';
+        }
+      }
+
+      toggleBtn.addEventListener('click', () => {
+        mode = mode === 'signUp' ? 'signIn' : 'signUp';
+        mount();
+      });
+
       mount();
-    });
-
-    mount();
+    } catch (err) {
+      console.error('[signup] Clerk boot failed:', err);
+      mountEl.innerHTML = '<div class="clerk-loading">// SIGNUP UNAVAILABLE &middot; PLEASE RELOAD</div>';
+    }
   }
-
-  bootClerk().catch((err) => {
-    console.error('[signup] Clerk boot failed:', err);
-    mountEl.innerHTML = '<div class="clerk-loading">// SIGNUP UNAVAILABLE &middot; PLEASE RELOAD</div>';
-  });
 </script>
 
 </body>
