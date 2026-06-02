@@ -216,7 +216,7 @@ function UpgradeProvider({ children }) {
               </button>
             </div>
             <Mono style={{ fontSize: 8, color: "rgba(244,241,234,0.40)", letterSpacing: "0.16em", marginTop: 14, display: "block", textAlign: "center" }}>
-              Real checkout connects when the website launches
+              Backstage Blueprint · Pro · billed monthly · cancel anytime
             </Mono>
           </div>
         </div>

@@ -107,14 +107,45 @@ export async function verifyTierFromBackend() {
  * - POSTs to /.netlify/functions/create-checkout-session
  * - The function uses STRIPE_SECRET_KEY (server-only) to create a session
  * - We follow the returned `url` to checkout.stripe.com
- * - No publishable key needed in the browser
+ *
+ * Order 010 update — 2026-06-01 PM:
+ * - Reads the current Clerk session (if any) and passes the user_id as
+ *   clerk_user_id in the request body. The function stamps it onto the
+ *   Stripe Session as client_reference_id, which the webhook then uses
+ *   to attach the resulting entitlement to the right user.
+ * - If no Clerk session exists, we still allow checkout (anonymous test
+ *   purchases), but the webhook will skip the entitlement insert — no
+ *   user to attach it to. In production this case shouldn't happen
+ *   because the toolkit.html Free CTA routes through Clerk signup first.
  */
 export async function startBBCheckout() {
   try {
+    // Try to grab the Clerk user_id, but don't fail if Clerk isn't ready.
+    let clerkUserId = null;
+    if (bbAuthReady()) {
+      try {
+        if (!_clerkPromise) {
+          _clerkPromise = (async () => {
+            const ClerkModule = await import("@clerk/clerk-js");
+            const Clerk = ClerkModule.Clerk || ClerkModule.default;
+            const instance = new Clerk(CLERK_PK);
+            await instance.load();
+            return instance;
+          })();
+        }
+        const clerk = await _clerkPromise;
+        if (clerk && clerk.user && clerk.user.id) {
+          clerkUserId = clerk.user.id;
+        }
+      } catch (clerkErr) {
+        console.warn("[BB] Clerk lookup before checkout failed (continuing anonymously):", clerkErr && clerkErr.message ? clerkErr.message : clerkErr);
+      }
+    }
+
     const res = await fetch("/.netlify/functions/create-checkout-session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ clerk_user_id: clerkUserId }),
     });
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}));

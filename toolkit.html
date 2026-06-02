@@ -467,11 +467,17 @@ body {
   // Paid button → land in the app with ?upgrade=prompt so the upgrade
   // modal opens automatically; the in-app Stripe Checkout takes over from
   // there (or falls back to dev-toggle if Stripe price ID isn't wired).
+  // Order 010: Free CTA routes through Clerk signup so the user lands at
+  // /toolkit/ with an active session — required for the webhook to attach
+  // any later paid entitlement to a real user_id.
   document.getElementById('signup-btn').addEventListener('click', () => {
-    window.location.href = '/toolkit/';
+    window.location.href = '/signup.html?return=/toolkit/';
   });
+  // Paid CTA: also route through signup so we have a Clerk session BEFORE
+  // hitting Stripe Checkout. After signup, redirect to /toolkit/?upgrade=prompt
+  // so the upgrade modal auto-opens.
   document.getElementById('upgrade-btn').addEventListener('click', () => {
-    window.location.href = '/toolkit/?upgrade=prompt';
+    window.location.href = '/signup.html?return=' + encodeURIComponent('/toolkit/?upgrade=prompt');
   });
   document.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', (e) => close(e.target.closest('.modal-backdrop'))));
   [signupModal, upgradeModal].forEach(m => m.addEventListener('click', (e) => { if (e.target === m) close(m); }));

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1B3D6E">
+<title>Get Your Guest Pass — Backstage Blueprint</title>
+<meta name="description" content="Sign up for a Backstage Blueprint Guest Pass. Free access to the Toolkit, Course preview, and more — upgrade to All Access anytime.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#1B3D6E; --navy-deep:#142C4F; --navy-glass:rgba(20,44,79,0.78);
+  --orange:#D85A1F; --cream:#F2EBDD; --ink:#0D0D0D;
+  --grid-line:rgba(242,235,221,0.08); --grid-major:rgba(242,235,221,0.14);
+  --line:rgba(242,235,221,0.18); --line-strong:rgba(242,235,221,0.32);
+  --dim:rgba(242,235,221,0.60);
+  --display-font:'Archivo',sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; min-height:100vh; }
+body {
+  background-color:var(--navy);
+  background-image:
+    linear-gradient(var(--grid-line) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-line) 1px,transparent 1px),
+    linear-gradient(var(--grid-major) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-major) 1px,transparent 1px);
+  background-size:40px 40px,40px 40px,200px 200px,200px 200px;
+  background-attachment:fixed;
+  color:var(--cream);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+/* HEADER (matches toolkit.html) */
+.site-header {
+  position:fixed; top:0; left:0; right:0; z-index:200;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 32px;
+  background:linear-gradient(180deg,rgba(20,44,79,0.78) 0%,rgba(20,44,79,0) 100%);
+  pointer-events:none;
+}
+.site-header > * { pointer-events:auto; }
+.brand-mark {
+  font-family:var(--display-font); font-size:20px; font-weight:900;
+  letter-spacing:-0.005em; text-transform:uppercase; color:var(--cream);
+  text-decoration:none; line-height:1;
+  display:inline-flex; align-items:center; transition:color 200ms ease;
+}
+.brand-mark:hover { color:var(--orange); }
+.brand-mark .reg {
+  display:inline-block; width:13px; height:13px;
+  border:1.25px solid currentColor; border-radius:50%;
+  font-family:'SF Mono',monospace; font-size:8.5px; font-weight:700;
+  line-height:11px; text-align:center; vertical-align:4px; margin-left:6px;
+}
+.header-back {
+  font-family:'SF Mono',monospace; font-size:11px; font-weight:700;
+  letter-spacing:0.28em; color:var(--cream); text-decoration:none;
+  text-transform:uppercase;
+  padding:9px 16px; border:1px solid var(--line-strong);
+  background:rgba(20,44,79,0.5); backdrop-filter:blur(6px);
+  transition:border-color 200ms ease, color 200ms ease;
+}
+.header-back:hover { border-color:var(--orange); color:var(--orange); }
+
+/* LAYOUT */
+.wrap {
+  position:relative; max-width:1180px; margin:0 auto;
+  padding:120px 28px 80px;
+  display:grid; grid-template-columns:1fr 1fr; gap:64px;
+  align-items:center; min-height:100vh;
+}
+@media (max-width:880px) {
+  .wrap { grid-template-columns:1fr; gap:40px; padding:100px 20px 60px; }
+}
+
+/* LEFT — credential anchor */
+.cred-side {
+  display:flex; flex-direction:column; align-items:center; gap:28px;
+}
+.cred-stamp {
+  font-family:'SF Mono',monospace; font-size:11px; font-weight:700;
+  letter-spacing:0.32em; text-transform:uppercase; color:var(--orange);
+}
+.cred-img-wrap {
+  position:relative; width:100%; max-width:380px; aspect-ratio:1/1;
+  display:flex; align-items:center; justify-content:center;
+  filter:drop-shadow(0 30px 60px rgba(0,0,0,0.55));
+  animation:cred-float 6s ease-in-out infinite;
+}
+.cred-img { width:100%; height:auto; display:block; }
+@keyframes cred-float {
+  0%,100% { transform:translateY(0) rotate(-2deg); }
+  50%     { transform:translateY(-12px) rotate(-1deg); }
+}
+.cred-caption {
+  text-align:center; font-family:var(--display-font);
+  font-size:clamp(22px,2.5vw,32px); font-weight:900;
+  letter-spacing:-0.005em; text-transform:uppercase; line-height:1.05;
+}
+.cred-caption .accent { color:var(--orange); }
+.cred-tag {
+  font-family:'SF Mono',monospace; font-size:11px; font-weight:700;
+  letter-spacing:0.24em; text-transform:uppercase; color:var(--dim);
+  text-align:center; max-width:340px;
+}
+
+/* RIGHT — form panel (toolkit-style frosted table) */
+.form-side {
+  background:var(--navy-glass); backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid var(--line-strong); border-left:3px solid var(--orange);
+  padding:36px 36px 32px;
+  box-shadow:
+    0 30px 80px rgba(0,0,0,0.45),
+    0 8px 22px rgba(0,0,0,0.35),
+    inset 0 0 0 0.5px rgba(242,235,221,0.08);
+  position:relative;
+}
+.form-side-id {
+  position:absolute; top:14px; right:18px;
+  font-family:'SF Mono',monospace; font-size:10px;
+  letter-spacing:0.32em; color:var(--dim); text-transform:uppercase;
+  pointer-events:none;
+}
+.form-overline {
+  font-family:'SF Mono',monospace; font-size:11px; font-weight:700;
+  letter-spacing:0.3em; text-transform:uppercase; color:var(--orange);
+  margin-bottom:14px;
+}
+.form-title {
+  font-family:var(--display-font);
+  font-size:clamp(28px,3.4vw,42px); font-weight:900;
+  letter-spacing:-0.012em; line-height:0.98; text-transform:uppercase;
+}
+.form-title .accent { color:var(--orange); }
+.form-rule { width:48px; height:2px; background:var(--orange); margin:14px 0 22px; }
+.form-body {
+  font-size:13.5px; line-height:1.55; color:var(--cream); opacity:0.92;
+  margin-bottom:22px; max-width:420px;
+}
+#clerk-mount {
+  /* Clerk renders here */
+  margin-top:8px; min-height:300px;
+  display:flex; align-items:flex-start; justify-content:center;
+}
+.clerk-loading {
+  font-family:'SF Mono',monospace; font-size:11px;
+  letter-spacing:0.24em; color:var(--dim); text-transform:uppercase;
+  padding:80px 0; text-align:center; width:100%;
+}
+.toggle-row {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-top:24px; padding-top:18px; border-top:0.5px solid var(--line);
+}
+.toggle-row-label {
+  font-family:'SF Mono',monospace; font-size:10.5px;
+  letter-spacing:0.22em; color:var(--dim); text-transform:uppercase;
+}
+.toggle-btn {
+  font-family:'SF Mono',monospace; font-size:11px; font-weight:700;
+  letter-spacing:0.24em; color:var(--orange); text-transform:uppercase;
+  background:transparent; border:0; cursor:pointer;
+  padding:4px 0; transition:opacity 200ms ease;
+}
+.toggle-btn:hover { opacity:0.7; }
+.fine-print {
+  font-family:'SF Mono',monospace; font-size:9.5px;
+  letter-spacing:0.18em; color:var(--dim); text-transform:uppercase;
+  text-align:center; margin-top:22px; padding-top:18px;
+  border-top:0.5px solid var(--line); line-height:1.6;
+}
+.fine-print a {
+  color:var(--cream); text-decoration:none;
+  border-bottom:0.5px solid var(--line-strong);
+}
+.fine-print a:hover { color:var(--orange); border-color:var(--orange); }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="/experience.html" class="brand-mark">Backstage Blueprint<span class="reg">R</span></a>
+  <a href="/toolkit.html" class="header-back">← Back to the Toolkit</a>
+</header>
+
+<main class="wrap">
+
+  <!-- LEFT: Guest Pass credential, the visual anchor -->
+  <aside class="cred-side" aria-hidden="true">
+    <div class="cred-stamp">// Your Guest Pass</div>
+    <div class="cred-img-wrap">
+      <img src="/Members%20Room/BB_MEMBER_GUEST_CREDENTIAL.png"
+           alt="Backstage Blueprint Guest Pass credential"
+           class="cred-img">
+    </div>
+    <h2 class="cred-caption">Backstage starts with a <span class="accent">pass</span>.</h2>
+    <p class="cred-tag">// FREE TOOLKIT &middot; FREE COURSE PREVIEW &middot; UPGRADE ANY TIME</p>
+  </aside>
+
+  <!-- RIGHT: signup form -->
+  <section class="form-side">
+    <span class="form-side-id">DOC BB-401 &middot; ACCESS</span>
+    <div class="form-overline">// Sign up &middot; Free</div>
+    <h1 class="form-title">Create your<br><span class="accent">Guest Pass.</span></h1>
+    <div class="form-rule"></div>
+    <p class="form-body">Sign up to start using the Toolkit. Free with a Guest Pass &mdash; no card required.</p>
+
+    <div id="clerk-mount">
+      <div class="clerk-loading">// LOADING SIGNUP &middot; STAND BY</div>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-row-label">// Already have a pass?</span>
+      <button id="toggle-mode" class="toggle-btn" type="button">Sign in instead →</button>
+    </div>
+
+    <p class="fine-print">
+      By signing up you agree to the
+      <a href="/terms.html">terms</a>
+      &amp;
+      <a href="/privacy.html">privacy policy</a>.
+    </p>
+  </section>
+
+</main>
+
+<!-- Clerk JS — loaded from JSDelivr CDN. Publishable key is safe in source
+     (it's the public/client-side key, designed for browsers). -->
+<script type="module">
+  import { Clerk } from 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.mjs';
+
+  const PK = 'pk_test_ZmFjdHVhbC1hc3AtMzAuY2xlcmsuYWNjb3VudHMuZGV2JA';
+
+  // Read ?return=… from the URL so different entry points can redirect
+  // differently after signup/signin. Default to /toolkit/.
+  const params = new URLSearchParams(window.location.search);
+  const returnUrl = (() => {
+    const r = params.get('return') || '/toolkit/';
+    // Only allow same-origin paths starting with '/' to prevent open redirect.
+    return r.startsWith('/') && !r.startsWith('//') ? r : '/toolkit/';
+  })();
+
+  const mountEl = document.getElementById('clerk-mount');
+  const toggleBtn = document.getElementById('toggle-mode');
+
+  // BB-themed Clerk appearance overrides.
+  const bbAppearance = {
+    variables: {
+      colorPrimary: '#D85A1F',
+      colorBackground: 'transparent',
+      colorText: '#F2EBDD',
+      colorTextSecondary: 'rgba(242,235,221,0.60)',
+      colorInputBackground: 'rgba(13,13,13,0.35)',
+      colorInputText: '#F2EBDD',
+      colorDanger: '#D85A1F',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      borderRadius: '2px',
+    },
+    elements: {
+      card: { boxShadow: 'none', backgroundColor: 'transparent', padding: 0, border: 'none', width: '100%' },
+      headerTitle: { display: 'none' },           // BB page provides the title
+      headerSubtitle: { display: 'none' },
+      logoBox: { display: 'none' },
+      footer: { display: 'none' },                // BB page provides the fine-print
+      formButtonPrimary: {
+        backgroundColor: '#D85A1F', color: '#0D0D0D',
+        fontFamily: "'SF Mono', monospace", letterSpacing: '0.18em',
+        textTransform: 'uppercase', fontWeight: 700, fontSize: '11px',
+        padding: '12px 16px', borderRadius: '2px',
+      },
+      formFieldLabel: {
+        fontFamily: "'SF Mono', monospace", fontSize: '10px',
+        letterSpacing: '0.22em', textTransform: 'uppercase',
+        color: 'rgba(242,235,221,0.60)', fontWeight: 700,
+      },
+      formFieldInput: {
+        backgroundColor: 'rgba(13,13,13,0.35)',
+        border: '1px solid rgba(242,235,221,0.18)',
+        color: '#F2EBDD', borderRadius: '2px',
+        padding: '11px 12px', fontSize: '14px',
+      },
+      socialButtonsBlockButton: {
+        border: '1px solid rgba(242,235,221,0.18)',
+        backgroundColor: 'transparent', color: '#F2EBDD',
+        borderRadius: '2px',
+      },
+      dividerLine: { backgroundColor: 'rgba(242,235,221,0.18)' },
+      dividerText: {
+        fontFamily: "'SF Mono', monospace", fontSize: '10px',
+        letterSpacing: '0.22em', color: 'rgba(242,235,221,0.60)',
+      },
+    },
+  };
+
+  let mode = 'signUp'; // or 'signIn'
+
+  async function bootClerk() {
+    const clerk = new Clerk(PK);
+    await clerk.load();
+
+    // If the user is already signed in, jump straight to the return URL.
+    if (clerk.user) {
+      window.location.replace(returnUrl);
+      return;
+    }
+
+    function mount() {
+      mountEl.innerHTML = '';
+      const opts = {
+        appearance: bbAppearance,
+        afterSignUpUrl: returnUrl,
+        afterSignInUrl: returnUrl,
+        redirectUrl: returnUrl,
+      };
+      if (mode === 'signUp') {
+        clerk.mountSignUp(mountEl, opts);
+        toggleBtn.textContent = 'Sign in instead →';
+      } else {
+        clerk.mountSignIn(mountEl, opts);
+        toggleBtn.textContent = 'Need a pass? Sign up →';
+      }
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      mode = mode === 'signUp' ? 'signIn' : 'signUp';
+      mount();
+    });
+
+    mount();
+  }
+
+  bootClerk().catch((err) => {
+    console.error('[signup] Clerk boot failed:', err);
+    mountEl.innerHTML = '<div class="clerk-loading">// SIGNUP UNAVAILABLE &middot; PLEASE RELOAD</div>';
+  });
+</script>
+
+</body>
+</html>

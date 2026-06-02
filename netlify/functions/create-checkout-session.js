@@ -1,8 +1,11 @@
 // =========================================================
 // Netlify Function: create-checkout-session
 // Order 009 · Toolkit Integration (server-side checkout)
+// Order 010 update · accepts clerk_user_id, passes as client_reference_id
 //
 // POST /.netlify/functions/create-checkout-session
+// Body: { clerk_user_id: string | null }
+//
 // Creates a Stripe Checkout Session using the server-side
 // STRIPE_SECRET_KEY and returns { url } for the browser to
 // redirect to. Replaces the deprecated client-only Checkout.
@@ -10,14 +13,11 @@
 // Env vars required (set in Netlify → Site → Env vars):
 //   STRIPE_SECRET_KEY            — sk_test_... or sk_live_...
 //   VITE_STRIPE_TOOLKIT_PRICE_ID — price_xxxxxxxxxxxx
-//     (VITE_ prefix kept for cross-use with the client bundle)
 // =========================================================
 
 const Stripe = require("stripe");
 
 exports.handler = async (event) => {
-  // CORS / preflight — same-origin POSTs don't strictly need this,
-  // but leave a friendly preflight handler in case of edge cases.
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 204,
@@ -45,18 +45,38 @@ exports.handler = async (event) => {
     };
   }
 
+  // Parse the request body to get the Clerk user_id (if any).
+  // We pass this as `client_reference_id` so the webhook (Order 010) can
+  // attach the resulting entitlement to the right user_id in Supabase.
+  let clerkUserId = null;
+  try {
+    if (event.body) {
+      const parsed = JSON.parse(event.body);
+      if (parsed && typeof parsed.clerk_user_id === "string" && parsed.clerk_user_id.length > 0) {
+        clerkUserId = parsed.clerk_user_id;
+      }
+    }
+  } catch (_) {
+    // Body wasn't JSON; ignore and proceed without a user reference.
+  }
+
   const stripe = Stripe(secretKey);
   const host = event.headers.host || event.headers["x-forwarded-host"] || "brilliant-gnome-5fc4a0.netlify.app";
   const origin = `https://${host}`;
 
   try {
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams = {
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${origin}/toolkit/?upgrade=success&sid={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/toolkit/?upgrade=cancelled`,
-      // allow_promotion_codes: true,  // enable later when promo codes are configured
-    });
+    };
+    // Only set client_reference_id when we have one — Stripe rejects empty strings.
+    if (clerkUserId) {
+      sessionParams.client_reference_id = clerkUserId;
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     return {
       statusCode: 200,
