@@ -2869,5 +2869,28 @@
     else if (e.key === 'ArrowRight' || e.keyCode === 39) flipNext();
   });
 
+  /* ---- notes (reconstructed — original was truncated by build pipeline) ---- */
+  function loadNotes(id){
+    try {
+      notesArea.value = localStorage.getItem('bb-notes-' + id) || '';
+    } catch(e) {
+      notesArea.value = '';
+    }
+    if (saveState) saveState.textContent = '';
+  }
+  var notesTimer;
+  if (notesArea) {
+    notesArea.addEventListener('input', function(){
+      if (saveState) saveState.textContent = 'SAVING\u2026';
+      clearTimeout(notesTimer);
+      notesTimer = setTimeout(function(){
+        try {
+          if (currentModule) localStorage.setItem('bb-notes-' + currentModule.id, notesArea.value);
+          if (saveState) saveState.textContent = 'SAVED';
+        } catch(e) {}
+      }, 600);
+    });
+  }
+
 })();
 </script>
