@@ -21,6 +21,18 @@ const BRAND = {
   orange: "#D4641E",   // Burnt Orange
 };
 
+// -------------------- ICON URL HELPER --------------------
+// PLOT_CATEGORIES stores icon paths as canonical site-absolute strings like
+// "/icons/drum_kit_1.png" — that reads cleanly in source. But Vite's `base`
+// config ('/toolkit/') only auto-prefixes URLs Vite processes at build time
+// (imports, HTML refs, CSS url()s). It does NOT rewrite raw strings baked
+// into runtime JS objects, so without help the browser fetches /icons/...
+// from the SITE root and gets 404s in production (where the app lives at
+// /toolkit/). This helper prepends Vite's BASE_URL so every icon resolves
+// at the correct subpath in dev AND prod.
+const iconUrl = (p) => p ? `${import.meta.env.BASE_URL}${p.replace(/^\//, "")}` : p;
+
+
 // Reusable tailwind-style class strings via inline styles where needed.
 // Tailwind core utilities still drive layout; brand colors come from inline style.
 
@@ -6285,7 +6297,7 @@ function StagePlotBuilder({ items, setItems, size, setSize, selectedId, setSelec
                           IMPORTANT: maxWidth:none overrides Tailwind's preflight reset
                           (`img { max-width: 100% }`) which would otherwise clamp the
                           scaled width back down to 100% of parent. */}
-                      <img src={it.icon} alt={it.label}
+                      <img src={iconUrl(it.icon)} alt={it.label}
                         style={{
                           position: "absolute",
                           left: "50%", top: "50%",
@@ -6500,7 +6512,7 @@ function StagePlotPreview({ items = [], size = { w: 40, d: 25 } }) {
       const iw = w * ds, ih = h * ds;
       return (
         <g key={it.id || idx} transform={transform}>
-          <image href={it.icon} x={cx - iw/2} y={cy - ih/2} width={iw} height={ih}
+          <image href={iconUrl(it.icon)} x={cx - iw/2} y={cy - ih/2} width={iw} height={ih}
             preserveAspectRatio="xMidYMid meet"/>
           {channel && (
             <text x={cx} y={cy + h/2 - 2} textAnchor="middle"
