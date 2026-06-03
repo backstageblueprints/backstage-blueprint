@@ -437,7 +437,89 @@ body {
   const modalClose = document.getElementById('modal-close');
   function openM() { modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); }
   function closeM() { modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
-  if (buyBtn) buyBtn.addEventListener('click', openM);
+  if (buyBtn) buyBtn.addEventListener('click', () => startBuyFlow('course', null));
+
+  /* ============================================================
+   * BB Buy Flow — Order 011 Commerce Activation
+   *
+   * Flow:
+   *  1. Click Buy → lazy-load Clerk SDK.
+   *  2. If signed in → POST to /.netlify/functions/create-checkout-session
+   *     with { product_key, clerk_user_id, template_slug? }.
+   *     Function returns { url } → browser redirects to Stripe Checkout.
+   *  3. If not signed in → redirect to /signup.html?return=<this-page>?buy=<key>
+   *     so signup.html can complete signup, then the sales page reloads with
+   *     ?buy= set, which auto-fires the buy flow.
+   *
+   * On error (Stripe not configured / function 500) → falls back to the
+   * placeholder modal so the page still feels alive.
+   * ============================================================ */
+  let __clerkPromise = null;
+  function __loadClerk() {
+    if (__clerkPromise) return __clerkPromise;
+    __clerkPromise = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.async = true;
+      s.crossOrigin = 'anonymous';
+      s.dataset.clerkPublishableKey = 'pk_test_ZmFjdHVhbC1hc3AtMzAuY2xlcmsuYWNjb3VudHMuZGV2JA';
+      s.src = 'https://factual-asp-30.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js';
+      s.onload = res;
+      s.onerror = rej;
+      document.head.appendChild(s);
+    }).then(() => window.Clerk.load());
+    return __clerkPromise;
+  }
+
+  async function startBuyFlow(productKey, templateSlug) {
+    try {
+      await __loadClerk();
+      const user = window.Clerk && window.Clerk.user;
+      if (!user) {
+        // Route through signup, preserving the buy intent in the return URL.
+        const ret = window.location.pathname
+          + (templateSlug ? '?id=' + encodeURIComponent(templateSlug) + '&buy=' + encodeURIComponent(productKey) : '?buy=' + encodeURIComponent(productKey));
+        window.location.href = '/signup.html?return=' + encodeURIComponent(ret);
+        return;
+      }
+      const body = { product_key: productKey, clerk_user_id: user.id };
+      if (templateSlug) body.template_slug = templateSlug;
+      const res = await fetch('/.netlify/functions/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.warn('[BB] Checkout error:', err.error || res.statusText);
+        if (typeof openM === 'function') openM();
+        return;
+      }
+      const data = await res.json();
+      if (data && data.url) {
+        window.location.assign(data.url);
+      } else if (typeof openM === 'function') {
+        openM();
+      }
+    } catch (err) {
+      console.warn('[BB] Buy flow failed:', err && err.message ? err.message : err);
+      if (typeof openM === 'function') openM();
+    }
+  }
+
+  // On page load, honor ?buy=<key> param (set by signup.html after a fresh signup,
+  // or by any cross-page link wanting to auto-trigger purchase).
+  (function bbHandleBuyIntent() {
+    const params = new URLSearchParams(window.location.search);
+    const buyKey = params.get('buy');
+    if (!buyKey) return;
+    const slug = null;
+    // Strip the buy param so reloads don't re-trigger
+    const u = new URL(window.location.href);
+    u.searchParams.delete('buy');
+    window.history.replaceState({}, '', u.toString());
+    setTimeout(() => startBuyFlow(buyKey, slug), 200);
+  })();
+
   if (modalClose) modalClose.addEventListener('click', closeM);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeM(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('open')) closeM(); });

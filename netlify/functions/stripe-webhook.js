@@ -1,22 +1,12 @@
 // =========================================================
 // Netlify Function: stripe-webhook
-// Order 010 · Stripe Webhook + Entitlement Insert
+// Orders 010 + 011 · Multi-product entitlement insert
 //
 // POST /.netlify/functions/stripe-webhook
-// Receives signed Stripe webhook events. On `checkout.session.completed`:
-//   1. Verifies the signature with STRIPE_WEBHOOK_SECRET.
-//   2. Pulls the Clerk user_id from session.client_reference_id.
-//   3. Maps the purchased price ID → entitlement type(s) using a config
-//      table (price_1Tan9yEWm3WEFi10RrSIefaB → ["toolkit_paid"]).
-//      Course price ID added later will map to ["course_owner","toolkit_paid"].
-//   4. Upserts the entitlement row(s) into Supabase via the service-role
-//      key (SUPABASE_SERVICE_ROLE_KEY), keyed on (user_id, entitlement_type)
-//      for idempotency. Stripe webhook retries are safe by design.
-//
-// Stripe dashboard webhook config (Order 010 PREREQ-1):
-//   - Endpoint: this function's URL
-//   - Listen for: checkout.session.completed
-//   - Signing secret stored as STRIPE_WEBHOOK_SECRET in Netlify env
+// Listens for `checkout.session.completed`. Verifies Stripe signature,
+// reads Clerk user_id from session.client_reference_id, maps the purchased
+// price ID(s) → entitlement type(s), upserts entitlements rows into
+// Supabase via the service-role key. Idempotent on (user_id, entitlement_type).
 //
 // Env vars required:
 //   STRIPE_SECRET_KEY            — for Stripe SDK (signature verify)
@@ -24,20 +14,41 @@
 //   VITE_SUPABASE_URL            — Supabase project URL
 //   SUPABASE_SERVICE_ROLE_KEY    — service role key (bypasses RLS, server-only)
 //
-// IMPORTANT: this function MUST read the raw request body for signature
-// verification. Netlify base64-encodes the body when isBase64Encoded=true;
-// we handle both cases below.
+// Product price IDs (resolved at runtime):
+//   VITE_STRIPE_TOOLKIT_PRICE_ID — Toolkit Membership ($5/mo) → toolkit_paid
+//   STRIPE_COURSE_PRICE_ID       — Course ($199 one-time) → course_owner + toolkit_paid (lifetime)
+//   STRIPE_BLUEPRINT_PRICE_ID    — Blueprint ($49 one-time) → blueprint_paid
+//   STRIPE_TEMPLATE_PRICES       — JSON map { "slug": "price_id" } → template:<slug>_owned each
 // =========================================================
 
 const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
 
-// Price ID → entitlement type(s) mapping. Adding Course later = one row.
-const PRICE_TO_ENTITLEMENTS = {
-  // Toolkit Membership (Backstage Blueprint sandbox test mode)
-  "price_1Tan9yEWm3WEFi10RrSIefaB": ["toolkit_paid"],
-  // Course (future): "price_xxxxxxxxxxxx": ["course_owner", "toolkit_paid"],
-};
+// Build the price-id → entitlement-types mapping from env at request time.
+// Returns a map AND a reverse map (price → template_slug) for slug lookup.
+function buildPriceMaps() {
+  const priceMap = {};
+  if (process.env.VITE_STRIPE_TOOLKIT_PRICE_ID) {
+    priceMap[process.env.VITE_STRIPE_TOOLKIT_PRICE_ID] = ["toolkit_paid"];
+  }
+  if (process.env.STRIPE_COURSE_PRICE_ID) {
+    // Course bundles lifetime toolkit access per the locked Course-Toolkit duration decision.
+    priceMap[process.env.STRIPE_COURSE_PRICE_ID] = ["course_owner", "toolkit_paid"];
+  }
+  if (process.env.STRIPE_BLUEPRINT_PRICE_ID) {
+    priceMap[process.env.STRIPE_BLUEPRINT_PRICE_ID] = ["blueprint_paid"];
+  }
+  // Templates: each slug → its own entitlement_type
+  try {
+    const templatePrices = JSON.parse(process.env.STRIPE_TEMPLATE_PRICES || "{}");
+    for (const [slug, priceId] of Object.entries(templatePrices)) {
+      priceMap[priceId] = [`template:${slug}_owned`];
+    }
+  } catch (_) {
+    console.warn("[stripe-webhook] STRIPE_TEMPLATE_PRICES is not valid JSON; skipping template mappings.");
+  }
+  return priceMap;
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -56,7 +67,6 @@ exports.handler = async (event) => {
 
   const stripe = Stripe(stripeSecret);
   const sig = event.headers["stripe-signature"] || event.headers["Stripe-Signature"];
-  // Get the RAW body. Netlify may have base64-encoded it.
   const rawBody = event.isBase64Encoded
     ? Buffer.from(event.body, "base64").toString("utf8")
     : event.body;
@@ -70,9 +80,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: `Webhook Error: ${err.message}` };
   }
 
-  // 2. We only care about completed checkout sessions for now
   if (stripeEvent.type !== "checkout.session.completed") {
-    // Acknowledge other events with 200 so Stripe doesn't retry.
     return { statusCode: 200, body: JSON.stringify({ received: true, ignored: stripeEvent.type }) };
   }
 
@@ -80,14 +88,11 @@ exports.handler = async (event) => {
   const clerkUserId = session.client_reference_id;
 
   if (!clerkUserId) {
-    // Test purchases made before Clerk signup landed have no user reference.
-    // 200 so Stripe doesn't retry, but log it.
     console.warn("[stripe-webhook] checkout.session.completed with no client_reference_id; session:", session.id);
     return { statusCode: 200, body: JSON.stringify({ received: true, skipped: "no_user_ref" }) };
   }
 
-  // 3. Figure out which entitlement(s) this purchase grants.
-  // We need to expand line_items to see the price IDs.
+  // 2. Get the line items + figure out which entitlement(s) to grant
   let priceIds = [];
   try {
     const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 10 });
@@ -99,9 +104,10 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: "Could not read line items" };
   }
 
+  const priceMap = buildPriceMaps();
   const entitlementTypes = new Set();
   for (const pid of priceIds) {
-    const types = PRICE_TO_ENTITLEMENTS[pid];
+    const types = priceMap[pid];
     if (types) {
       types.forEach((t) => entitlementTypes.add(t));
     } else {
@@ -116,8 +122,7 @@ exports.handler = async (event) => {
     };
   }
 
-  // 4. Upsert into Supabase entitlements (idempotent — retries are safe
-  //    because of the UNIQUE constraint on (user_id, entitlement_type)).
+  // 3. Upsert into Supabase entitlements (idempotent — UNIQUE constraint on user_id+entitlement_type)
   const supabase = createClient(supabaseUrl, supabaseServiceKey, {
     auth: { persistSession: false },
   });
@@ -135,12 +140,11 @@ exports.handler = async (event) => {
 
   if (error) {
     console.error("[stripe-webhook] Supabase upsert error:", error.message);
-    // Return 500 so Stripe retries the delivery.
     return { statusCode: 500, body: `Supabase error: ${error.message}` };
   }
 
   console.log(
-    `[stripe-webhook] Granted ${rows.length} entitlement(s) to ${clerkUserId} from session ${session.id}`
+    `[stripe-webhook] Granted ${rows.length} entitlement(s) to ${clerkUserId} from session ${session.id}: ${rows.map(r => r.entitlement_type).join(", ")}`
   );
   return {
     statusCode: 200,

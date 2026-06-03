@@ -1,21 +1,64 @@
 // =========================================================
 // Netlify Function: create-checkout-session
-// Order 009 · Toolkit Integration (server-side checkout)
-// Order 010 update · accepts clerk_user_id, passes as client_reference_id
+// Orders 009 + 010 + 011 · Toolkit + multi-product commerce
 //
 // POST /.netlify/functions/create-checkout-session
-// Body: { clerk_user_id: string | null }
+// Body: { product_key: string, clerk_user_id: string | null, template_slug?: string }
 //
-// Creates a Stripe Checkout Session using the server-side
-// STRIPE_SECRET_KEY and returns { url } for the browser to
-// redirect to. Replaces the deprecated client-only Checkout.
+// product_key values supported:
+//   "toolkit"   — Toolkit Membership ($5/mo subscription)
+//   "course"    — Backstage Blueprint Course ($199 one-time)
+//   "blueprint" — The Blueprint bundle ($49 one-time)
+//   "template"  — Individual template (requires template_slug; price resolved
+//                 from STRIPE_TEMPLATE_PRICES JSON env var)
 //
-// Env vars required (set in Netlify → Site → Env vars):
-//   STRIPE_SECRET_KEY            — sk_test_... or sk_live_...
-//   VITE_STRIPE_TOOLKIT_PRICE_ID — price_xxxxxxxxxxxx
+// Backward-compat: if no product_key is provided, defaults to "toolkit".
 // =========================================================
 
 const Stripe = require("stripe");
+
+// Server-side product catalog. Each product resolves to a price ID + mode.
+// Price IDs are stored in env vars so no Stripe IDs in source.
+function getProductConfig(productKey, templateSlug) {
+  const config = {
+    toolkit: {
+      priceId: process.env.VITE_STRIPE_TOOLKIT_PRICE_ID,
+      mode: "subscription",
+      successPath: "/toolkit/?upgrade=success&sid={CHECKOUT_SESSION_ID}",
+      cancelPath: "/toolkit/?upgrade=cancelled",
+    },
+    course: {
+      priceId: process.env.STRIPE_COURSE_PRICE_ID,
+      mode: "payment",
+      successPath: "/course-viewer.html?purchase=success&sid={CHECKOUT_SESSION_ID}",
+      cancelPath: "/course.html?purchase=cancelled",
+    },
+    blueprint: {
+      priceId: process.env.STRIPE_BLUEPRINT_PRICE_ID,
+      mode: "payment",
+      successPath: "/my-binder.html?purchase=success&sid={CHECKOUT_SESSION_ID}",
+      cancelPath: "/blueprint.html?purchase=cancelled",
+    },
+  };
+  if (productKey === "template") {
+    if (!templateSlug) return null;
+    let templatePrices = {};
+    try {
+      templatePrices = JSON.parse(process.env.STRIPE_TEMPLATE_PRICES || "{}");
+    } catch (_) {
+      return null;
+    }
+    const priceId = templatePrices[templateSlug];
+    if (!priceId) return null;
+    return {
+      priceId,
+      mode: "payment",
+      successPath: `/my-binder.html?purchase=success&template=${encodeURIComponent(templateSlug)}&sid={CHECKOUT_SESSION_ID}`,
+      cancelPath: `/template.html?id=${encodeURIComponent(templateSlug)}&purchase=cancelled`,
+    };
+  }
+  return config[productKey] || null;
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
@@ -33,31 +76,44 @@ exports.handler = async (event) => {
   }
 
   const secretKey = process.env.STRIPE_SECRET_KEY;
-  const priceId = process.env.VITE_STRIPE_TOOLKIT_PRICE_ID;
-
-  if (!secretKey || !priceId) {
+  if (!secretKey) {
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        error: "Stripe is not configured on the server (missing STRIPE_SECRET_KEY or VITE_STRIPE_TOOLKIT_PRICE_ID).",
-      }),
+      body: JSON.stringify({ error: "Stripe is not configured on the server (missing STRIPE_SECRET_KEY)." }),
     };
   }
 
-  // Parse the request body to get the Clerk user_id (if any).
-  // We pass this as `client_reference_id` so the webhook (Order 010) can
-  // attach the resulting entitlement to the right user_id in Supabase.
+  // Parse request body
+  let productKey = "toolkit";
   let clerkUserId = null;
+  let templateSlug = null;
   try {
     if (event.body) {
       const parsed = JSON.parse(event.body);
-      if (parsed && typeof parsed.clerk_user_id === "string" && parsed.clerk_user_id.length > 0) {
+      if (typeof parsed.product_key === "string" && parsed.product_key.length > 0) {
+        productKey = parsed.product_key;
+      }
+      if (typeof parsed.clerk_user_id === "string" && parsed.clerk_user_id.length > 0) {
         clerkUserId = parsed.clerk_user_id;
+      }
+      if (typeof parsed.template_slug === "string" && parsed.template_slug.length > 0) {
+        templateSlug = parsed.template_slug;
       }
     }
   } catch (_) {
-    // Body wasn't JSON; ignore and proceed without a user reference.
+    // body wasn't JSON; proceed with defaults
+  }
+
+  const product = getProductConfig(productKey, templateSlug);
+  if (!product || !product.priceId) {
+    return {
+      statusCode: 400,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: `Product not configured: ${productKey}${templateSlug ? ` (template ${templateSlug})` : ""}. Server is missing the price ID env var.`,
+      }),
+    };
   }
 
   const stripe = Stripe(secretKey);
@@ -66,14 +122,17 @@ exports.handler = async (event) => {
 
   try {
     const sessionParams = {
-      mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/toolkit/?upgrade=success&sid={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/toolkit/?upgrade=cancelled`,
+      mode: product.mode,
+      line_items: [{ price: product.priceId, quantity: 1 }],
+      success_url: `${origin}${product.successPath}`,
+      cancel_url: `${origin}${product.cancelPath}`,
     };
-    // Only set client_reference_id when we have one — Stripe rejects empty strings.
     if (clerkUserId) {
       sessionParams.client_reference_id = clerkUserId;
+    }
+    // For one-time purchases, capture the customer email automatically.
+    if (product.mode === "payment") {
+      sessionParams.customer_creation = "always";
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
