@@ -147,12 +147,10 @@ body {
   opacity: 0;
   transition: transform 1100ms cubic-bezier(0.22, 1, 0.36, 1),
               opacity 600ms ease-out;
-  pointer-events: none;
 }
 .screen.in-view .table-anchor {
   transform: translateZ(0) translateY(0) rotateX(0);
   opacity: 1;
-  pointer-events: auto;
 }
 .table {
   position: relative;
@@ -272,6 +270,9 @@ body {
 }
 .cta-primary {
   display: inline-flex;
+  position: relative;
+  z-index: 5;
+  pointer-events: auto !important;
   align-items: center;
   gap: 10px;
   padding: 16px 28px;
