@@ -656,16 +656,26 @@ body {
               <div class="mono-label">// FREE CHECKLIST</div>
               <h1 class="hero-title">Pulled From<br>The Binder<span class="accent">.</span></h1>
               <p class="hero-sub">The free checklist of everything a tour can&rsquo;t afford to forget.</p>
-              <form class="signup-form" id="signup-form" novalidate>
+              <form class="signup-form seva-form formkit-form"
+                    id="signup-form"
+                    action="https://app.kit.com/forms/9524196/subscriptions"
+                    method="post"
+                    data-sv-form="9524196"
+                    data-uid="5f2e9ae789"
+                    data-format="inline"
+                    data-version="5"
+                    accept-charset="UTF-8"
+                    novalidate>
                 <label class="sr-only" for="email">Your email address</label>
                 <input
                   class="signup-input"
                   type="email"
                   id="email"
-                  name="email"
+                  name="email_address"
                   placeholder="// YOUR EMAIL ADDRESS"
                   autocomplete="email"
                   required>
+                <input type="hidden" name="tags[]" value="lead:free-checklist">
                 <button type="submit" class="cta-primary">
                   GET IT
                   <span class="arrow">&rarr;</span>
@@ -685,8 +695,8 @@ body {
         <div id="confirmation-content" class="confirmation" hidden>
           <div class="icon-check">&check;</div>
           <h2 class="confirmation-title">Check your email<span class="accent">.</span></h2>
-          <p class="confirmation-body">We just sent <strong id="confirm-email"></strong> a link to your PDF. <strong>Pulled From The Binder</strong> is yours to keep &mdash; run it before every show.</p>
-          <p class="dl-fallback">Didn&rsquo;t auto-download? &nbsp; <a href="checklist/pulled_from_the_binder.pdf" download>Grab the PDF</a></p>
+          <p class="confirmation-body">We just sent <strong id="confirm-email"></strong> a confirmation link. Click it to receive <strong>Pulled From The Binder</strong> &mdash; yours to keep, run it before every show.</p>
+          <p class="dl-fallback">Don&rsquo;t see it? &nbsp; Check spam, or look for a note from <strong>Backstage Blueprint</strong>.</p>
         </div>
 
       </div>
@@ -982,14 +992,15 @@ body {
   });
 
   // ---------- FORM HANDLER ----------
-  // Placeholder for Kit integration — see Order 003 notes.
+  // Submits to Kit form 9524196 (Free Checklist Signup) — incentive email delivers the PDF.
+  // Hidden tags[] input applies the lead:free-checklist tag on subscribe.
   const form = document.getElementById('signup-form');
   const heroContent = document.getElementById('hero-content');
   const confirmationContent = document.getElementById('confirmation-content');
   const confirmEmail = document.getElementById('confirm-email');
 
   if (form) {
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const emailInput = form.querySelector('#email');
       const email = (emailInput.value || '').trim();
@@ -1000,19 +1011,26 @@ body {
         return;
       }
 
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+
+      try {
+        const fd = new FormData(form);
+        await fetch(form.action, {
+          method: 'POST',
+          body: fd,
+          mode: 'no-cors'
+        });
+      } catch (err) {
+        // Network errors swallowed — Kit is fire-and-forget here.
+        // We still show confirmation so user gets a clear "check your email" cue.
+        // Worst case: user resubmits and Kit dedupes.
+        console.warn('Kit submit error (showing confirmation anyway):', err);
+      }
+
       confirmEmail.textContent = email;
       heroContent.hidden = true;
       confirmationContent.hidden = false;
-
-      // Auto-trigger PDF download
-      setTimeout(() => {
-        const a = document.createElement('a');
-        a.href = 'checklist/pulled_from_the_binder.pdf';
-        a.download = 'pulled_from_the_binder.pdf';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }, 700);
     });
   }
 
