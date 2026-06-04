@@ -68,7 +68,7 @@ body {
 .price-aside strong { color:var(--cream); font-weight:600; }
 .buy-row { margin-top:22px; }
 .cta-primary { position:relative; z-index:5; pointer-events:auto !important; display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:22px 38px; min-width:240px; min-height:56px; font-family:var(--display-font); font-size:13px; font-weight:900; letter-spacing:0.18em; text-transform:uppercase; background:var(--orange); color:var(--cream); border:none; cursor:pointer; white-space:nowrap; transition:transform 200ms cubic-bezier(0.22,1.2,0.36,1), filter 200ms ease, box-shadow 200ms ease; }
-.cta-primary:hover { transform:translateY(-2px); filter:brightness(1.08); box-shadow:0 8px 22px rgba(216,90,31,0.45); }
+.cta-primary:hover { filter:brightness(1.10); box-shadow:0 8px 22px rgba(216,90,31,0.45); }
 .license-note { margin-top:14px; font-family:'SF Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--dim); max-width:440px; line-height:1.55; }
 .hero-cover-frame { position:relative; transform:rotate(-1.5deg); }
 .hero-cover { display:block; width:100%; max-width:460px; margin:0 auto; filter:drop-shadow(0 16px 30px rgba(0,0,0,0.55)) drop-shadow(0 4px 10px rgba(0,0,0,0.3)); user-select:none; }
@@ -543,22 +543,44 @@ body {
 
 
 <script>
-/* Order 012 hotfix v2 — extend Buy button hitbox to the whole .buy-row container.
-   Some viewports apparently render the button at a smaller hitbox than its visual
-   area; clicking anywhere in .buy-row now routes through the canonical hero handler. */
+/* Order 012 hotfix v3 — delegate clicks across the WHOLE .table (orange card),
+   not just .buy-row, plus an Enter-key shortcut. Works around mysterious viewport-
+   specific hit-test issues where the button's visible area doesn't catch real mouse
+   clicks reliably. The hero buy-btn / signup-btn JS handler remains the single
+   source of truth — this just expands what triggers it. */
 (function(){
+  function fireBuy() {
+    var hero = document.getElementById('buy-btn')
+            || document.getElementById('signup-btn')
+            || document.querySelector('button.cta-primary, a.cta-primary');
+    if (hero) hero.click();
+  }
+  // 1. Click anywhere inside the .table card → fire buy (unless click was on another
+  //    interactive thing like an anchor link inside the card).
+  document.querySelectorAll('.table').forEach(function(t){
+    t.style.cursor = 'pointer';
+    t.addEventListener('click', function(e){
+      // Don't intercept clicks on links/buttons that already work
+      if (e.target.closest('a[href], button')) return;
+      fireBuy();
+    });
+  });
+  // 2. Same for .buy-row (belt + suspenders if .table delegation has issues too)
   document.querySelectorAll('.buy-row').forEach(function(row){
     row.style.cursor = 'pointer';
     row.addEventListener('click', function(e){
-      // Only intercept if the click didn\'t already land on a button/anchor
-      if (e.target.closest('button, a')) return;
-      var hero = document.getElementById('buy-btn')
-              || document.getElementById('signup-btn')
-              || row.querySelector('button.cta-primary, a.cta-primary');
-      if (hero) hero.click();
+      if (e.target.closest('a[href], button')) return;
+      fireBuy();
     });
+  });
+  // 3. Keyboard shortcut — Enter key fires buy from anywhere on page
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.target.matches('input, textarea, select, [contenteditable]')) {
+      fireBuy();
+    }
   });
 })();
 </script>
+
 </body>
 </html>

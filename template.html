@@ -281,8 +281,7 @@ body {
               box-shadow 200ms ease;
 }
 .cta-primary:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.08);
+  filter: brightness(1.10);
   box-shadow: 0 8px 22px rgba(216, 90, 31, 0.45);
 }
 .license-note {
@@ -1183,22 +1182,44 @@ const TEMPLATES = {
 
 
 <script>
-/* Order 012 hotfix v2 — extend Buy button hitbox to the whole .buy-row container.
-   Some viewports apparently render the button at a smaller hitbox than its visual
-   area; clicking anywhere in .buy-row now routes through the canonical hero handler. */
+/* Order 012 hotfix v3 — delegate clicks across the WHOLE .table (orange card),
+   not just .buy-row, plus an Enter-key shortcut. Works around mysterious viewport-
+   specific hit-test issues where the button's visible area doesn't catch real mouse
+   clicks reliably. The hero buy-btn / signup-btn JS handler remains the single
+   source of truth — this just expands what triggers it. */
 (function(){
+  function fireBuy() {
+    var hero = document.getElementById('buy-btn')
+            || document.getElementById('signup-btn')
+            || document.querySelector('button.cta-primary, a.cta-primary');
+    if (hero) hero.click();
+  }
+  // 1. Click anywhere inside the .table card → fire buy (unless click was on another
+  //    interactive thing like an anchor link inside the card).
+  document.querySelectorAll('.table').forEach(function(t){
+    t.style.cursor = 'pointer';
+    t.addEventListener('click', function(e){
+      // Don't intercept clicks on links/buttons that already work
+      if (e.target.closest('a[href], button')) return;
+      fireBuy();
+    });
+  });
+  // 2. Same for .buy-row (belt + suspenders if .table delegation has issues too)
   document.querySelectorAll('.buy-row').forEach(function(row){
     row.style.cursor = 'pointer';
     row.addEventListener('click', function(e){
-      // Only intercept if the click didn\'t already land on a button/anchor
-      if (e.target.closest('button, a')) return;
-      var hero = document.getElementById('buy-btn')
-              || document.getElementById('signup-btn')
-              || row.querySelector('button.cta-primary, a.cta-primary');
-      if (hero) hero.click();
+      if (e.target.closest('a[href], button')) return;
+      fireBuy();
     });
+  });
+  // 3. Keyboard shortcut — Enter key fires buy from anywhere on page
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.target.matches('input, textarea, select, [contenteditable]')) {
+      fireBuy();
+    }
   });
 })();
 </script>
+
 </body>
 </html>
