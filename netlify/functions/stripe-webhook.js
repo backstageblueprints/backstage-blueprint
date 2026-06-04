@@ -1,12 +1,21 @@
 // =========================================================
 // Netlify Function: stripe-webhook
-// Orders 010 + 011 · Multi-product entitlement insert
+// Orders 010 + 011 + 012 · Multi-product entitlement lifecycle
 //
 // POST /.netlify/functions/stripe-webhook
-// Listens for `checkout.session.completed`. Verifies Stripe signature,
-// reads Clerk user_id from session.client_reference_id, maps the purchased
-// price ID(s) → entitlement type(s), upserts entitlements rows into
-// Supabase via the service-role key. Idempotent on (user_id, entitlement_type).
+//
+// Handled events:
+//   checkout.session.completed     — grant entitlements
+//   charge.refunded                — revoke entitlements for refunded purchase (refund_policy.md)
+//   customer.subscription.deleted  — revoke subscription-source entitlements
+//   invoice.payment_failed         — mark lapse_pending (7-day grace per lapse_grace_period.md)
+//   customer.subscription.updated  — clear lapse_pending if subscription back to active
+//
+// Defensive about schema: `source` and `stripe_session_id` / `stripe_charge_id`
+// columns on `entitlements` may or may not exist depending on whether the
+// Leg 3 SQL migration has run. Inserts try with the column then retry without
+// on column-missing errors. Revocation handlers warn + skip rather than
+// crashing if lookup columns aren't available yet.
 //
 // Env vars required:
 //   STRIPE_SECRET_KEY            — for Stripe SDK (signature verify)
@@ -15,8 +24,8 @@
 //   SUPABASE_SERVICE_ROLE_KEY    — service role key (bypasses RLS, server-only)
 //
 // Product price IDs (resolved at runtime):
-//   VITE_STRIPE_TOOLKIT_PRICE_ID — Toolkit Membership ($5/mo) → toolkit_paid
-//   STRIPE_COURSE_PRICE_ID       — Course ($199 one-time) → course_owner + toolkit_paid (lifetime)
+//   VITE_STRIPE_TOOLKIT_PRICE_ID — Toolkit Membership ($5/mo) → toolkit_paid (subscription)
+//   STRIPE_COURSE_PRICE_ID       — Course ($199 one-time) → course_owner + toolkit_paid (course_bundle)
 //   STRIPE_BLUEPRINT_PRICE_ID    — Blueprint ($49 one-time) → blueprint_paid
 //   STRIPE_TEMPLATE_PRICES       — JSON map { "slug": "price_id" } → template:<slug>_owned each
 // =========================================================
@@ -24,31 +33,319 @@
 const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
 
-// Build the price-id → entitlement-types mapping from env at request time.
-// Returns a map AND a reverse map (price → template_slug) for slug lookup.
+// Postgres error code for "column does not exist"
+const PG_UNDEFINED_COLUMN = "42703";
+
+// -----------------------------------------------------------------------
+// Price → entitlements map (built per-request from env)
+// Each tuple is [entitlement_type, source]. The source matters for refund
+// + lapse handling — only `source='subscription'` rows are touched by
+// subscription.deleted / invoice.payment_failed; course_bundle survives both.
+// -----------------------------------------------------------------------
 function buildPriceMaps() {
   const priceMap = {};
   if (process.env.VITE_STRIPE_TOOLKIT_PRICE_ID) {
-    priceMap[process.env.VITE_STRIPE_TOOLKIT_PRICE_ID] = ["toolkit_paid"];
+    priceMap[process.env.VITE_STRIPE_TOOLKIT_PRICE_ID] = [["toolkit_paid", "subscription"]];
   }
   if (process.env.STRIPE_COURSE_PRICE_ID) {
-    // Course bundles lifetime toolkit access per the locked Course-Toolkit duration decision.
-    priceMap[process.env.STRIPE_COURSE_PRICE_ID] = ["course_owner", "toolkit_paid"];
+    priceMap[process.env.STRIPE_COURSE_PRICE_ID] = [
+      ["course_owner", "course"],
+      ["toolkit_paid", "course_bundle"],
+    ];
   }
   if (process.env.STRIPE_BLUEPRINT_PRICE_ID) {
-    priceMap[process.env.STRIPE_BLUEPRINT_PRICE_ID] = ["blueprint_paid"];
+    priceMap[process.env.STRIPE_BLUEPRINT_PRICE_ID] = [["blueprint_paid", "blueprint"]];
   }
-  // Templates: each slug → its own entitlement_type
   try {
     const templatePrices = JSON.parse(process.env.STRIPE_TEMPLATE_PRICES || "{}");
     for (const [slug, priceId] of Object.entries(templatePrices)) {
-      priceMap[priceId] = [`template:${slug}_owned`];
+      priceMap[priceId] = [[`template:${slug}_owned`, "template"]];
     }
   } catch (_) {
     console.warn("[stripe-webhook] STRIPE_TEMPLATE_PRICES is not valid JSON; skipping template mappings.");
   }
   return priceMap;
 }
+
+// -----------------------------------------------------------------------
+// Defensive upsert — tries the full row, retries without optional columns
+// (source, stripe_session_id, stripe_charge_id) if the column is missing.
+// -----------------------------------------------------------------------
+async function defensiveEntitlementUpsert(supabase, rows) {
+  let { data, error } = await supabase
+    .from("entitlements")
+    .upsert(rows, { onConflict: "user_id,entitlement_type" })
+    .select();
+  if (!error) return { data, error: null, columnDropped: null };
+
+  // Column missing → strip optional columns + retry
+  if (error.code === PG_UNDEFINED_COLUMN) {
+    const m = (error.message || "").match(/column "?(\w+)"? .*does not exist/i);
+    const dropped = m ? m[1] : "unknown";
+    console.warn(`[stripe-webhook] entitlements.${dropped} column missing — retrying without optional fields. Run Leg 3 SQL migration.`);
+    const stripped = rows.map((r) => {
+      const { source, stripe_session_id, stripe_charge_id, ...rest } = r;
+      return rest;
+    });
+    ({ data, error } = await supabase
+      .from("entitlements")
+      .upsert(stripped, { onConflict: "user_id,entitlement_type" })
+      .select());
+    return { data, error, columnDropped: dropped };
+  }
+  return { data, error, columnDropped: null };
+}
+
+// -----------------------------------------------------------------------
+// Customer → user_id lookup via stripe_customers table.
+// Returns null if table missing or no row found (caller logs + skips).
+// -----------------------------------------------------------------------
+async function lookupClerkUserByCustomer(supabase, stripeCustomerId) {
+  if (!stripeCustomerId) return null;
+  try {
+    const { data, error } = await supabase
+      .from("stripe_customers")
+      .select("clerk_user_id")
+      .eq("stripe_customer_id", stripeCustomerId)
+      .maybeSingle();
+    if (error) {
+      console.warn("[stripe-webhook] stripe_customers lookup error:", error.message);
+      return null;
+    }
+    return data ? data.clerk_user_id : null;
+  } catch (e) {
+    console.warn("[stripe-webhook] stripe_customers lookup threw:", e.message);
+    return null;
+  }
+}
+
+// =========================================================
+// Event handlers
+// =========================================================
+
+// checkout.session.completed — grant entitlements + capture customer mapping
+async function handleCheckoutCompleted(stripe, supabase, session) {
+  const clerkUserId = session.client_reference_id;
+  if (!clerkUserId) {
+    console.warn("[stripe-webhook] checkout.session.completed with no client_reference_id; session:", session.id);
+    return { received: true, skipped: "no_user_ref" };
+  }
+
+  let priceIds = [];
+  try {
+    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 10 });
+    priceIds = lineItems.data.map((item) => item.price && item.price.id).filter(Boolean);
+  } catch (err) {
+    console.error("[stripe-webhook] Failed to list line items:", err.message);
+    throw new Error("Could not read line items");
+  }
+
+  const priceMap = buildPriceMaps();
+  const rows = [];
+  for (const pid of priceIds) {
+    const tuples = priceMap[pid];
+    if (!tuples) {
+      console.warn("[stripe-webhook] Unknown price ID, no entitlement mapping:", pid);
+      continue;
+    }
+    for (const [entitlement_type, source] of tuples) {
+      rows.push({
+        user_id: clerkUserId,
+        entitlement_type,
+        status: "active",
+        source,
+        stripe_session_id: session.id,
+      });
+    }
+  }
+
+  if (rows.length === 0) {
+    return { received: true, skipped: "no_known_prices", priceIds };
+  }
+
+  const { error, columnDropped } = await defensiveEntitlementUpsert(supabase, rows);
+  if (error) {
+    console.error("[stripe-webhook] Supabase upsert error:", error.message);
+    throw new Error(`Supabase error: ${error.message}`);
+  }
+
+  // Capture stripe_customer_id mapping for billing portal + future events
+  if (session.customer) {
+    try {
+      const { error: custErr } = await supabase
+        .from("stripe_customers")
+        .upsert(
+          [{ clerk_user_id: clerkUserId, stripe_customer_id: session.customer }],
+          { onConflict: "clerk_user_id" }
+        );
+      if (custErr) {
+        console.warn("[stripe-webhook] stripe_customers upsert warning:", custErr.message);
+      }
+    } catch (e) {
+      console.warn("[stripe-webhook] stripe_customers upsert failed:", e.message);
+    }
+  }
+
+  console.log(
+    `[stripe-webhook] Granted ${rows.length} entitlement(s) to ${clerkUserId} from session ${session.id}: ${rows.map((r) => r.entitlement_type).join(", ")}${columnDropped ? ` (warning: ${columnDropped} column missing)` : ""}`
+  );
+  return { received: true, granted: rows.map((r) => r.entitlement_type) };
+}
+
+// charge.refunded — immediate revoke per refund_policy.md
+// Strategy: look up the original checkout session via the charge's payment_intent,
+// then revoke entitlements that were granted by that session.
+async function handleChargeRefunded(stripe, supabase, charge) {
+  const customerId = charge.customer;
+  const clerkUserId = await lookupClerkUserByCustomer(supabase, customerId);
+  if (!clerkUserId) {
+    console.warn("[stripe-webhook] charge.refunded: no clerk_user_id for customer", customerId, "— skipping. Migration may be needed.");
+    return { received: true, skipped: "no_user_for_customer" };
+  }
+
+  // Find the session(s) that generated this charge
+  let sessions = [];
+  try {
+    const list = await stripe.checkout.sessions.list({ payment_intent: charge.payment_intent, limit: 5 });
+    sessions = list.data;
+  } catch (e) {
+    console.warn("[stripe-webhook] could not list sessions for payment_intent:", e.message);
+  }
+
+  if (sessions.length === 0) {
+    console.warn("[stripe-webhook] charge.refunded: no session found for payment_intent", charge.payment_intent);
+    return { received: true, skipped: "no_session_for_charge" };
+  }
+
+  let revoked = 0;
+  for (const sess of sessions) {
+    // Try to find entitlements granted by this session
+    const { data: ents, error: lookupErr } = await supabase
+      .from("entitlements")
+      .select("id, entitlement_type, source")
+      .eq("user_id", clerkUserId)
+      .eq("stripe_session_id", sess.id);
+    if (lookupErr) {
+      if (lookupErr.code === PG_UNDEFINED_COLUMN) {
+        console.warn("[stripe-webhook] charge.refunded: stripe_session_id column missing — cannot precisely revoke. Run Leg 3 migration. Skipping.");
+        return { received: true, skipped: "migration_pending" };
+      }
+      console.warn("[stripe-webhook] charge.refunded lookup error:", lookupErr.message);
+      continue;
+    }
+    if (!ents || ents.length === 0) continue;
+    const ids = ents.map((e) => e.id);
+    const { error: delErr } = await supabase.from("entitlements").delete().in("id", ids);
+    if (delErr) {
+      console.error("[stripe-webhook] charge.refunded delete error:", delErr.message);
+      continue;
+    }
+    revoked += ids.length;
+    console.log(`[stripe-webhook] Refund revoked ${ids.length} entitlement(s) for ${clerkUserId}: ${ents.map((e) => e.entitlement_type).join(", ")}`);
+  }
+  return { received: true, revoked };
+}
+
+// customer.subscription.deleted — revoke ONLY subscription-source entitlements.
+// Course-bundled toolkit_paid survives (independent grant per refund_policy.md).
+async function handleSubscriptionDeleted(supabase, subscription) {
+  const customerId = subscription.customer;
+  const clerkUserId = await lookupClerkUserByCustomer(supabase, customerId);
+  if (!clerkUserId) {
+    console.warn("[stripe-webhook] subscription.deleted: no clerk_user_id for customer", customerId);
+    return { received: true, skipped: "no_user_for_customer" };
+  }
+  // Delete subscription-source toolkit_paid only
+  const { data, error } = await supabase
+    .from("entitlements")
+    .delete()
+    .eq("user_id", clerkUserId)
+    .eq("entitlement_type", "toolkit_paid")
+    .eq("source", "subscription")
+    .select();
+  if (error) {
+    if (error.code === PG_UNDEFINED_COLUMN) {
+      console.warn("[stripe-webhook] subscription.deleted: source column missing — cannot scope revoke to subscription only. Skipping to avoid revoking course_bundle access. Run Leg 3 migration.");
+      return { received: true, skipped: "migration_pending" };
+    }
+    console.error("[stripe-webhook] subscription.deleted delete error:", error.message);
+    throw new Error(error.message);
+  }
+  const n = data ? data.length : 0;
+  console.log(`[stripe-webhook] subscription.deleted revoked ${n} subscription-source toolkit_paid row(s) for ${clerkUserId}`);
+  return { received: true, revoked: n };
+}
+
+// invoice.payment_failed — mark lapse_pending (7-day grace per lapse_grace_period.md)
+// External Kit automation handles the day-1/3/6 reminder emails based on a tag,
+// and a separate scheduled job runs the day-7 revoke. This handler just flips
+// the status so other systems know the user is in the grace window.
+async function handlePaymentFailed(supabase, invoice) {
+  const customerId = invoice.customer;
+  const clerkUserId = await lookupClerkUserByCustomer(supabase, customerId);
+  if (!clerkUserId) {
+    console.warn("[stripe-webhook] invoice.payment_failed: no clerk_user_id for customer", customerId);
+    return { received: true, skipped: "no_user_for_customer" };
+  }
+  const { data, error } = await supabase
+    .from("entitlements")
+    .update({ status: "lapse_pending", lapse_started_at: new Date().toISOString() })
+    .eq("user_id", clerkUserId)
+    .eq("entitlement_type", "toolkit_paid")
+    .eq("source", "subscription")
+    .select();
+  if (error) {
+    if (error.code === PG_UNDEFINED_COLUMN) {
+      console.warn("[stripe-webhook] invoice.payment_failed: source or lapse_started_at column missing — cannot mark lapse. Run Leg 3 migration.");
+      return { received: true, skipped: "migration_pending" };
+    }
+    console.error("[stripe-webhook] invoice.payment_failed update error:", error.message);
+    throw new Error(error.message);
+  }
+  const n = data ? data.length : 0;
+  console.log(`[stripe-webhook] invoice.payment_failed flagged ${n} row(s) as lapse_pending for ${clerkUserId}`);
+  // TODO: Kit API call to add 'Subscription Lapse Pending' tag on this user's email,
+  // triggering the day-1/3/6 reminder sequence. Requires KIT_API_KEY env var.
+  return { received: true, flagged: n };
+}
+
+// customer.subscription.updated — if subscription is back to active and we'd
+// previously flagged lapse_pending, clear the flag (payment recovered).
+async function handleSubscriptionUpdated(supabase, subscription) {
+  if (subscription.status !== "active") {
+    return { received: true, ignored_status: subscription.status };
+  }
+  const customerId = subscription.customer;
+  const clerkUserId = await lookupClerkUserByCustomer(supabase, customerId);
+  if (!clerkUserId) return { received: true, skipped: "no_user_for_customer" };
+
+  const { data, error } = await supabase
+    .from("entitlements")
+    .update({ status: "active", lapse_started_at: null })
+    .eq("user_id", clerkUserId)
+    .eq("entitlement_type", "toolkit_paid")
+    .eq("source", "subscription")
+    .eq("status", "lapse_pending")
+    .select();
+  if (error) {
+    if (error.code === PG_UNDEFINED_COLUMN) {
+      console.warn("[stripe-webhook] subscription.updated: column missing — Leg 3 migration pending.");
+      return { received: true, skipped: "migration_pending" };
+    }
+    console.error("[stripe-webhook] subscription.updated update error:", error.message);
+    throw new Error(error.message);
+  }
+  const n = data ? data.length : 0;
+  if (n > 0) {
+    console.log(`[stripe-webhook] subscription.updated cleared lapse_pending on ${n} row(s) for ${clerkUserId}`);
+    // TODO: Kit API call to remove 'Subscription Lapse Pending' tag.
+  }
+  return { received: true, recovered: n };
+}
+
+// =========================================================
+// Handler entry
+// =========================================================
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -71,7 +368,6 @@ exports.handler = async (event) => {
     ? Buffer.from(event.body, "base64").toString("utf8")
     : event.body;
 
-  // 1. Verify signature
   let stripeEvent;
   try {
     stripeEvent = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
@@ -80,91 +376,34 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: `Webhook Error: ${err.message}` };
   }
 
-  if (stripeEvent.type !== "checkout.session.completed") {
-    return { statusCode: 200, body: JSON.stringify({ received: true, ignored: stripeEvent.type }) };
-  }
-
-  const session = stripeEvent.data.object;
-  const clerkUserId = session.client_reference_id;
-
-  if (!clerkUserId) {
-    console.warn("[stripe-webhook] checkout.session.completed with no client_reference_id; session:", session.id);
-    return { statusCode: 200, body: JSON.stringify({ received: true, skipped: "no_user_ref" }) };
-  }
-
-  // 2. Get the line items + figure out which entitlement(s) to grant
-  let priceIds = [];
-  try {
-    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 10 });
-    priceIds = lineItems.data
-      .map((item) => item.price && item.price.id)
-      .filter(Boolean);
-  } catch (err) {
-    console.error("[stripe-webhook] Failed to list line items:", err.message);
-    return { statusCode: 500, body: "Could not read line items" };
-  }
-
-  const priceMap = buildPriceMaps();
-  const entitlementTypes = new Set();
-  for (const pid of priceIds) {
-    const types = priceMap[pid];
-    if (types) {
-      types.forEach((t) => entitlementTypes.add(t));
-    } else {
-      console.warn("[stripe-webhook] Unknown price ID, no entitlement mapping:", pid);
-    }
-  }
-
-  if (entitlementTypes.size === 0) {
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ received: true, skipped: "no_known_prices", priceIds }),
-    };
-  }
-
-  // 3. Upsert into Supabase entitlements (idempotent — UNIQUE constraint on user_id+entitlement_type)
   const supabase = createClient(supabaseUrl, supabaseServiceKey, {
     auth: { persistSession: false },
   });
 
-  const rows = [...entitlementTypes].map((t) => ({
-    user_id: clerkUserId,
-    entitlement_type: t,
-    status: "active",
-  }));
-
-  const { data, error } = await supabase
-    .from("entitlements")
-    .upsert(rows, { onConflict: "user_id,entitlement_type" })
-    .select();
-
-  if (error) {
-    console.error("[stripe-webhook] Supabase upsert error:", error.message);
-    return { statusCode: 500, body: `Supabase error: ${error.message}` };
-  }
-
-  // Order 012 · capture stripe_customer_id → clerk_user_id mapping
-  // Used by create-portal-session.js to launch the Stripe Billing Portal.
-  // Graceful: if the stripe_customers table doesn't exist yet (pre-migration),
-  // log a warning and continue — entitlement insert above is the load-bearing op.
-  if (session.customer) {
-    try {
-      const { error: custErr } = await supabase
-        .from("stripe_customers")
-        .upsert([{ clerk_user_id: clerkUserId, stripe_customer_id: session.customer }], { onConflict: "clerk_user_id" });
-      if (custErr) {
-        console.warn("[stripe-webhook] stripe_customers upsert warning (table may not exist yet):", custErr.message);
-      }
-    } catch (e) {
-      console.warn("[stripe-webhook] stripe_customers upsert failed:", e.message);
+  try {
+    let result;
+    switch (stripeEvent.type) {
+      case "checkout.session.completed":
+        result = await handleCheckoutCompleted(stripe, supabase, stripeEvent.data.object);
+        break;
+      case "charge.refunded":
+        result = await handleChargeRefunded(stripe, supabase, stripeEvent.data.object);
+        break;
+      case "customer.subscription.deleted":
+        result = await handleSubscriptionDeleted(supabase, stripeEvent.data.object);
+        break;
+      case "invoice.payment_failed":
+        result = await handlePaymentFailed(supabase, stripeEvent.data.object);
+        break;
+      case "customer.subscription.updated":
+        result = await handleSubscriptionUpdated(supabase, stripeEvent.data.object);
+        break;
+      default:
+        return { statusCode: 200, body: JSON.stringify({ received: true, ignored: stripeEvent.type }) };
     }
+    return { statusCode: 200, body: JSON.stringify(result) };
+  } catch (err) {
+    console.error(`[stripe-webhook] Handler error for ${stripeEvent.type}:`, err.message);
+    return { statusCode: 500, body: err.message };
   }
-
-  console.log(
-    `[stripe-webhook] Granted ${rows.length} entitlement(s) to ${clerkUserId} from session ${session.id}: ${rows.map(r => r.entitlement_type).join(", ")}`
-  );
-  return {
-    statusCode: 200,
-    body: JSON.stringify({ received: true, granted: rows.map((r) => r.entitlement_type) }),
-  };
 };

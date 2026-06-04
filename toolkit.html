@@ -70,7 +70,7 @@ body {
 .hero-sub { margin-top:18px; font-size:clamp(14.5px,1.35vw,18px); line-height:1.5; color:var(--cream); max-width:460px; }
 .hero-body { margin-top:14px; font-size:14px; line-height:1.65; color:rgba(242,235,221,0.85); max-width:460px; }
 .buy-row { margin-top:24px; display:flex; gap:14px; flex-wrap:wrap; }
-.cta-primary { position:relative; z-index:5; pointer-events:auto !important; display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:22px 38px; min-width:200px; min-height:56px; font-family:var(--display-font); font-size:12.5px; font-weight:900; letter-spacing:0.18em; text-transform:uppercase; background:var(--orange); color:var(--cream); border:none; cursor:pointer; white-space:nowrap; transition:transform 200ms cubic-bezier(0.22,1.2,0.36,1), filter 200ms ease, box-shadow 200ms ease; text-decoration:none; }
+.cta-primary { display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:22px 38px; font-family:var(--display-font); font-size:12.5px; font-weight:900; letter-spacing:0.18em; text-transform:uppercase; background:var(--orange); color:var(--cream); border:none; cursor:pointer; white-space:nowrap; transition:transform 200ms cubic-bezier(0.22,1.2,0.36,1), filter 200ms ease, box-shadow 200ms ease; text-decoration:none; }
 .cta-primary:hover { filter:brightness(1.10); box-shadow:0 8px 22px rgba(216,90,31,0.45); }
 .cta-secondary { display:inline-flex; align-items:center; gap:12px; padding:14px 24px; font-family:'SF Mono',monospace; font-size:11px; font-weight:700; letter-spacing:0.28em; text-transform:uppercase; color:var(--cream); background:transparent; border:1px solid var(--cream); text-decoration:none; white-space:nowrap; cursor:pointer; transition:border-color 200ms ease, color 200ms ease, transform 200ms cubic-bezier(0.22,1.2,0.36,1); }
 .cta-secondary:hover { border-color:var(--orange); color:var(--orange); transform:translateY(-2px); }
@@ -189,7 +189,7 @@ body {
             <p class="hero-meta-line">// FREE WITH A <strong>GUEST PASS</strong> &middot; <strong>$5/MO LAUNCH</strong> FOR FULL FEATURES</p>
           </div>
           <div class="hero-cover-frame">
-            <img class="hero-cover" src="toolkit-covers/cover_rider_builder.png" alt="The Toolkit &mdash; Rider Builder cover" loading="eager">
+            <img class="hero-cover" src="toolkit/cover_rider_builder.png" alt="The Toolkit &mdash; Rider Builder cover" loading="eager">
             <span class="cover-spec">DOC BB-301 &middot; WEB APP</span>
           </div>
         </div>
@@ -217,7 +217,7 @@ body {
             </ul>
           </div>
           <div class="tool-img-frame">
-            <img class="tool-img" src="toolkit-covers/preview_rider_builder.png" alt="Rider Builder preview" loading="lazy">
+            <img class="tool-img" src="toolkit/preview_rider_builder.png" alt="Rider Builder preview" loading="lazy">
           </div>
         </div>
       </div>
@@ -244,7 +244,7 @@ body {
             </ul>
           </div>
           <div class="tool-img-frame">
-            <img class="tool-img" src="toolkit-covers/cover_stage_plot_builder.png" alt="Stage Plot Builder cover" loading="lazy" style="max-width:340px;">
+            <img class="tool-img" src="toolkit/cover_stage_plot_builder.png" alt="Stage Plot Builder cover" loading="lazy" style="max-width:340px;">
           </div>
         </div>
       </div>
@@ -274,7 +274,7 @@ body {
               <li class="tier-row no"><span class="tier-mark">&times;</span><span>Advanced features unlocked</span></li>
             </ul>
             <div class="tier-cta">
-              <button class="cta-primary" type="button" onclick="document.getElementById('signup-btn').click();">START FREE <span>&rarr;</span></button>
+              <button class="cta-primary" type="button" data-cta="signup">START FREE <span>&rarr;</span></button>
             </div>
           </div>
 
@@ -291,7 +291,7 @@ body {
               <li class="tier-row"><span class="tier-mark">+</span><span>Included free with The Course</span></li>
             </ul>
             <div class="tier-cta">
-              <button class="cta-primary" type="button" onclick="document.getElementById('upgrade-btn').click();">UPGRADE NOW <span>&rarr;</span></button>
+              <button class="cta-primary" type="button" data-cta="upgrade">UPGRADE NOW <span>&rarr;</span></button>
             </div>
           </div>
         </div>
@@ -331,12 +331,12 @@ body {
             <p class="hero-sub">Two web tools. Every tour needs both.</p>
             <p class="hero-body">Stop building riders in Word. Stop drawing stage plots in PowerPoint. The Toolkit handles both &mdash; fast, clean, exportable.</p>
             <div class="buy-row">
-              <button class="cta-primary" type="button" onclick="document.getElementById('signup-btn').click();">START FREE <span>&rarr;</span></button>
+              <button class="cta-primary" type="button" data-cta="signup">START FREE <span>&rarr;</span></button>
             </div>
             <p class="hero-meta-line">// FREE WITH A <strong>GUEST PASS</strong> &middot; <strong>$5/MO LAUNCH</strong> FOR FULL FEATURES</p>
           </div>
           <div class="hero-cover-frame">
-            <img class="hero-cover" src="toolkit-covers/cover_rider_builder.png" alt="" loading="lazy">
+            <img class="hero-cover" src="toolkit/cover_rider_builder.png" alt="" loading="lazy">
             <span class="cover-spec">DOC BB-301 &middot; WEB APP</span>
           </div>
         </div>
@@ -470,15 +470,16 @@ body {
   // Order 010: Free CTA routes through Clerk signup so the user lands at
   // /toolkit/ with an active session — required for the webhook to attach
   // any later paid entitlement to a real user_id.
-  document.getElementById('signup-btn').addEventListener('click', () => {
-    window.location.href = '/signup.html?return=/toolkit/';
-  });
+  // Bind to ALL signup CTAs (primary + clones). Plain handler, no delegation.
+  const __toolkitSignup = () => { window.location.href = '/signup.html?return=/toolkit/'; };
+  const __toolkitUpgrade = () => { window.location.href = '/signup.html?return=' + encodeURIComponent('/toolkit/?upgrade=prompt'); };
+  document.getElementById('signup-btn').addEventListener('click', __toolkitSignup);
+  document.querySelectorAll('button.cta-primary[data-cta="signup"]').forEach(b => b.addEventListener('click', __toolkitSignup));
   // Paid CTA: also route through signup so we have a Clerk session BEFORE
   // hitting Stripe Checkout. After signup, redirect to /toolkit/?upgrade=prompt
   // so the upgrade modal auto-opens.
-  document.getElementById('upgrade-btn').addEventListener('click', () => {
-    window.location.href = '/signup.html?return=' + encodeURIComponent('/toolkit/?upgrade=prompt');
-  });
+  document.getElementById('upgrade-btn').addEventListener('click', __toolkitUpgrade);
+  document.querySelectorAll('button.cta-primary[data-cta="upgrade"]').forEach(b => b.addEventListener('click', __toolkitUpgrade));
   document.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', (e) => close(e.target.closest('.modal-backdrop'))));
   [signupModal, upgradeModal].forEach(m => m.addEventListener('click', (e) => { if (e.target === m) close(m); }));
   document.addEventListener('keydown', (e) => {
@@ -507,46 +508,6 @@ body {
 })();
 </script>
 
-
-<script>
-/* Order 012 hotfix v3 — delegate clicks across the WHOLE .table (orange card),
-   not just .buy-row, plus an Enter-key shortcut. Works around mysterious viewport-
-   specific hit-test issues where the button's visible area doesn't catch real mouse
-   clicks reliably. The hero buy-btn / signup-btn JS handler remains the single
-   source of truth — this just expands what triggers it. */
-(function(){
-  function fireBuy() {
-    var hero = document.getElementById('buy-btn')
-            || document.getElementById('signup-btn')
-            || document.querySelector('button.cta-primary, a.cta-primary');
-    if (hero) hero.click();
-  }
-  // 1. Click anywhere inside the .table card → fire buy (unless click was on another
-  //    interactive thing like an anchor link inside the card).
-  document.querySelectorAll('.table').forEach(function(t){
-    t.style.cursor = 'pointer';
-    t.addEventListener('click', function(e){
-      // Don't intercept clicks on links/buttons that already work
-      if (e.target.closest('a[href], button')) return;
-      fireBuy();
-    });
-  });
-  // 2. Same for .buy-row (belt + suspenders if .table delegation has issues too)
-  document.querySelectorAll('.buy-row').forEach(function(row){
-    row.style.cursor = 'pointer';
-    row.addEventListener('click', function(e){
-      if (e.target.closest('a[href], button')) return;
-      fireBuy();
-    });
-  });
-  // 3. Keyboard shortcut — Enter key fires buy from anywhere on page
-  document.addEventListener('keydown', function(e){
-    if (e.key === 'Enter' && !e.target.matches('input, textarea, select, [contenteditable]')) {
-      fireBuy();
-    }
-  });
-})();
-</script>
 
 </body>
 </html>

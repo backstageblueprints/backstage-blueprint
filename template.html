@@ -261,9 +261,6 @@ body {
 }
 .cta-primary {
   display: inline-flex;
-  position: relative;
-  z-index: 5;
-  pointer-events: auto !important;
   align-items: center;
   gap: 10px;
   padding: 15px 26px;
@@ -649,7 +646,7 @@ body {
               <div class="price-aside" id="hero-price-aside">// SINGLE TEMPLATE</div>
             </div>
             <div class="buy-row">
-              <button class="cta-primary" id="buy-btn" type="button">GET IT <span>&rarr;</span></button>
+              <button class="cta-primary" id="buy-btn" type="button" data-buy="template">GET IT <span>&rarr;</span></button>
             </div>
             <p class="license-note">// LICENSED FOR YOUR OWN TOURS &middot; NO RESALE &middot; ONE PURCHASE, ONE USER</p>
           </div>
@@ -737,7 +734,7 @@ body {
               <div class="price-aside" id="clone-price-aside">// SINGLE TEMPLATE</div>
             </div>
             <div class="buy-row">
-              <button class="cta-primary" type="button" onclick="document.getElementById('buy-btn').click();">GET IT <span>&rarr;</span></button>
+              <button class="cta-primary" type="button" data-buy="template">GET IT <span>&rarr;</span></button>
             </div>
             <p class="license-note">// LICENSED FOR YOUR OWN TOURS &middot; NO RESALE &middot; ONE PURCHASE, ONE USER</p>
           </div>
@@ -913,6 +910,27 @@ const TEMPLATES = {
   }
 };
 
+// =========================================================
+// Slug → Google Drive "make a copy" URL (mirrors my-binder.html)
+// Used by Order 012 ownership polish to swap buy button → drive URL for owners.
+// =========================================================
+const SLUG_TO_DRIVE_URL = {
+  'master-budget': 'https://docs.google.com/spreadsheets/d/1mwxjZEF6ur6qOO0rdChFhdCt3m9SywnK40dWvBoenDU/copy',
+  'show-design-worksheet': 'https://docs.google.com/spreadsheets/d/1xf4-tGSdvH_HqZBTQQpZBncKR82cK_hVY2UmvQzqIwI/copy',
+  'crew-onboarding': 'https://drive.google.com/uc?export=download&id=1rQV9VGJ4xCnQJUJd7xC0aYU9vjpL9NEd',
+  'technical-rider': 'https://docs.google.com/document/d/1GxSnWdOkDKt8TvL-vNdAmbXWRCyN3y5lwWSAeues7u4/copy',
+  'input-list': 'https://docs.google.com/spreadsheets/d/1Ng2_KvL4gbz6jcvmxt9AuH-NuO1rj2may3V1s91jmZY/copy',
+  'hospitality-rider': 'https://docs.google.com/document/d/1DwSa9Ws23A_Mu6_88UNMP2GWSTMMygYLyQTNqqNEYDU/copy',
+  'truck-routing': 'https://docs.google.com/spreadsheets/d/1sGxceFosTELT8CCLUS_ffcZr336_jEDSf7Xj1odVs10/copy',
+  'travel-grid': 'https://docs.google.com/spreadsheets/d/1AdBOrYa3y0XJ8Ek9Ow4O9y-IFGaD0RjqGwNsSEibJpY/copy',
+  'show-advance-packet': 'https://docs.google.com/spreadsheets/d/1cYavN5BX6KTDGQtRezdPyviY83N6ISEFYH5TY3NtsP8/copy',
+  'day-sheet': 'https://docs.google.com/spreadsheets/d/1SIkXlQ-1N9Egkbk84AQ6LkNOzU_6qR1GGBYhvbZdFqs/copy',
+  'pass-sheet': 'https://docs.google.com/spreadsheets/d/1wlqRVcUAnnL6a7Cyc3O4FODy1klVBXlaDQeD2MDjUG4/copy',
+  'wayfinding-pack': 'https://docs.google.com/document/d/1B5-natoPJb5Rhw82W8fgovH56kYP7Q0QS-0Vyoz6Z9Q/copy',
+  'road-report': 'https://docs.google.com/spreadsheets/d/1-333VPUCc_80HUCvkEc1v64Duw8TjUFBc1SA_G266zY/copy',
+  'show-settlement': 'https://docs.google.com/spreadsheets/d/18L56833fRhCVf9jzMW0RhR-Tg-4mXbY8sJSkZCGBWaA/copy',
+};
+
 
 // =========================================================
 // READ URL ID, POPULATE THE PAGE
@@ -1086,7 +1104,44 @@ const TEMPLATES = {
   const modalClose = document.getElementById('modal-close');
   function openModal() { modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false'); }
   function closeModal() { modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); }
-  if (buyBtn) buyBtn.addEventListener('click', () => startBuyFlow('template', id));
+  document.querySelectorAll('button.cta-primary[data-buy="template"]').forEach(btn => btn.addEventListener('click', () => startBuyFlow('template', id)));
+
+  // Order 012 #181 ownership polish — if the user owns this template (via
+  // blueprint_paid OR template:<slug>_owned), swap BUY for MAKE A COPY routing
+  // straight to the Drive URL. Lazy-loads Clerk, fails open as buy CTA on error.
+  async function applyOwnershipSwap() {
+    try {
+      await __loadClerk();
+      const user = window.Clerk && window.Clerk.user;
+      if (!user) return;
+      const res = await fetch('/.netlify/functions/get-my-entitlements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clerk_user_id: user.id })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const ents = new Set(data.entitlements || []);
+      const owns = ents.has('blueprint_paid') || ents.has('template:' + id + '_owned');
+      if (!owns) return;
+      const driveUrl = SLUG_TO_DRIVE_URL[id];
+      if (!driveUrl) {
+        console.warn('[BB] Owner detected but no drive URL for', id);
+        return;
+      }
+      document.querySelectorAll('button.cta-primary[data-buy="template"]').forEach(btn => {
+        // Clone-and-replace strips the existing buy-flow listener.
+        const fresh = btn.cloneNode(true);
+        fresh.innerHTML = 'MAKE A COPY <span class="arrow">&rarr;</span>';
+        fresh.removeAttribute('data-buy');
+        fresh.addEventListener('click', () => window.open(driveUrl, '_blank', 'noopener'));
+        btn.parentNode.replaceChild(fresh, btn);
+      });
+    } catch (e) {
+      console.warn('[BB] Ownership swap failed (defaulting to buy CTA):', e && e.message);
+    }
+  }
+  applyOwnershipSwap();
 
   /* BB Buy Flow — Order 011 Commerce Activation
    * Click Buy → lazy-load Clerk → POST checkout function with product key.
@@ -1180,46 +1235,6 @@ const TEMPLATES = {
 })();
 </script>
 
-
-<script>
-/* Order 012 hotfix v3 — delegate clicks across the WHOLE .table (orange card),
-   not just .buy-row, plus an Enter-key shortcut. Works around mysterious viewport-
-   specific hit-test issues where the button's visible area doesn't catch real mouse
-   clicks reliably. The hero buy-btn / signup-btn JS handler remains the single
-   source of truth — this just expands what triggers it. */
-(function(){
-  function fireBuy() {
-    var hero = document.getElementById('buy-btn')
-            || document.getElementById('signup-btn')
-            || document.querySelector('button.cta-primary, a.cta-primary');
-    if (hero) hero.click();
-  }
-  // 1. Click anywhere inside the .table card → fire buy (unless click was on another
-  //    interactive thing like an anchor link inside the card).
-  document.querySelectorAll('.table').forEach(function(t){
-    t.style.cursor = 'pointer';
-    t.addEventListener('click', function(e){
-      // Don't intercept clicks on links/buttons that already work
-      if (e.target.closest('a[href], button')) return;
-      fireBuy();
-    });
-  });
-  // 2. Same for .buy-row (belt + suspenders if .table delegation has issues too)
-  document.querySelectorAll('.buy-row').forEach(function(row){
-    row.style.cursor = 'pointer';
-    row.addEventListener('click', function(e){
-      if (e.target.closest('a[href], button')) return;
-      fireBuy();
-    });
-  });
-  // 3. Keyboard shortcut — Enter key fires buy from anywhere on page
-  document.addEventListener('keydown', function(e){
-    if (e.key === 'Enter' && !e.target.matches('input, textarea, select, [contenteditable]')) {
-      fireBuy();
-    }
-  });
-})();
-</script>
 
 </body>
 </html>

@@ -67,7 +67,7 @@ body {
 .price-aside { font-family:'SF Mono',monospace; font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim); line-height:1.55; }
 .price-aside strong { color:var(--cream); font-weight:600; }
 .buy-row { margin-top:22px; }
-.cta-primary { position:relative; z-index:5; pointer-events:auto !important; display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:22px 38px; min-width:240px; min-height:56px; font-family:var(--display-font); font-size:13px; font-weight:900; letter-spacing:0.18em; text-transform:uppercase; background:var(--orange); color:var(--cream); border:none; cursor:pointer; white-space:nowrap; transition:transform 200ms cubic-bezier(0.22,1.2,0.36,1), filter 200ms ease, box-shadow 200ms ease; }
+.cta-primary { display:inline-flex; align-items:center; justify-content:center; gap:10px; padding:22px 38px; font-family:var(--display-font); font-size:13px; font-weight:900; letter-spacing:0.18em; text-transform:uppercase; background:var(--orange); color:var(--cream); border:none; cursor:pointer; white-space:nowrap; transition:transform 200ms cubic-bezier(0.22,1.2,0.36,1), filter 200ms ease, box-shadow 200ms ease; }
 .cta-primary:hover { filter:brightness(1.10); box-shadow:0 8px 22px rgba(216,90,31,0.45); }
 .license-note { margin-top:14px; font-family:'SF Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--dim); max-width:440px; line-height:1.55; }
 .hero-cover-frame { position:relative; transform:rotate(-1.5deg); }
@@ -188,7 +188,7 @@ body {
               <div class="price-aside">// LAUNCH<br>STANDARD <strong>$299</strong></div>
             </div>
             <div class="buy-row">
-              <button class="cta-primary" id="buy-btn" type="button">GET THE COURSE <span>&rarr;</span></button>
+              <button class="cta-primary" id="buy-btn" type="button" data-buy="course">GET THE COURSE <span>&rarr;</span></button>
             </div>
             <p class="license-note">// INCLUDES THE BLUEPRINT + PAID TOOLKIT &middot; LIFETIME ACCESS</p>
           </div>
@@ -327,7 +327,7 @@ body {
               <div class="price-aside">// LAUNCH<br>STANDARD <strong>$299</strong></div>
             </div>
             <div class="buy-row">
-              <button class="cta-primary" type="button" onclick="document.getElementById('buy-btn').click();">GET THE COURSE <span>&rarr;</span></button>
+              <button class="cta-primary" type="button" data-buy="course">GET THE COURSE <span>&rarr;</span></button>
             </div>
             <p class="license-note">// INCLUDES THE BLUEPRINT + PAID TOOLKIT &middot; LIFETIME ACCESS</p>
           </div>
@@ -437,7 +437,7 @@ body {
   const modalClose = document.getElementById('modal-close');
   function openM() { modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); }
   function closeM() { modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
-  if (buyBtn) buyBtn.addEventListener('click', () => startBuyFlow('course', null));
+  document.querySelectorAll('button.cta-primary[data-buy="course"]').forEach(btn => btn.addEventListener('click', () => startBuyFlow('course', null)));
 
   /* ============================================================
    * BB Buy Flow — Order 011 Commerce Activation
@@ -541,46 +541,6 @@ body {
 })();
 </script>
 
-
-<script>
-/* Order 012 hotfix v3 — delegate clicks across the WHOLE .table (orange card),
-   not just .buy-row, plus an Enter-key shortcut. Works around mysterious viewport-
-   specific hit-test issues where the button's visible area doesn't catch real mouse
-   clicks reliably. The hero buy-btn / signup-btn JS handler remains the single
-   source of truth — this just expands what triggers it. */
-(function(){
-  function fireBuy() {
-    var hero = document.getElementById('buy-btn')
-            || document.getElementById('signup-btn')
-            || document.querySelector('button.cta-primary, a.cta-primary');
-    if (hero) hero.click();
-  }
-  // 1. Click anywhere inside the .table card → fire buy (unless click was on another
-  //    interactive thing like an anchor link inside the card).
-  document.querySelectorAll('.table').forEach(function(t){
-    t.style.cursor = 'pointer';
-    t.addEventListener('click', function(e){
-      // Don't intercept clicks on links/buttons that already work
-      if (e.target.closest('a[href], button')) return;
-      fireBuy();
-    });
-  });
-  // 2. Same for .buy-row (belt + suspenders if .table delegation has issues too)
-  document.querySelectorAll('.buy-row').forEach(function(row){
-    row.style.cursor = 'pointer';
-    row.addEventListener('click', function(e){
-      if (e.target.closest('a[href], button')) return;
-      fireBuy();
-    });
-  });
-  // 3. Keyboard shortcut — Enter key fires buy from anywhere on page
-  document.addEventListener('keydown', function(e){
-    if (e.key === 'Enter' && !e.target.matches('input, textarea, select, [contenteditable]')) {
-      fireBuy();
-    }
-  });
-})();
-</script>
 
 </body>
 </html>
