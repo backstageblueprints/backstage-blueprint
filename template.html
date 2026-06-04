@@ -1181,5 +1181,24 @@ const TEMPLATES = {
 })();
 </script>
 
+
+<script>
+/* Order 012 hotfix v2 — extend Buy button hitbox to the whole .buy-row container.
+   Some viewports apparently render the button at a smaller hitbox than its visual
+   area; clicking anywhere in .buy-row now routes through the canonical hero handler. */
+(function(){
+  document.querySelectorAll('.buy-row').forEach(function(row){
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', function(e){
+      // Only intercept if the click didn\'t already land on a button/anchor
+      if (e.target.closest('button, a')) return;
+      var hero = document.getElementById('buy-btn')
+              || document.getElementById('signup-btn')
+              || row.querySelector('button.cta-primary, a.cta-primary');
+      if (hero) hero.click();
+    });
+  });
+})();
+</script>
 </body>
 </html>
