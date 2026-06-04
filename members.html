@@ -1717,10 +1717,32 @@
         e.target.classList.contains('item-mixer')) return;  // the lifted item
     closeInspect();
   });
+  // Order 012 · credential overlay buttons → Pass pages
   document.querySelectorAll('[data-stub]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       e.preventDefault();
-      alert(`"${btn.dataset.stub.toUpperCase()}" coming in V2.`);
+      const action = btn.dataset.stub;
+      if (action === 'settings') { window.location.href = '/account.html'; return; }
+      if (action === 'billing')  { window.location.href = '/billing.html'; return; }
+      if (action === 'signout') {
+        try {
+          if (!window.Clerk) {
+            await new Promise((res, rej) => {
+              const s = document.createElement('script');
+              s.async = true; s.crossOrigin = 'anonymous';
+              s.dataset.clerkPublishableKey = 'pk_test_ZmFjdHVhbC1hc3AtMzAuY2xlcmsuYWNjb3VudHMuZGV2JA';
+              s.src = 'https://factual-asp-30.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js';
+              s.onload = res; s.onerror = rej;
+              document.head.appendChild(s);
+            });
+            await window.Clerk.load();
+          }
+          await window.Clerk.signOut();
+        } catch (err) {
+          console.warn('[BB] sign out failed:', err && err.message);
+        }
+        window.location.href = '/experience.html';
+      }
     });
   });
 })();

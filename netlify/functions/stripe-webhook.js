@@ -143,6 +143,23 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: `Supabase error: ${error.message}` };
   }
 
+  // Order 012 · capture stripe_customer_id → clerk_user_id mapping
+  // Used by create-portal-session.js to launch the Stripe Billing Portal.
+  // Graceful: if the stripe_customers table doesn't exist yet (pre-migration),
+  // log a warning and continue — entitlement insert above is the load-bearing op.
+  if (session.customer) {
+    try {
+      const { error: custErr } = await supabase
+        .from("stripe_customers")
+        .upsert([{ clerk_user_id: clerkUserId, stripe_customer_id: session.customer }], { onConflict: "clerk_user_id" });
+      if (custErr) {
+        console.warn("[stripe-webhook] stripe_customers upsert warning (table may not exist yet):", custErr.message);
+      }
+    } catch (e) {
+      console.warn("[stripe-webhook] stripe_customers upsert failed:", e.message);
+    }
+  }
+
   console.log(
     `[stripe-webhook] Granted ${rows.length} entitlement(s) to ${clerkUserId} from session ${session.id}: ${rows.map(r => r.entitlement_type).join(", ")}`
   );

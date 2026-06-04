@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backstage Blueprint — Account</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root { --black:#0E0E0E; --black2:#141414; --blue:#1B3A5C; --bone:#F4F1EA; --orange:#D4641E; --dim:rgba(244,241,234,0.55); --line-strong:rgba(244,241,234,0.28); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--black); color: var(--bone); font-family: 'Inter', sans-serif; min-height: 100vh; }
+  .topbar { height: 56px; background: var(--black2); border-bottom: 1px solid var(--line-strong); display: flex; align-items: center; justify-content: space-between; padding: 0 22px; gap: 16px; }
+  .topbar-left { display: flex; align-items: center; gap: 18px; }
+  .brand-mark { width: 30px; height: 30px; border: 1px solid var(--orange); display: inline-flex; align-items: center; justify-content: center; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 11px; color: var(--orange); letter-spacing: 0.08em; }
+  .topbar-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2.5px; color: var(--orange); text-transform: uppercase; font-weight: 700; }
+  .topbar-link { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.5px; color: var(--dim); text-decoration: none; text-transform: uppercase; padding: 8px 0; border-bottom: 1px solid transparent; }
+  .topbar-link:hover { color: var(--orange); border-bottom-color: var(--orange); }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 56px 28px 80px; }
+  .page-overline { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; color: var(--orange); margin-bottom: 12px; text-transform: uppercase; font-weight: 700; }
+  .page-title { font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 36px; letter-spacing: 1px; line-height: 1.05; margin-bottom: 8px; }
+  .page-title .accent { color: var(--orange); }
+  .page-sub { font-size: 14px; color: var(--dim); margin-bottom: 32px; }
+  .clerk-mount { background: rgba(20,20,20,0.55); border: 1px solid var(--line-strong); padding: 20px; min-height: 480px; }
+  .loading { color: var(--dim); font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="brand-mark">BB</div>
+    <span class="topbar-label">Account</span>
+  </div>
+  <a class="topbar-link" href="/members.html">&larr; Members Hub</a>
+</div>
+
+<div class="wrap">
+  <div class="page-overline">— Account settings —</div>
+  <h1 class="page-title">Your account<span class="accent">.</span></h1>
+  <p class="page-sub">Name, email, password, and connected sign-in methods.</p>
+  <div class="clerk-mount" id="clerk-profile">
+    <div class="loading">Loading your account…</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var __clerkPromise = null;
+  function __loadClerk() {
+    if (__clerkPromise) return __clerkPromise;
+    __clerkPromise = new Promise(function(res, rej){
+      var s = document.createElement("script");
+      s.async = true;
+      s.crossOrigin = "anonymous";
+      s.dataset.clerkPublishableKey = "pk_test_ZmFjdHVhbC1hc3AtMzAuY2xlcmsuYWNjb3VudHMuZGV2JA";
+      s.src = "https://factual-asp-30.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    }).then(function(){ return window.Clerk.load(); });
+    return __clerkPromise;
+  }
+  __loadClerk().then(function(){
+    var user = window.Clerk && window.Clerk.user;
+    if (!user) { window.location.href = "/signup.html?return=" + encodeURIComponent("/account.html"); return; }
+    var mount = document.getElementById("clerk-profile");
+    mount.innerHTML = "";
+    window.Clerk.mountUserProfile(mount, {
+      appearance: {
+        variables: { colorPrimary: "#D4641E", colorBackground: "#141414", colorText: "#F4F1EA", colorInputBackground: "rgba(244,241,234,0.04)", colorInputText: "#F4F1EA", borderRadius: "0" }
+      }
+    });
+  }).catch(function(e){
+    document.getElementById("clerk-profile").innerHTML = "<div class=\"loading\">Couldn\u2019t load Clerk. Try refreshing.</div>";
+    console.warn("[BB Account]", e && e.message);
+  });
+})();
+</script>
+</body>
+</html>

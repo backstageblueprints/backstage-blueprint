@@ -1301,26 +1301,27 @@ body[data-filter="guides"] .card .btn-primary { display: none; }
     });
   });
 
-  // -------- READ GUIDE PLACEHOLDER ----------
-  const modal = document.getElementById('gr-modal');
-  const modalTitle = document.getElementById('gr-title');
-  const modalClose = document.getElementById('gr-close');
-
+  // -------- READ GUIDE → Guide Reader navigation (Order 012) ----------
+  // Maps each paired template DOC# to its companion guide DOC#.
+  // Source: Order 012 / 02_Assets/guide_masters_reference/README.md
+  const TEMPLATE_DOC_TO_GUIDE_DOC = {
+    '201': '302',  // Master Budget       → Master Budget Guide
+    '204': '304',  // Technical Rider     → Technical Rider Guide
+    '206': '305',  // Hospitality Rider   → Hospitality Rider Guide
+    '209': '303',  // Show Advance Packet → Show Advance Guide
+    '210': '306',  // Day Sheet           → Day Sheet Guide
+    '213': '307',  // Road Report         → Road Report Guide
+    '214': '308'   // Show Settlement     → Settlement Guide
+  };
   document.querySelectorAll('.btn-secondary[data-guide]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      modalTitle.textContent = btn.getAttribute('data-guide') + ' — Guide';
-      modal.classList.add('is-open');
+      const card = btn.closest('.card');
+      const tplDoc = card && card.getAttribute('data-doc');
+      const guideDoc = TEMPLATE_DOC_TO_GUIDE_DOC[tplDoc];
+      if (!guideDoc) { console.warn('[BB] No guide for template', tplDoc); return; }
+      window.location.href = '/guide.html?id=' + guideDoc;
     });
-  });
-  modalClose.addEventListener('click', () => modal.classList.remove('is-open'));
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.classList.remove('is-open');
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modal.classList.contains('is-open')) {
-      modal.classList.remove('is-open');
-    }
   });
 })();
 </script>
