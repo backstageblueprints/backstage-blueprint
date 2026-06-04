@@ -1200,36 +1200,96 @@ body[data-filter="guides"] .card .btn-primary { display: none; }
 (function () {
   'use strict';
 
-  // -------- ENTITLEMENTS STUB ----------
-  // Until Supabase is wired, ownership is a hand-edited array.
-  // URL ?state=A | ?state=B | ?state=C overrides for QA / preview.
-  // A = 0 owned, B = partial (random subset), C = all owned.
+  // -------- ENTITLEMENTS ----------
+  // Order 011 — live Supabase reads via /.netlify/functions/get-my-entitlements.
+  // Resolution order:
+  //   1. ?state=A|B|C URL param → QA / preview override (kept for designer use).
+  //   2. Live: Clerk lazy-load → if signed-in user → fetch entitlements → compute owned.
+  //   3. Anonymous user / fetch failure → state A (BUY CTAs visible, funnel-friendly).
+  //
+  // Slug → DOC# mapping from BB_Member_Templates_URLs.html (Order 011 spec).
+  // Blueprint bundle unlocks all 14 templates per blueprint_stripe.md.
   const ALL_DOCS = ['201','202','203','204','205','206','207','208','209','210','211','212','213','214'];
-
-  const ENTITLEMENTS = {
+  const SLUG_TO_DOC = {
+    'master-budget':'201','show-design-worksheet':'202','crew-onboarding':'203',
+    'technical-rider':'204','input-list':'205','hospitality-rider':'206',
+    'truck-routing':'207','travel-grid':'208','show-advance-packet':'209',
+    'day-sheet':'210','pass-sheet':'211','wayfinding-pack':'212',
+    'road-report':'213','show-settlement':'214'
+  };
+  const SIM_ENTITLEMENTS = {
     A: [],
-    B: ['201','203','204','210','213'],   // sample partial
+    B: ['201','203','204','210','213'],   // sample partial for designer preview
     C: ALL_DOCS.slice(),
   };
 
-  // Read URL param if provided, otherwise default to C (full).
-  const params = new URLSearchParams(window.location.search);
-  const stateParam = (params.get('state') || 'C').toUpperCase();
-  const state = ['A','B','C'].includes(stateParam) ? stateParam : 'C';
-  const owned = ENTITLEMENTS[state];
+  // Clerk lazy-loader — same pattern as blueprint.html / course.html / template.html.
+  let __clerkPromise = null;
+  function __loadClerk() {
+    if (__clerkPromise) return __clerkPromise;
+    __clerkPromise = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.async = true;
+      s.crossOrigin = 'anonymous';
+      s.dataset.clerkPublishableKey = 'pk_test_ZmFjdHVhbC1hc3AtMzAuY2xlcmsuYWNjb3VudHMuZGV2JA';
+      s.src = 'https://factual-asp-30.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    }).then(() => window.Clerk.load());
+    return __clerkPromise;
+  }
 
-  document.body.setAttribute('data-state', state);
-
-  // Mark unowned cards
-  document.querySelectorAll('.card').forEach(card => {
-    const doc = card.getAttribute('data-doc');
-    if (!owned.includes(doc)) {
-      card.classList.add('is-unowned');
+  function computeOwnedDocs(entitlementSet) {
+    // Blueprint unlocks all 14 templates.
+    if (entitlementSet.has('blueprint_paid')) return ALL_DOCS.slice();
+    // Otherwise: per-template entitlements (entitlement_type = "template:<slug>_owned").
+    const owned = [];
+    for (const [slug, doc] of Object.entries(SLUG_TO_DOC)) {
+      if (entitlementSet.has('template:' + slug + '_owned')) owned.push(doc);
     }
-  });
+    return owned;
+  }
 
-  // Update count
-  document.getElementById('owned-count').textContent = owned.length;
+  function applyOwnership(owned) {
+    const ownedSet = new Set(owned);
+    let state = 'B';
+    if (owned.length === 0) state = 'A';
+    else if (owned.length >= ALL_DOCS.length) state = 'C';
+    document.body.setAttribute('data-state', state);
+    document.querySelectorAll('.card').forEach(card => {
+      const doc = card.getAttribute('data-doc');
+      if (!ownedSet.has(doc)) card.classList.add('is-unowned');
+      else card.classList.remove('is-unowned');
+    });
+    document.getElementById('owned-count').textContent = String(owned.length);
+  }
+
+  async function loadEntitlements() {
+    const params = new URLSearchParams(window.location.search);
+    const stateParam = (params.get('state') || '').toUpperCase();
+    if (['A','B','C'].includes(stateParam)) {
+      applyOwnership(SIM_ENTITLEMENTS[stateParam]);
+      return;
+    }
+    // Live mode — optimistic empty state while we resolve (funnel-friendly).
+    applyOwnership([]);
+    try {
+      await __loadClerk();
+      const user = window.Clerk && window.Clerk.user;
+      if (!user) return;
+      const res = await fetch('/.netlify/functions/get-my-entitlements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clerk_user_id: user.id })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      applyOwnership(computeOwnedDocs(new Set(data.entitlements || [])));
+    } catch (e) {
+      console.warn('[BB] Entitlement read failed:', e && e.message);
+    }
+  }
+  loadEntitlements();
 
   // -------- FILTER ROW ----------
   document.querySelectorAll('.filter-btn').forEach(btn => {
