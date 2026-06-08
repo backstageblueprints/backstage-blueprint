@@ -173,6 +173,20 @@ body {
   pointer-events: auto;
 }
 
+/* CR-CHK-01 fix (06.08.2026):
+   Page 1 is the landing screen — user arrives directly on it with no scroll-
+   into-view trigger. The fly-in CSS chain (opacity 0 + translateZ(-700px) +
+   pointer-events:none → unlocked by .in-view) was racing browser layout in
+   Edge/Strategy's repro, leaving the Kit email input non-interactive.
+   This rule overrides the fly-in defaults specifically for #screen-1 so the
+   input is always reachable from the first paint. Higher specificity (ID +
+   class) beats both the default and the .in-view selector. */
+#screen-1 .table-anchor {
+  transform: translateZ(0) translateY(0) rotateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .table {
   position: relative;
   background: var(--navy-glass);
@@ -644,7 +658,7 @@ body {
   <!-- =========================
        SCREEN 1 — HERO + FORM
        ========================= -->
-  <section class="screen" id="screen-1" data-cue="1">
+  <section class="screen in-view" id="screen-1" data-cue="1">
     <div class="table-anchor">
       <div class="table" data-table="hero">
         <div class="table-id">// TBL 01/4</div>
