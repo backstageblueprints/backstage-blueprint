@@ -229,6 +229,50 @@ body[data-state="A"] .intro-cta { display: flex; }
 body[data-state="A"] .intro-sub-default { display: none; }
 body[data-state="A"] .intro-sub-A { display: block; }
 
+/* Blueprint Preface card — visible only when user holds blueprint_paid OR course_owner
+   (set via JS as data-blueprint-owner="true" on <body>). Per Order 012 PREREQ-5. */
+.preface-card {
+  display: none;
+  margin-top: 22px;
+  padding: 18px 22px;
+  border: 1px solid rgba(159, 197, 231, 0.35);
+  background: rgba(27, 58, 92, 0.18);
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+body[data-blueprint-owner="true"] .preface-card { display: flex; }
+.preface-card-text {
+  flex: 1;
+  font-size: 13px;
+  opacity: 0.92;
+  min-width: 200px;
+}
+.preface-card-text strong { color: var(--bone); }
+.preface-card-text .tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--orange);
+  margin-right: 8px;
+  text-transform: uppercase;
+}
+.preface-card-btn {
+  background: transparent;
+  color: var(--bone);
+  border: 1px solid var(--bone);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  font-weight: 700;
+  padding: 12px 18px;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: background 0.2s, color 0.2s;
+}
+.preface-card-btn:hover { background: var(--bone); color: var(--black); }
+
 /* =========================================================
    B. PHASE CLUSTERS + CARD GRID
    ========================================================= */
@@ -687,6 +731,15 @@ body[data-filter="guides"] .card .btn-primary { display: none; }
     <div class="intro-cta">
       <div class="intro-cta-text"><strong>Start your binder.</strong> Grab the whole Blueprint or pick individual templates &agrave; la carte.</div>
       <a class="intro-cta-btn" href="blueprint.html">GO TO THE TABLE &nbsp;&rarr;</a>
+    </div>
+
+    <!-- Blueprint Preface card — only visible for blueprint_paid OR course_owner -->
+    <div class="preface-card">
+      <div class="preface-card-text">
+        <span class="tag">// DOC-099</span>
+        <strong>Read the Blueprint Overview.</strong> The bundle preface &mdash; what each template does, how they relate as a system, when in a tour you reach for each one.
+      </div>
+      <a class="preface-card-btn" href="guide.html?id=099">READ PREFACE &nbsp;&rarr;</a>
     </div>
 
     <div class="intro-row">
@@ -1264,11 +1317,20 @@ body[data-filter="guides"] .card .btn-primary { display: none; }
     document.getElementById('owned-count').textContent = String(owned.length);
   }
 
+  function applyBlueprintOwnership(entitlementSet) {
+    // Per Order 012 blueprint_preface.md wiring brief — only blueprint_paid or course_owner
+    // unlock the bundle-level Preface card. Toolkit / single-template owners don't see it.
+    const isBlueprintOwner = entitlementSet.has('blueprint_paid') || entitlementSet.has('course_owner');
+    document.body.setAttribute('data-blueprint-owner', isBlueprintOwner ? 'true' : 'false');
+  }
+
   async function loadEntitlements() {
     const params = new URLSearchParams(window.location.search);
     const stateParam = (params.get('state') || '').toUpperCase();
     if (['A','B','C'].includes(stateParam)) {
       applyOwnership(SIM_ENTITLEMENTS[stateParam]);
+      // Sim state C = full ownership → assume Blueprint bundle for the preface preview
+      if (stateParam === 'C') applyBlueprintOwnership(new Set(['blueprint_paid']));
       return;
     }
     // Live mode — optimistic empty state while we resolve (funnel-friendly).
@@ -1284,7 +1346,9 @@ body[data-filter="guides"] .card .btn-primary { display: none; }
       });
       if (!res.ok) return;
       const data = await res.json();
-      applyOwnership(computeOwnedDocs(new Set(data.entitlements || [])));
+      const entSet = new Set(data.entitlements || []);
+      applyOwnership(computeOwnedDocs(entSet));
+      applyBlueprintOwnership(entSet);
     } catch (e) {
       console.warn('[BB] Entitlement read failed:', e && e.message);
     }

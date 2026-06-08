@@ -191,6 +191,834 @@
   </div>
 </div>
 
+<script type="text/html" id="g-099" data-title="Blueprint Preface">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BB — The Blueprint (Preface)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black:  #0E0E0E;
+    --black2: #141414;
+    --blue:   #1B3A5C;
+    --blue-d: #122947;
+    --blue-l: #9FC5E7;
+    --bone:   #F4F1EA;
+    --orange: #D4641E;
+    --page-w: 816px;
+    --page-h: 1056px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: letter; margin: 0; }
+  html, body { background: #1a1a1a; }
+  body {
+    color: var(--bone);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 30px 0 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .format-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: rgba(244,241,234,0.35);
+    text-align: center;
+    padding: 0 0 14px;
+  }
+  .page-wrapper {
+    width: var(--page-w);
+    height: var(--page-h);
+    background: var(--black);
+    border: 0.5px solid rgba(244,241,234,0.15);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin-top: 32px;
+  }
+  .page-wrapper:first-of-type { margin-top: 0; }
+
+  /* HEADER */
+  .page-header {
+    padding: 10px 36px;
+    border-bottom: 2px solid var(--orange);
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+  .tb-mark { display: inline-block; border: 1px solid rgba(244,241,234,0.55); color: var(--bone); flex-shrink: 0; }
+  .tb-mark .hrow, .tb-mark .frow { display: flex; justify-content: space-between; padding: 1px 6px; font-family: 'JetBrains Mono', monospace; font-size: 6px; letter-spacing: 1.5px; gap: 8px; }
+  .tb-mark .hrow { border-bottom: 0.5px solid rgba(244,241,234,0.4); opacity: 0.7; }
+  .tb-mark .frow { border-top: 0.5px solid rgba(244,241,234,0.4); opacity: 0.5; }
+  .tb-mark .body { padding: 3px 8px 4px; }
+  .tb-mark .top { font-family: 'Archivo', sans-serif; font-size: 9px; font-weight: 900; letter-spacing: 2px; line-height: 1; }
+  .tb-mark .bot { font-family: 'Archivo', sans-serif; font-size: 9px; font-weight: 300; letter-spacing: 2px; line-height: 1; margin-top: 2px; }
+  .header-meta { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1.8px; color: rgba(244,241,234,0.5); line-height: 1.6; }
+  .doc-stamp { text-align: right; flex-shrink: 0; }
+  .doc-stamp .doc-num { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1.8px; color: rgba(244,241,234,0.5); margin-bottom: 2px; }
+  .doc-stamp .doc-rev { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--orange); border-bottom: 1px solid var(--orange); padding-bottom: 1px; }
+  .doc-stamp .pg-num { font-family: 'JetBrains Mono', monospace; font-weight: 400; font-size: 8px; letter-spacing: 1.8px; color: rgba(244,241,234,0.5); margin-top: 2px; line-height: 1.4; }
+  .doc-stamp .pg-num .pg-of { margin-left: 2px; }
+
+  /* ============================================ */
+  /* PAGE 1 — COVER (BLUEPRINT SCHEMATIC STYLE)   */
+  /* ============================================ */
+  .cover-page {
+    background: var(--black);
+    background-image:
+      linear-gradient(rgba(27,58,92,0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,58,92,0.18) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .cover-page .page-header {
+    background: var(--black);
+    background-image:
+      linear-gradient(rgba(27,58,92,0.2) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,58,92,0.2) 1px, transparent 1px);
+    background-size: 22px 22px;
+    border-bottom: 2px solid var(--orange);
+  }
+  .cover-canvas {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .cover-eyebrow {
+    padding: 26px 50px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--orange);
+    position: relative;
+    z-index: 2;
+  }
+  .cover-eyebrow-rule {
+    flex: 1;
+    height: 1px;
+    background: var(--orange);
+    opacity: 0.5;
+    margin: 0 14px;
+  }
+
+  .cover-hero {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+    padding: 22px 0 22px;
+  }
+  .cover-square {
+    position: relative;
+    width: 480px;
+    height: 480px;
+    background: var(--blue);
+    background-image:
+      linear-gradient(rgba(159,197,231,0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(159,197,231,0.18) 1px, transparent 1px),
+      linear-gradient(rgba(159,197,231,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(159,197,231,0.08) 1px, transparent 1px);
+    background-size: 80px 80px, 80px 80px, 20px 20px, 20px 20px;
+    border: 2px solid rgba(244,241,234,0.6);
+    box-shadow:
+      0 0 0 1px rgba(244,241,234,0.18),
+      0 6px 24px rgba(0,0,0,0.45);
+    overflow: hidden;
+  }
+
+  .cover-titleblock {
+    position: absolute;
+    bottom: 22px;
+    right: 22px;
+    width: 168px;
+    border: 1px solid rgba(244,241,234,0.45);
+    background: rgba(27,58,92,0.55);
+    padding: 0;
+    z-index: 5;
+    opacity: 0.78;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .cover-titleblock .tbk-row {
+    display: flex;
+    border-bottom: 1px solid rgba(244,241,234,0.35);
+    font-size: 7.5px;
+    letter-spacing: 1.5px;
+    line-height: 1.3;
+  }
+  .cover-titleblock .tbk-row:last-child { border-bottom: 0; }
+  .cover-titleblock .tbk-key {
+    padding: 4px 6px;
+    color: rgba(244,241,234,0.55);
+    border-right: 1px solid rgba(244,241,234,0.35);
+    flex: 0 0 38%;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .cover-titleblock .tbk-val {
+    padding: 4px 6px;
+    color: rgba(244,241,234,0.92);
+    flex: 1;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .cover-titleblock .tbk-head {
+    padding: 5px 6px 4px;
+    color: var(--orange);
+    border-bottom: 1px solid rgba(244,241,234,0.35);
+    font-size: 8px;
+    letter-spacing: 2px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  .cover-square::before,
+  .cover-square::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--orange);
+    opacity: 0.6;
+  }
+  .cover-square::before {
+    top: 8px; left: 8px;
+    border-right: 0;
+    border-bottom: 0;
+  }
+  .cover-square::after {
+    bottom: 8px; right: 8px;
+    border-left: 0;
+    border-top: 0;
+  }
+
+  .cover-map {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+  .cover-map svg { width: 100%; height: 100%; display: block; }
+
+  .cover-compass {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+  }
+  .cover-compass svg {
+    width: 320px;
+    height: auto;
+    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.4));
+  }
+
+  .cover-gear {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    z-index: 4;
+    opacity: 0.92;
+  }
+  .cover-gear-tr {
+    top: 22px;
+    right: 22px;
+    width: 110px;
+    height: 110px;
+  }
+  .cover-gear-bl {
+    bottom: 26px;
+    left: 26px;
+    width: 78px;
+    height: 78px;
+    opacity: 0.85;
+  }
+  .cover-gear svg { width: 100%; height: 100%; }
+
+  .cover-crosshair {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    z-index: 2;
+  }
+  .cover-crosshair::before,
+  .cover-crosshair::after {
+    content: "";
+    position: absolute;
+    background: var(--orange);
+    opacity: 0.55;
+  }
+  .cover-crosshair::before { width: 100%; height: 1px; top: 50%; }
+  .cover-crosshair::after { width: 1px; height: 100%; left: 50%; }
+  .cover-ch-tl { top: 18px; left: 18px; }
+  .cover-ch-tr { top: 18px; right: 18px; }
+  .cover-ch-bl { bottom: 18px; left: 18px; }
+  .cover-ch-br { bottom: 18px; right: 18px; }
+
+  .cover-title-block {
+    padding: 0 50px 36px;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--orange);
+    margin-bottom: 14px;
+  }
+  .cover-main {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 86px;
+    letter-spacing: 2px;
+    line-height: 0.9;
+    color: var(--bone);
+    margin-bottom: 10px;
+  }
+  .cover-main .accent { color: var(--orange); }
+  .cover-sub {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 300;
+    font-size: 18px;
+    letter-spacing: 4px;
+    color: rgba(244,241,234,0.75);
+    text-transform: uppercase;
+    margin-top: 10px;
+  }
+  .cover-rule {
+    width: 80px;
+    height: 2px;
+    background: var(--orange);
+    margin-top: 22px;
+  }
+  .cover-meta {
+    margin-top: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2.5px;
+    color: rgba(244,241,234,0.6);
+    line-height: 1.7;
+  }
+
+  /* ============================================ */
+  /* CONTENT PAGES                                 */
+  /* ============================================ */
+  .page2 { background: #FFFFFF; color: var(--black); }
+  .page2 .page-header { background: var(--black); background-image: linear-gradient(rgba(27,58,92,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(27,58,92,0.2) 1px, transparent 1px); background-size: 22px 22px; border-bottom: 2px solid var(--orange); }
+  .page2 .body-area { padding: 18px 40px 20px; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .page2 .module-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--orange);
+    margin-bottom: 5px;
+  }
+  .page2 .page-title {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 28px;
+    letter-spacing: 1px;
+    line-height: 0.95;
+    color: var(--black);
+    margin-bottom: 3px;
+  }
+  .page2 .page-sub {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 300;
+    font-size: 12.5px;
+    letter-spacing: 1px;
+    color: var(--black);
+    margin-bottom: 10px;
+  }
+  .page2 .para {
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    font-weight: 400;
+    line-height: 1.55;
+    color: var(--black);
+    margin-bottom: 6px;
+  }
+  .page2 .para strong { font-weight: 700; }
+  .page2 .para em { font-style: italic; color: rgba(14,14,14,0.78); }
+
+  /* SECTION HEADERS in body */
+  .sec-head {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 12.5px;
+    letter-spacing: 1.5px;
+    color: var(--black);
+    text-transform: uppercase;
+    margin: 10px 0 5px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--orange);
+  }
+
+  /* LICENSE block (orange-edge callout, matches CTA pattern from DOC-100) */
+  .lic-block {
+    border-left: 3px solid var(--orange);
+    padding: 8px 12px;
+    margin: 8px 0 10px;
+    background: rgba(212,100,30,0.05);
+  }
+  .lic-block .lic-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--orange);
+    margin-bottom: 3px;
+  }
+  .lic-block .lic-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--black);
+    font-style: italic;
+  }
+
+  /* TEMPLATE GRID — phase-grouped, 2-column, scannable */
+  .tpl-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 22px;
+    row-gap: 4px;
+    margin: 4px 0 6px;
+  }
+  .tpl-phase {
+    grid-column: 1 / -1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    color: var(--orange);
+    text-transform: uppercase;
+    margin: 6px 0 2px;
+    padding-bottom: 2px;
+    border-bottom: 0.5px dashed rgba(212,100,30,0.45);
+  }
+  .tpl-row {
+    font-family: 'Inter', sans-serif;
+    font-size: 10.5px;
+    line-height: 1.4;
+    color: var(--black);
+    padding: 2px 0 2px 11px;
+    position: relative;
+  }
+  .tpl-row::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--orange);
+    font-weight: 700;
+  }
+  .tpl-row .tpl-name {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 10.5px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--black);
+  }
+  .tpl-row .tpl-desc {
+    color: rgba(14,14,14,0.78);
+  }
+  .tpl-row .tpl-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    color: var(--orange);
+    text-transform: uppercase;
+    margin-left: 4px;
+  }
+
+  /* TWO-DICTIONARY block — compact two-row layout */
+  .dict-row {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--black);
+    padding: 2px 0 2px 11px;
+    position: relative;
+    margin-bottom: 2px;
+  }
+  .dict-row::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--orange);
+    font-weight: 700;
+  }
+  .dict-row .dict-name {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 900;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  /* Closing line */
+  .closing-line {
+    margin-top: auto;
+    padding-top: 12px;
+    text-align: center;
+    font-family: 'Archivo', sans-serif;
+    font-weight: 300;
+    font-size: 13px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(14,14,14,0.6);
+  }
+
+  /* PRINT */
+  @media print {
+    body { background: white; padding: 0; }
+    .format-label { display: none; }
+    .page-wrapper {
+      box-shadow: none; border: none;
+      width: 8.5in; height: 11in;
+      margin-top: 0;
+      page-break-after: always;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="format-label">BB · THE BLUEPRINT · DOC-099 · LETTER 8.5&times;11</div>
+
+<!-- ============================================ -->
+<!-- PAGE 1 — COVER                                 -->
+<!-- ============================================ -->
+<div class="page-wrapper cover-page">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-099</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        THE BLUEPRINT<br>
+        PREFACE
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-099 / REV.01</div>
+      <div class="doc-rev">BACKSTAGEBLUEPRINT.CO</div>
+      <div class="pg-num">PG 01<span class="pg-of">/ 02</span></div>
+    </div>
+  </div>
+
+  <div class="cover-canvas">
+    <span class="cover-crosshair cover-ch-tl"></span>
+    <span class="cover-crosshair cover-ch-tr"></span>
+    <span class="cover-crosshair cover-ch-bl"></span>
+    <span class="cover-crosshair cover-ch-br"></span>
+
+    <div class="cover-eyebrow">
+      <span>&mdash; DOC-099 &mdash;</span>
+      <span class="cover-eyebrow-rule"></span>
+      <span>&mdash; PREFACE / REV.01 &mdash;</span>
+    </div>
+
+    <div class="cover-hero">
+      <div class="cover-square">
+
+        <div class="cover-map">
+          <svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" fill="none">
+            <g stroke="rgba(244,241,234,0.28)" stroke-width="1" stroke-dasharray="3,4">
+              <circle cx="160" cy="180" r="150"/>
+              <circle cx="320" cy="200" r="125"/>
+              <circle cx="240" cy="340" r="105"/>
+            </g>
+            <g stroke="rgba(244,241,234,0.18)" stroke-width="0.8" stroke-dasharray="2,3">
+              <circle cx="100" cy="380" r="60"/>
+              <circle cx="400" cy="380" r="50"/>
+              <circle cx="380" cy="100" r="55"/>
+            </g>
+            <g stroke="rgba(244,241,234,0.22)" stroke-width="0.8" stroke-dasharray="4,5">
+              <line x1="0" y1="240" x2="480" y2="240"/>
+              <line x1="240" y1="0" x2="240" y2="480"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="cover-gear cover-gear-tr">
+          <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#D4641E" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+            <g>
+              <rect x="55" y="6" width="10" height="14" fill="#D4641E"/>
+              <rect x="55" y="100" width="10" height="14" fill="#D4641E"/>
+              <rect x="6" y="55" width="14" height="10" fill="#D4641E"/>
+              <rect x="100" y="55" width="14" height="10" fill="#D4641E"/>
+              <rect x="55" y="6" width="10" height="14" fill="#D4641E" transform="rotate(30 60 60)"/>
+              <rect x="55" y="6" width="10" height="14" fill="#D4641E" transform="rotate(60 60 60)"/>
+              <rect x="55" y="6" width="10" height="14" fill="#D4641E" transform="rotate(120 60 60)"/>
+              <rect x="55" y="6" width="10" height="14" fill="#D4641E" transform="rotate(150 60 60)"/>
+            </g>
+            <circle cx="60" cy="60" r="42" stroke-width="2.5" fill="#1B3A5C"/>
+            <circle cx="60" cy="60" r="34" stroke-width="1" stroke-dasharray="2,3" opacity="0.6"/>
+            <circle cx="60" cy="60" r="14" stroke-width="2" fill="#1B3A5C"/>
+            <circle cx="60" cy="60" r="3" fill="#D4641E" stroke="none"/>
+            <g stroke-width="0.7" opacity="0.4">
+              <line x1="34" y1="50" x2="50" y2="34"/>
+              <line x1="38" y1="56" x2="56" y2="38"/>
+              <line x1="70" y1="34" x2="86" y2="50"/>
+              <line x1="64" y1="38" x2="82" y2="56"/>
+              <line x1="34" y1="70" x2="50" y2="86"/>
+              <line x1="38" y1="64" x2="56" y2="82"/>
+              <line x1="70" y1="86" x2="86" y2="70"/>
+              <line x1="64" y1="82" x2="82" y2="64"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="cover-gear cover-gear-bl">
+          <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#D4641E" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+            <g>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E"/>
+              <rect x="56" y="102" width="8" height="12" fill="#D4641E"/>
+              <rect x="6" y="56" width="12" height="8" fill="#D4641E"/>
+              <rect x="102" y="56" width="12" height="8" fill="#D4641E"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(36 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(72 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(108 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(144 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(216 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(252 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(288 60 60)"/>
+              <rect x="56" y="6" width="8" height="12" fill="#D4641E" transform="rotate(324 60 60)"/>
+            </g>
+            <circle cx="60" cy="60" r="42" stroke-width="2.5" fill="#1B3A5C"/>
+            <circle cx="60" cy="60" r="34" stroke-width="1" stroke-dasharray="2,3" opacity="0.6"/>
+            <circle cx="60" cy="60" r="12" stroke-width="2" fill="#1B3A5C"/>
+            <circle cx="60" cy="60" r="2.5" fill="#D4641E" stroke="none"/>
+            <g stroke-width="1.6" opacity="0.85">
+              <line x1="60" y1="36" x2="60" y2="48"/>
+              <line x1="60" y1="72" x2="60" y2="84"/>
+              <line x1="36" y1="60" x2="48" y2="60"/>
+              <line x1="72" y1="60" x2="84" y2="60"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="cover-titleblock">
+          <div class="tbk-head">&mdash; ARCHITECT &mdash;</div>
+          <div class="tbk-row">
+            <div class="tbk-key">FIRM</div>
+            <div class="tbk-val">Backstage Blueprint</div>
+          </div>
+          <div class="tbk-row">
+            <div class="tbk-key">DOC</div>
+            <div class="tbk-val">DOC-099</div>
+          </div>
+          <div class="tbk-row">
+            <div class="tbk-key">REV</div>
+            <div class="tbk-val">01</div>
+          </div>
+          <div class="tbk-row">
+            <div class="tbk-key">SCALE</div>
+            <div class="tbk-val">1 : 1</div>
+          </div>
+        </div>
+
+        <div class="cover-compass">
+          <svg viewBox="0 0 400 460" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#D4641E" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+            <path d="M 184 14 Q 184 8 200 8 Q 216 8 216 14 L 216 88 L 184 88 Z" stroke-width="3.5" fill="#1B3A5C"/>
+            <g stroke-width="1.4" opacity="0.85">
+              <line x1="186" y1="24" x2="214" y2="24"/>
+              <line x1="186" y1="32" x2="214" y2="32"/>
+              <line x1="186" y1="40" x2="214" y2="40"/>
+              <line x1="186" y1="48" x2="214" y2="48"/>
+              <line x1="186" y1="56" x2="214" y2="56"/>
+              <line x1="186" y1="64" x2="214" y2="64"/>
+              <line x1="186" y1="72" x2="214" y2="72"/>
+              <line x1="186" y1="80" x2="214" y2="80"/>
+            </g>
+            <circle cx="200" cy="124" r="40" stroke-width="4" fill="#1B3A5C"/>
+            <circle cx="200" cy="124" r="30" stroke-width="1.5" opacity="0.7"/>
+            <circle cx="200" cy="124" r="8" fill="#D4641E" stroke="none"/>
+            <circle cx="200" cy="124" r="4" fill="#1B3A5C" stroke="none"/>
+            <g stroke-width="1.2" opacity="0.7">
+              <line x1="172" y1="110" x2="228" y2="110"/>
+              <line x1="168" y1="120" x2="232" y2="120"/>
+              <line x1="170" y1="130" x2="230" y2="130"/>
+              <line x1="176" y1="140" x2="224" y2="140"/>
+            </g>
+            <line x1="200" y1="88" x2="200" y2="124" stroke-width="3"/>
+            <path d="M 178 152 L 96 412" stroke-width="4.5"/>
+            <path d="M 184 152 L 102 412" stroke-width="1" opacity="0.55"/>
+            <g stroke-width="1.2" opacity="0.65">
+              <line x1="166" y1="186" x2="180" y2="180"/>
+              <line x1="156" y1="220" x2="170" y2="214"/>
+              <line x1="146" y1="254" x2="160" y2="248"/>
+              <line x1="136" y1="288" x2="150" y2="282"/>
+              <line x1="126" y1="322" x2="140" y2="316"/>
+              <line x1="116" y1="356" x2="130" y2="350"/>
+              <line x1="106" y1="390" x2="120" y2="384"/>
+            </g>
+            <path d="M 222 152 L 304 412" stroke-width="4.5"/>
+            <path d="M 216 152 L 298 412" stroke-width="1" opacity="0.55"/>
+            <g stroke-width="1.2" opacity="0.65">
+              <line x1="234" y1="186" x2="220" y2="180"/>
+              <line x1="244" y1="220" x2="230" y2="214"/>
+              <line x1="254" y1="254" x2="240" y2="248"/>
+              <line x1="264" y1="288" x2="250" y2="282"/>
+              <line x1="274" y1="322" x2="260" y2="316"/>
+              <line x1="284" y1="356" x2="270" y2="350"/>
+              <line x1="294" y1="390" x2="280" y2="384"/>
+            </g>
+            <rect x="116" y="252" width="168" height="14" fill="#D4641E" stroke-width="2.5"/>
+            <line x1="118" y1="254" x2="282" y2="254" stroke="#1B3A5C" stroke-width="1.2" opacity="0.45"/>
+            <line x1="116" y1="246" x2="116" y2="272" stroke-width="3"/>
+            <line x1="284" y1="246" x2="284" y2="272" stroke-width="3"/>
+            <circle cx="200" cy="259" r="18" stroke-width="3.2" fill="#1B3A5C"/>
+            <circle cx="200" cy="259" r="11" stroke-width="1.5" opacity="0.75"/>
+            <line x1="186" y1="259" x2="214" y2="259" stroke-width="2.2"/>
+            <line x1="200" y1="245" x2="200" y2="273" stroke-width="2.2"/>
+            <g stroke-width="1.6" opacity="0.9">
+              <line x1="188" y1="248" x2="184" y2="245"/>
+              <line x1="212" y1="248" x2="216" y2="245"/>
+              <line x1="188" y1="270" x2="184" y2="273"/>
+              <line x1="212" y1="270" x2="216" y2="273"/>
+              <line x1="182" y1="259" x2="178" y2="259"/>
+              <line x1="218" y1="259" x2="222" y2="259"/>
+            </g>
+            <rect x="86" y="378" width="28" height="22" stroke-width="3" fill="#1B3A5C"/>
+            <line x1="88" y1="386" x2="112" y2="386" stroke-width="1.4" opacity="0.7"/>
+            <line x1="88" y1="392" x2="112" y2="392" stroke-width="1.4" opacity="0.7"/>
+            <path d="M 92 400 L 88 438 L 112 438 L 108 400 Z" stroke-width="2.8" fill="#D4641E" fill-opacity="0.25"/>
+            <circle cx="100" cy="438" r="3" fill="#D4641E" stroke="none"/>
+            <rect x="286" y="378" width="28" height="22" stroke-width="3" fill="#1B3A5C"/>
+            <line x1="288" y1="386" x2="312" y2="386" stroke-width="1.4" opacity="0.7"/>
+            <line x1="288" y1="392" x2="312" y2="392" stroke-width="1.4" opacity="0.7"/>
+            <path d="M 296 400 L 294 442 L 306 442 L 304 400 Z" stroke-width="2.8" fill="#D4641E" fill-opacity="0.25"/>
+            <circle cx="300" cy="442" r="2" fill="#D4641E" stroke="none"/>
+          </svg>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="cover-title-block">
+      <div class="cover-tag">&mdash; DOC-099 / PREFACE &mdash;</div>
+      <div class="cover-main">THE<br>BLUEPRINT<span class="accent">.</span></div>
+      <div class="cover-sub">14 templates &middot; 9 paired guides</div>
+      <div class="cover-rule"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PAGE 2 — THE PREFACE (BODY)                    -->
+<!-- ============================================ -->
+<div class="page-wrapper page2">
+  <div class="page-header">
+    <div class="header-left">
+      <div class="tb-mark">
+        <div class="hrow"><span>DOC-099</span><span>EST. 2026</span></div>
+        <div class="body"><div class="top">BACKSTAGE</div><div class="bot">BLUEPRINT</div></div>
+        <div class="frow"><span>BB.CO</span><span>REV.01</span></div>
+      </div>
+      <div class="header-meta">
+        THE BLUEPRINT<br>
+        WHAT YOU HAVE / HOW TO USE IT
+      </div>
+    </div>
+    <div class="doc-stamp">
+      <div class="doc-num">DOC-099 / REV.01</div>
+      <div class="pg-num">PG 02<span class="pg-of">/ 02</span></div>
+    </div>
+  </div>
+
+  <div class="body-area">
+    <div class="module-tag">&mdash; THE BLUEPRINT / PG 02 &mdash;</div>
+    <div class="page-title">WHAT YOU HAVE.</div>
+    <div class="page-sub">The kit, how it works, and where help lives.</div>
+
+    <p class="para">The Blueprint is <strong>14 working documents and 9 paired guides</strong> &mdash; the same files we run on real shows. Not theoretical, not sales-page versions of the work, not stripped-down samples. Owning the Blueprint means owning all of it. There&rsquo;s no tiered edition. There&rsquo;s nothing held back for a future product. What you have on day one is the whole kit.</p>
+
+    <div class="sec-head">How to use it</div>
+
+    <p class="para">Each template opens via a Google Drive &ldquo;Make a copy&rdquo; link. You land in your own Drive with your own copy, immediately. They&rsquo;re yours forever &mdash; no expiration, no subscription, no DRM. Most templates ship with a paired guide that walks through how to fill it out, so you&rsquo;re not guessing at intent. The two dictionaries cover vocabulary that comes up while you&rsquo;re in the work.</p>
+
+    <div class="lic-block">
+      <div class="lic-label">&mdash; LICENSE &mdash;</div>
+      <div class="lic-text">Licensed for your own tours and productions &mdash; copy them, adapt them, run them on as many shows as you do. May not be resold or redistributed as a kit.</div>
+    </div>
+
+    <div class="sec-head">The 14 at a glance</div>
+
+    <div class="tpl-grid">
+      <div class="tpl-phase">&mdash; Planning &mdash;</div>
+      <div class="tpl-row"><span class="tpl-name">Master Budget</span> <span class="tpl-tag">(with guide)</span><br><span class="tpl-desc">the consolidated planning model where the paper budget gets built</span></div>
+      <div class="tpl-row"><span class="tpl-name">Show Design Worksheet</span><br><span class="tpl-desc">song-by-song tracker for visuals + cues</span></div>
+
+      <div class="tpl-phase">&mdash; Team &amp; Advance &mdash;</div>
+      <div class="tpl-row"><span class="tpl-name">Crew Onboarding &middot; Travel Profile</span><br><span class="tpl-desc">crew intake &mdash; contact, ID, flights, dietary, emergency</span></div>
+      <div class="tpl-row"><span class="tpl-name">Technical Rider</span> <span class="tpl-tag">(with guide)</span><br><span class="tpl-desc">technical requirements doc for advancing the show</span></div>
+      <div class="tpl-row"><span class="tpl-name">Input List</span><br><span class="tpl-desc">channels list, pairs with the Tech Rider</span></div>
+      <div class="tpl-row"><span class="tpl-name">Hospitality Rider</span> <span class="tpl-tag">(with guide)</span><br><span class="tpl-desc">catering, dressing rooms, buyouts</span></div>
+      <div class="tpl-row"><span class="tpl-name">Truck Routing</span><br><span class="tpl-desc">truck mileage + routing grid</span></div>
+      <div class="tpl-row"><span class="tpl-name">Travel Grid</span><br><span class="tpl-desc">hotels and flights across the touring party</span></div>
+      <div class="tpl-row" style="grid-column: 1 / -1;"><span class="tpl-name">Show Advance Packet</span> <span class="tpl-tag">(with guide)</span><br><span class="tpl-desc">one-page production summary that wraps the advance</span></div>
+
+      <div class="tpl-phase">&mdash; Show Day &mdash;</div>
+      <div class="tpl-row"><span class="tpl-name">Day Sheet</span> <span class="tpl-tag">(with guide)</span><br><span class="tpl-desc">the one-page day-of-show schedule and info</span></div>
+      <div class="tpl-row"><span class="tpl-name">Pass Sheet &middot; Credential Map</span><br><span class="tpl-desc">pass key and pass roster</span></div>
+      <div class="tpl-row" style="grid-column: 1 / -1;"><span class="tpl-name">Wayfinding Pack</span><br><span class="tpl-desc">printable backstage signage</span></div>
+
+      <div class="tpl-phase">&mdash; The Close &mdash;</div>
+      <div class="tpl-row"><span class="tpl-name">Road Report</span> <span class="tpl-tag">(with guide)</span><br><span class="tpl-desc">the live, during-tour money ledger</span></div>
+      <div class="tpl-row"><span class="tpl-name">Show Settlement</span> <span class="tpl-tag">(with guide)</span><br><span class="tpl-desc">the per-show vs. deal settlement worksheet</span></div>
+    </div>
+
+    <div class="sec-head">Two dictionaries</div>
+
+    <div class="dict-row"><span class="dict-name">Production Dictionary</span> &mdash; alphabetical reference for live-production terms. Look something up when you need to.</div>
+    <div class="dict-row"><span class="dict-name">Settlement Dictionary</span> &mdash; scoped to settlement vocabulary. Most useful inside Module 8 of the Course.</div>
+
+    <div class="sec-head">Updates &amp; help</div>
+
+    <p class="para">The live folder picks up fresh versions when something gets meaningfully better. Your existing copies stay yours, untouched, forever &mdash; new copies pick up the latest. You never lose your work to a &ldquo;we updated the master&rdquo; email. Anything that breaks, anything you can&rsquo;t figure out &mdash; <strong>hello@backstageblueprint.com</strong>. We read it.</p>
+
+    <div class="closing-line">
+      &mdash; THE KIT IS YOURS. TAKE IT ON THE ROAD. &mdash;
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
+
+</script>
+
 <script type="text/html" id="g-300" data-title="Production Dictionary">
 <!DOCTYPE html>
 <html lang="en">
@@ -11402,6 +12230,7 @@
 
   // -------- GUIDE CATALOG ----------
   var GUIDES = {
+    "099": { title: "Blueprint Preface",       shortName: "Blueprint Preface",  kind: "bundle",     upgradeUrl: "/blueprint.html" },
     "300": { title: "Production Dictionary",   shortName: "Production Dict.",   kind: "dictionary" },
     "301": { title: "Settlement Dictionary",   shortName: "Settlement Dict.",   kind: "dictionary" },
     "302": { title: "Master Budget Guide",     shortName: "Master Budget",      kind: "paired", slug: "master-budget",       upgradeUrl: "/template.html?id=master-budget" },
@@ -11412,7 +12241,7 @@
     "307": { title: "Road Report Guide",       shortName: "Road Report",        kind: "paired", slug: "road-report",         upgradeUrl: "/template.html?id=road-report" },
     "308": { title: "Settlement Guide",        shortName: "Settlement",         kind: "paired", slug: "show-settlement",     upgradeUrl: "/template.html?id=show-settlement" }
   };
-  var GUIDE_ORDER = ["300","301","302","303","304","305","306","307","308"];
+  var GUIDE_ORDER = ["099","300","301","302","303","304","305","306","307","308"];
 
   // -------- ENTITLEMENT → UNLOCK MATRIX ----------
   // Per Order 012 / dictionary_unlock_scope.md + guide_masters_reference/README.md
@@ -11476,6 +12305,9 @@
     if (g.kind === "dictionary") {
       upgradeBody.textContent = "Both reference dictionaries unlock with any paid product — the cheapest is a single $5 template.";
       upgradeCta.setAttribute("href", "/templates.html");
+    } else if (g.kind === "bundle") {
+      upgradeBody.textContent = "The Blueprint Preface is the bundle's overview — included with The Blueprint (all 14 templates + 9 guides) or with the Course.";
+      upgradeCta.setAttribute("href", g.upgradeUrl);
     } else {
       upgradeBody.textContent = "This guide ships with the " + g.shortName + " template, or with The Blueprint bundle (all 14 templates + all 9 guides).";
       upgradeCta.setAttribute("href", g.upgradeUrl);
