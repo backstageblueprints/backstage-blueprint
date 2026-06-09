@@ -36,6 +36,113 @@ const { createClient } = require("@supabase/supabase-js");
 // Postgres error code for "column does not exist"
 const PG_UNDEFINED_COLUMN = "42703";
 
+// =====================================================================
+// Kit API integration — Order 013 Leg B
+// =====================================================================
+// Fire-and-forget tag application on subscriber email. Used by the lapse +
+// recovery handlers to drive Kit's day-1/3/6 reminder cadence.
+//
+// Wiring requirements:
+//   KIT_API_KEY env var must be set in Netlify. Without it, every Kit call
+//   short-circuits silently (logs a single warning), so the webhook stays
+//   working in test mode + during the Order 013 flip window.
+//
+// Tag names (Order 013 spec):
+//   lapse:toolkit-3day      — fired when invoice.payment_failed flags lapse_pending
+//   recovery:toolkit-3day   — fired when customer.subscription.updated clears the flag
+//
+// Kit auto-creates tags on first use via the v3 subscribers endpoint, so the
+// tags don't need to pre-exist (per Order 013 03_Wiring/kit_api_wiring.md).
+// =====================================================================
+
+const KIT_API_BASE = "https://api.kit.com/v3";
+
+// In-memory cache for the duration of a function instance. Netlify recycles
+// instances so this is best-effort, not durable — that's fine, the lookup
+// is cheap and infrequent.
+const __kitTagIdCache = new Map();
+
+async function lookupKitTagIdByName(tagName) {
+  if (__kitTagIdCache.has(tagName)) return __kitTagIdCache.get(tagName);
+  const apiKey = process.env.KIT_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const res = await fetch(`${KIT_API_BASE}/tags?api_key=${encodeURIComponent(apiKey)}`);
+    if (!res.ok) {
+      console.warn(`[kit] tag list lookup failed: ${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    const tags = (data && data.tags) || [];
+    for (const t of tags) {
+      __kitTagIdCache.set(t.name, t.id);
+    }
+    return __kitTagIdCache.get(tagName) || null;
+  } catch (e) {
+    console.warn("[kit] tag list lookup threw:", e.message);
+    return null;
+  }
+}
+
+// Apply a tag to a subscriber by email. Returns { ok, status }. Never throws —
+// failures are logged but do not break the webhook response.
+async function fireKitTag(email, tagName) {
+  if (!email || !tagName) return { ok: false, reason: "no_email_or_tag" };
+  const apiKey = process.env.KIT_API_KEY;
+  if (!apiKey) {
+    console.warn(`[kit] KIT_API_KEY not set — skipping ${tagName} for ${email}`);
+    return { ok: false, reason: "no_api_key" };
+  }
+  try {
+    let tagId = await lookupKitTagIdByName(tagName);
+    if (!tagId) {
+      // Tag doesn't exist yet — create it. Kit's v3 POST /tags creates new tags.
+      const createRes = await fetch(`${KIT_API_BASE}/tags`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ api_key: apiKey, tag: { name: tagName } }),
+      });
+      if (createRes.ok) {
+        const createData = await createRes.json();
+        tagId = createData && createData.tag && createData.tag.id;
+        if (tagId) __kitTagIdCache.set(tagName, tagId);
+      }
+    }
+    if (!tagId) {
+      console.warn(`[kit] could not resolve or create tag '${tagName}'`);
+      return { ok: false, reason: "no_tag_id" };
+    }
+    const subRes = await fetch(`${KIT_API_BASE}/tags/${tagId}/subscribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ api_key: apiKey, email }),
+    });
+    if (!subRes.ok) {
+      console.warn(`[kit] tag-fire ${tagName} for ${email} failed: ${subRes.status}`);
+      return { ok: false, reason: "subscribe_failed", status: subRes.status };
+    }
+    console.log(`[kit] fired tag '${tagName}' on ${email}`);
+    return { ok: true };
+  } catch (e) {
+    console.warn(`[kit] fireKitTag threw for ${tagName} on ${email}:`, e.message);
+    return { ok: false, reason: "exception", error: e.message };
+  }
+}
+
+// Resolve the email for a Stripe customer ID via stripe.customers.retrieve.
+// Returns null on failure — Kit calls then no-op silently.
+async function getEmailForCustomer(stripe, customerId) {
+  if (!customerId) return null;
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    if (customer && customer.deleted) return null;
+    return (customer && customer.email) || null;
+  } catch (e) {
+    console.warn("[kit] customer email lookup failed:", e.message);
+    return null;
+  }
+}
+
 // -----------------------------------------------------------------------
 // Price → entitlements map (built per-request from env)
 // Each tuple is [entitlement_type, source]. The source matters for refund
@@ -278,9 +385,9 @@ async function handleSubscriptionDeleted(supabase, subscription) {
 
 // invoice.payment_failed — mark lapse_pending (7-day grace per lapse_grace_period.md)
 // External Kit automation handles the day-1/3/6 reminder emails based on a tag,
-// and a separate scheduled job runs the day-7 revoke. This handler just flips
-// the status so other systems know the user is in the grace window.
-async function handlePaymentFailed(supabase, invoice) {
+// and a separate scheduled job runs the day-7 revoke. This handler flips the
+// Supabase status AND fires the Kit lapse:toolkit-3day tag (Order 013 Leg B).
+async function handlePaymentFailed(stripe, supabase, invoice) {
   const customerId = invoice.customer;
   const clerkUserId = await lookupClerkUserByCustomer(supabase, customerId);
   if (!clerkUserId) {
@@ -304,14 +411,24 @@ async function handlePaymentFailed(supabase, invoice) {
   }
   const n = data ? data.length : 0;
   console.log(`[stripe-webhook] invoice.payment_failed flagged ${n} row(s) as lapse_pending for ${clerkUserId}`);
-  // TODO: Kit API call to add 'Subscription Lapse Pending' tag on this user's email,
-  // triggering the day-1/3/6 reminder sequence. Requires KIT_API_KEY env var.
+
+  // Fire Kit lapse tag — triggers the day-1/3/6 reminder cadence in Kit.
+  // Email lookup via Stripe customer; tag fire is fire-and-forget.
+  if (n > 0) {
+    const email = invoice.customer_email || await getEmailForCustomer(stripe, customerId);
+    if (email) {
+      await fireKitTag(email, "lapse:toolkit-3day");
+    } else {
+      console.warn("[stripe-webhook] invoice.payment_failed: no email available for Kit tag fire");
+    }
+  }
   return { received: true, flagged: n };
 }
 
 // customer.subscription.updated — if subscription is back to active and we'd
 // previously flagged lapse_pending, clear the flag (payment recovered).
-async function handleSubscriptionUpdated(supabase, subscription) {
+// Also fires the Kit recovery:toolkit-3day tag (Order 013 Leg B).
+async function handleSubscriptionUpdated(stripe, supabase, subscription) {
   if (subscription.status !== "active") {
     return { received: true, ignored_status: subscription.status };
   }
@@ -338,7 +455,14 @@ async function handleSubscriptionUpdated(supabase, subscription) {
   const n = data ? data.length : 0;
   if (n > 0) {
     console.log(`[stripe-webhook] subscription.updated cleared lapse_pending on ${n} row(s) for ${clerkUserId}`);
-    // TODO: Kit API call to remove 'Subscription Lapse Pending' tag.
+    // Fire Kit recovery tag — Kit automation can use this to exit the user
+    // from the lapse reminder cadence and send a welcome-back email.
+    const email = await getEmailForCustomer(stripe, customerId);
+    if (email) {
+      await fireKitTag(email, "recovery:toolkit-3day");
+    } else {
+      console.warn("[stripe-webhook] subscription.updated: no email available for Kit tag fire");
+    }
   }
   return { received: true, recovered: n };
 }
@@ -393,10 +517,10 @@ exports.handler = async (event) => {
         result = await handleSubscriptionDeleted(supabase, stripeEvent.data.object);
         break;
       case "invoice.payment_failed":
-        result = await handlePaymentFailed(supabase, stripeEvent.data.object);
+        result = await handlePaymentFailed(stripe, supabase, stripeEvent.data.object);
         break;
       case "customer.subscription.updated":
-        result = await handleSubscriptionUpdated(supabase, stripeEvent.data.object);
+        result = await handleSubscriptionUpdated(stripe, supabase, stripeEvent.data.object);
         break;
       default:
         return { statusCode: 200, body: JSON.stringify({ received: true, ignored: stripeEvent.type }) };

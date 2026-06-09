@@ -278,22 +278,36 @@ body {
           <div class="table-rule"></div>
           <p class="body-p" style="margin-bottom:18px;">A short intake. We&rsquo;ll route this to a matched partner within a few business days.</p>
 
-          <form class="form-grid" id="inquiry-form" novalidate>
+          <!-- Order 013 Leg C — Audit Inquiry Kit form.
+               Placeholders: REPLACE_FORM_ID, REPLACE_UID swap after Gibby builds the
+               form in Kit + Strategy stamps Orders/013_Live_Mode_Plumbing/03_Wiring/audit_kit_form.md.
+               Field naming follows Kit conventions: email_address (native), fields[<key>] (custom).
+               Same Kit-with-tag pattern as checklist.html (Free Checklist form 9524196). -->
+          <form class="form-grid seva-form formkit-form"
+                id="inquiry-form"
+                action="https://app.kit.com/forms/REPLACE_FORM_ID/subscriptions"
+                method="post"
+                data-sv-form="REPLACE_FORM_ID"
+                data-uid="REPLACE_UID"
+                data-format="inline"
+                data-version="5"
+                accept-charset="UTF-8"
+                novalidate>
             <div class="field">
               <label class="field-label" for="audit-name">Name</label>
-              <input class="field-input" type="text" id="audit-name" name="name" placeholder="// YOUR NAME" required>
+              <input class="field-input" type="text" id="audit-name" name="fields[first_name]" placeholder="// YOUR NAME" required>
             </div>
             <div class="field">
               <label class="field-label" for="audit-email">Email</label>
-              <input class="field-input" type="email" id="audit-email" name="email" placeholder="// YOUR EMAIL" required>
+              <input class="field-input" type="email" id="audit-email" name="email_address" placeholder="// YOUR EMAIL" required>
             </div>
             <div class="field">
               <label class="field-label" for="audit-tour">Tour / project name <span style="color:var(--dim);">(optional)</span></label>
-              <input class="field-input" type="text" id="audit-tour" name="tour" placeholder="// E.G. SUMMER 2026 FESTIVAL RUN">
+              <input class="field-input" type="text" id="audit-tour" name="fields[tour]" placeholder="// E.G. SUMMER 2026 FESTIVAL RUN">
             </div>
             <div class="field">
               <label class="field-label" for="audit-offering">Which offering</label>
-              <select class="field-select" id="audit-offering" name="offering">
+              <select class="field-select" id="audit-offering" name="fields[offering]">
                 <option value="systems-audit">Systems Audit ($499&ndash;$799)</option>
                 <option value="full-audit">Full Audit ($1,500&ndash;$2,500)</option>
                 <option value="consulting">Partner Consulting (by scope)</option>
@@ -302,8 +316,9 @@ body {
             </div>
             <div class="field full">
               <label class="field-label" for="audit-desc">Brief description</label>
-              <textarea class="field-textarea" id="audit-desc" name="description" placeholder="// ONE PARAGRAPH ON WHAT YOU'RE WORKING ON" required></textarea>
+              <textarea class="field-textarea" id="audit-desc" name="fields[message]" placeholder="// ONE PARAGRAPH ON WHAT YOU'RE WORKING ON" required></textarea>
             </div>
+            <input type="hidden" name="tags[]" value="lead:audit-inquiry">
             <div class="form-submit-row">
               <button class="cta-primary" type="submit">SEND INQUIRY <span>&rarr;</span></button>
               <span class="form-meta">// WE REPLY WITHIN A FEW BUSINESS DAYS</span>
@@ -459,8 +474,9 @@ body {
     });
   });
 
-  // INQUIRY FORM — Placeholder; submission backend TBD (Kit / Formspark / etc.)
-  // Documented in 03_Wiring/audit_inquiry.md at handoff.
+  // INQUIRY FORM — POSTs to Kit form (Audit Inquiry Signup) via Order 013 Leg C wiring.
+  // Hidden tags[]=lead:audit-inquiry applies on subscribe. Email + custom fields land in Kit.
+  // Form ID + UID placeholder until Gibby builds the form + stamps audit_kit_form.md.
   const form = document.getElementById('inquiry-form');
   const formContent = document.getElementById('form-content');
   const confirmation = document.getElementById('confirmation-content');
@@ -468,7 +484,7 @@ body {
   const confirmEmail = document.getElementById('confirm-email');
 
   if (form) {
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = form.querySelector('#audit-name').value.trim();
       const email = form.querySelector('#audit-email').value.trim();
@@ -479,6 +495,22 @@ body {
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) form.querySelector('#audit-email').style.borderColor = 'var(--orange)';
         if (!desc) form.querySelector('#audit-desc').style.borderColor = 'var(--orange)';
         return;
+      }
+
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+
+      // Only POST to Kit if the form ID has been wired (placeholders still in place = dev/staging guard).
+      if (!form.action.includes('REPLACE_FORM_ID')) {
+        try {
+          const fd = new FormData(form);
+          await fetch(form.action, { method: 'POST', body: fd, mode: 'no-cors' });
+        } catch (err) {
+          // Network errors swallowed — confirmation still shows so user knows we got it.
+          console.warn('Kit submit error (showing confirmation anyway):', err);
+        }
+      } else {
+        console.warn('[audit] Kit form ID not yet wired — submission only updated UI, not Kit.');
       }
 
       confirmName.textContent = name;
